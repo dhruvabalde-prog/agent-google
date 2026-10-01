@@ -1,7 +1,7 @@
 {
-  "name": "Agent Google",
-  "short_name": "AgentGoogle",
-  "description": "Autonomous AI Agent for Google Workspace & Executive Function",
+  "name": "Suchi",
+  "short_name": "Suchi",
+  "description": "Suchi — Autonomous AI Chief of Staff & Life Operating System",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",

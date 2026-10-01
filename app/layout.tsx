@@ -2,8 +2,8 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Agent Google',
-  description: 'AI-powered Google Workspace assistant',
+  title: 'Suchi — Life Operating System',
+  description: 'Suchi — Autonomous AI Chief of Staff & Life Operating System. Minimum attention, maximum life clarity.',
   manifest: '/manifest.json',
   icons: {
     icon: '/favicon.svg',
@@ -13,12 +13,12 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'Agent Google',
+    title: 'Suchi',
   },
 };
 
 export const viewport: Viewport = {
-  themeColor: '#2563eb',
+  themeColor: '#0f172a',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
@@ -38,10 +38,10 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/icon-192.svg" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="application-name" content="Agent Google" />
-        <meta name="apple-mobile-web-app-title" content="Agent Google" />
+        <meta name="application-name" content="Suchi" />
+        <meta name="apple-mobile-web-app-title" content="Suchi" />
       </head>
-      <body className="bg-gray-50 antialiased">{children}</body>
+      <body className="bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 antialiased">{children}</body>
     </html>
   );
 }

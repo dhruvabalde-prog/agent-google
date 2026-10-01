@@ -109,7 +109,33 @@ export default function Home() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
-  // Check auth on load
+  // Dark Mode Theme
+  const [isDarkMode, setIsDarkMode] = useState(false);
+
+  useEffect(() => {
+    try {
+      const savedTheme = localStorage.getItem('suchi_theme');
+      if (savedTheme === 'dark') {
+        setIsDarkMode(true);
+      } else if (savedTheme === 'light') {
+        setIsDarkMode(false);
+      } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        setIsDarkMode(true);
+      }
+    } catch (e) {}
+  }, []);
+
+  function toggleDarkMode() {
+    setIsDarkMode(prev => {
+      const next = !prev;
+      try {
+        localStorage.setItem('suchi_theme', next ? 'dark' : 'light');
+      } catch (e) {}
+      return next;
+    });
+  }
+
+  // Check auth on load - redirect to /connect if unauthenticated
   useEffect(() => {
     async function checkAuth() {
       try {
@@ -118,10 +144,18 @@ export default function Home() {
           const data = await res.json();
           if (data.authenticated && data.user) {
             setUser(data.user);
+          } else {
+            window.location.href = '/connect';
+            return;
           }
+        } else {
+          window.location.href = '/connect';
+          return;
         }
       } catch (error) {
         console.error('Error checking auth session:', error);
+        window.location.href = '/connect';
+        return;
       } finally {
         setIsCheckingAuth(false);
       }
@@ -480,20 +514,37 @@ export default function Home() {
     setAttachedFiles([]);
     setRecordedAudioUrl(null);
     setIsSettingsOpen(false);
+    window.location.href = '/connect';
   };
 
   return (
-    <div className={`flex flex-col h-[100dvh] overflow-hidden ${isIncognito ? 'bg-gray-950 text-gray-100' : 'bg-gray-50 text-gray-900'}`}>
+    <div className={`flex flex-col h-[100dvh] overflow-hidden ${
+      isDarkMode
+        ? (isIncognito ? 'bg-purple-950 text-purple-100' : 'bg-gray-950 text-gray-100')
+        : (isIncognito ? 'bg-purple-900 text-white' : 'bg-gray-50 text-gray-900')
+    }`}>
       {/* HEADER */}
       <header className={`h-14 border-b px-3 sm:px-4 flex items-center justify-between z-20 transition-colors ${
-        isIncognito ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'
+        isDarkMode
+          ? (isIncognito ? 'bg-purple-900/80 border-purple-800' : 'bg-gray-900 border-gray-800 text-white')
+          : (isIncognito ? 'bg-purple-900 border-purple-800 text-white' : 'bg-white border-gray-200 text-gray-900')
       }`}>
-        {/* Left: Brand */}
+        {/* Left: Brand - Suchi with Compass Needle */}
         <div className="flex items-center gap-2 flex-shrink-0">
-          <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-sm shadow-sm">
-            G
+          <span className="w-7 h-7 rounded-lg bg-slate-950 border border-slate-800 flex items-center justify-center p-1 shadow-sm">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="18" height="18">
+              <circle cx="16" cy="16" r="12" fill="none" stroke="#475569" strokeWidth="2"/>
+              <polygon points="16,6.5 19,16 16,14.5" fill="#38bdf8"/>
+              <polygon points="16,25.5 19,16 16,17.5" fill="#94a3b8"/>
+              <circle cx="16" cy="16" r="2.5" fill="#ffffff"/>
+            </svg>
+          </span>
+          <div className="flex items-baseline gap-1.5">
+            <span className="font-bold text-sm tracking-tight">Suchi</span>
+            <span className="text-[9px] uppercase font-bold tracking-wider text-blue-500 bg-blue-500/10 border border-blue-500/20 px-1 py-0.2 rounded">
+              Life OS
+            </span>
           </div>
-          <span className="font-semibold text-sm tracking-tight hidden sm:inline">Agent Google</span>
           {isIncognito && (
             <span className="text-[10px] bg-purple-900/60 text-purple-300 font-bold px-1.5 py-0.5 rounded-full border border-purple-700">
               INCOGNITO
@@ -533,77 +584,112 @@ export default function Home() {
           </div>
         )}
 
-        {/* Right: Settings Dropdown & Install Button */}
+        {/* Right: Settings Dropdown (Install Button placed inside) */}
         <div className="flex items-center gap-2">
-          {isInstallable && (
-            <button
-              onClick={handleInstallApp}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 border border-blue-200 text-blue-700 text-xs font-semibold hover:bg-blue-100 transition-colors shadow-sm"
-              title="Install Web App"
-            >
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-              </svg>
-              <span>Install App</span>
-            </button>
-          )}
-
           <div className="relative">
             <button
               onClick={() => setIsSettingsOpen(!isSettingsOpen)}
-              className="flex items-center gap-1.5 p-1.5 rounded-lg border border-gray-200 hover:bg-gray-100 text-xs font-medium transition-colors"
+              className={`flex items-center gap-1.5 p-1.5 rounded-lg border text-xs font-medium transition-colors ${
+                isDarkMode
+                  ? 'border-gray-700 bg-gray-800 hover:bg-gray-700 text-gray-200'
+                  : 'border-gray-200 hover:bg-gray-100 text-gray-700'
+              }`}
             >
               {user ? (
                 <img src={user.picture} alt={user.name} className="w-6 h-6 rounded-full" />
               ) : (
-                <span className="text-gray-600">Settings ▾</span>
+                <span>Settings ▾</span>
               )}
             </button>
 
             {/* Dropdown Menu */}
             {isSettingsOpen && (
-              <div className="absolute right-0 mt-2 w-52 bg-white border border-gray-200 rounded-xl shadow-xl py-2 z-50 text-xs text-gray-700">
+              <div className={`absolute right-0 mt-2 w-56 border rounded-xl shadow-xl py-2 z-50 text-xs ${
+                isDarkMode ? 'bg-gray-900 border-gray-700 text-gray-200' : 'bg-white border-gray-200 text-gray-700'
+              }`}>
                 {user ? (
                   <>
-                    <div className="px-3 py-2 border-b border-gray-100 font-semibold text-gray-900 truncate">
+                    <div className="px-3 py-2 border-b border-gray-100 dark:border-gray-800 font-semibold text-gray-900 dark:text-gray-100 truncate">
                       {user.name}
                     </div>
+
+                    {/* Install App Option */}
                     <button
                       onClick={() => { handleInstallApp(); setIsSettingsOpen(false); }}
-                      className="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center justify-between text-blue-600 font-medium"
+                      className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center justify-between text-blue-600 dark:text-blue-400 font-medium"
                     >
                       <span className="flex items-center gap-1.5">
                         <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                         </svg>
-                        <span>Install App</span>
+                        <span>Install Suchi App</span>
                       </span>
-                      {isInstallable && <span className="bg-blue-100 text-blue-700 text-[9px] px-1.5 py-0.5 rounded font-bold">READY</span>}
+                      {isInstallable && <span className="bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 text-[9px] px-1.5 py-0.5 rounded font-bold">READY</span>}
                     </button>
+
+                    {/* Light / Dark Mode Toggle */}
+                    <button
+                      onClick={toggleDarkMode}
+                      className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center justify-between"
+                    >
+                      <span className="flex items-center gap-1.5">
+                        <span>{isDarkMode ? '☀️' : '🌙'}</span>
+                        <span>{isDarkMode ? 'Light Mode' : 'Dark Mode'}</span>
+                      </span>
+                      <span className="text-[10px] text-gray-400 font-mono">{isDarkMode ? 'DARK' : 'LIGHT'}</span>
+                    </button>
+
+                    {/* Privacy & Security Policy */}
+                    <Link
+                      href="/privacy"
+                      onClick={() => setIsSettingsOpen(false)}
+                      className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center justify-between text-gray-700 dark:text-gray-300"
+                    >
+                      <span className="flex items-center gap-1.5">
+                        <span>🛡️</span>
+                        <span>Privacy & Security</span>
+                      </span>
+                      <span className="text-[10px] text-gray-400">Policy</span>
+                    </Link>
+
+                    {/* Chats Archive */}
                     <button
                       onClick={openArchive}
-                      className="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center justify-between"
+                      className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center justify-between"
                     >
-                      <span>Chats Archive</span>
+                      <span className="flex items-center gap-1.5">
+                        <span>📁</span>
+                        <span>Chats Archive</span>
+                      </span>
                       <span className="text-[10px] text-gray-400">Ctrl+A</span>
                     </button>
+
+                    {/* Incognito Mode */}
                     <button
                       onClick={() => { setIsIncognito(!isIncognito); setIsSettingsOpen(false); }}
-                      className="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center justify-between text-purple-700 font-medium"
+                      className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center justify-between text-purple-700 dark:text-purple-400 font-medium"
                     >
-                      <span>{isIncognito ? 'Exit Incognito' : 'Incognito Mode'}</span>
-                      <span className="text-[10px]">🔒</span>
+                      <span className="flex items-center gap-1.5">
+                        <span>🔒</span>
+                        <span>{isIncognito ? 'Exit Incognito' : 'Incognito Mode'}</span>
+                      </span>
+                      <span className="text-[10px]">RAM only</span>
                     </button>
+
+                    {/* Delete Chat */}
                     <button
                       onClick={handleDeleteCurrentChat}
-                      className="w-full text-left px-3 py-2 hover:bg-red-50 text-red-600"
+                      className="w-full text-left px-3 py-2 hover:bg-red-50 dark:hover:bg-red-950/30 text-red-600 dark:text-red-400"
                     >
                       Delete Chat
                     </button>
-                    <div className="border-t border-gray-100 my-1"></div>
+
+                    <div className="border-t border-gray-100 dark:border-gray-800 my-1"></div>
+
+                    {/* Sign Out */}
                     <button
                       onClick={handleLogout}
-                      className="w-full text-left px-3 py-2 hover:bg-gray-100 text-gray-500"
+                      className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400"
                     >
                       Disconnect Google / Sign Out
                     </button>
@@ -612,19 +698,19 @@ export default function Home() {
                   <>
                     <button
                       onClick={() => { handleInstallApp(); setIsSettingsOpen(false); }}
-                      className="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center justify-between text-blue-600 font-medium"
+                      className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center justify-between text-blue-600 font-medium"
                     >
                       <span className="flex items-center gap-1.5">
                         <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                         </svg>
-                        <span>Install App</span>
+                        <span>Install Suchi App</span>
                       </span>
                       {isInstallable && <span className="bg-blue-100 text-blue-700 text-[9px] px-1.5 py-0.5 rounded font-bold">READY</span>}
                     </button>
                     <button
                       onClick={handleLogin}
-                      className="w-full text-left px-3 py-2 hover:bg-gray-100 font-semibold text-blue-600"
+                      className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 font-semibold text-blue-600"
                     >
                       Connect Google Account
                     </button>
@@ -641,21 +727,41 @@ export default function Home() {
       <main className="flex-1 overflow-y-auto px-4 py-6">
         <div className="max-w-3xl mx-auto space-y-6">
           {messages.length === 0 && (
-            <div className="flex flex-col items-center justify-center min-h-[50vh] text-center">
-              <h2 className="text-xl font-semibold text-gray-400 mb-6">What can I organize or create for you?</h2>
-              <div className="flex flex-wrap justify-center gap-2 max-w-md">
+            <div className="flex flex-col items-center justify-center min-h-[50vh] text-center px-4">
+              <span className="w-12 h-12 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-center p-2 shadow-md mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="28" height="28">
+                  <circle cx="16" cy="16" r="13" fill="none" stroke="#334155" strokeWidth="1.5"/>
+                  <polygon points="16,5 19.5,16 16,14" fill="#3b82f6"/>
+                  <polygon points="16,5 12.5,16 16,14" fill="#60a5fa"/>
+                  <polygon points="16,27 19.5,16 16,18" fill="#64748b"/>
+                  <polygon points="16,27 12.5,16 16,18" fill="#94a3b8"/>
+                  <circle cx="16" cy="16" r="2.5" fill="#ffffff" stroke="#0f172a" strokeWidth="1"/>
+                </svg>
+              </span>
+              <h2 className="text-xl sm:text-2xl font-bold tracking-tight mb-2">
+                What can Suchi take off your plate today?
+              </h2>
+              <p className="text-xs text-gray-400 mb-6 max-w-md">
+                Your autonomous Chief of Staff & Life OS. Minimum time & attention spent, maximum clarity & benefit received.
+              </p>
+              <div className="flex flex-wrap justify-center gap-2 max-w-lg">
                 {[
-                  'Make a 5-slide presentation on AI trends',
-                  'Research quantum computing and draft a doc',
-                  'Create an expense sheet with formulas',
-                  'Check my urgent emails today',
+                  'Find best health insurance policy for my parents',
+                  'Audit recurring monthly subscriptions & cut costs',
+                  'Draft a 6-month emergency fund & debt payoff roadmap',
+                  'Organize family medical checkups and records in Drive',
+                  'Draft a 5-slide career growth & salary review deck',
                 ].map((s, i) => (
                   <button
                     key={i}
                     onClick={() => sendMessage(s)}
-                    className="px-3 py-1.5 rounded-full border border-gray-200 bg-white hover:bg-gray-50 text-xs text-gray-600 shadow-sm transition-colors"
+                    className={`px-3.5 py-2 rounded-full border text-xs shadow-sm transition-all text-left ${
+                      isDarkMode
+                        ? 'border-gray-800 bg-gray-900 hover:bg-gray-800 text-gray-300 hover:border-gray-700'
+                        : 'border-gray-200 bg-white hover:bg-gray-50 text-gray-700 hover:border-gray-300'
+                    }`}
                   >
-                    {s}
+                    ✦ {s}
                   </button>
                 ))}
               </div>
@@ -744,11 +850,13 @@ export default function Home() {
       </main>
 
       {/* INPUT BAR */}
-      <footer className={`border-t p-3 relative z-10 ${isIncognito ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'}`}>
+      <footer className={`border-t p-3 relative z-10 ${isDarkMode || isIncognito ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'}`}>
         <div className="max-w-3xl mx-auto flex flex-col gap-2">
           {/* Agent Suggests Popup */}
           {activeSuggestion && (
-            <div className="flex items-center justify-between p-2 rounded-lg bg-indigo-50 border border-indigo-200 text-xs text-indigo-900">
+            <div className={`flex items-center justify-between p-2 rounded-lg border text-xs ${
+              isDarkMode ? 'bg-indigo-950/60 border-indigo-800 text-indigo-300' : 'bg-indigo-50 border-indigo-200 text-indigo-900'
+            }`}>
               <span>💡 {activeSuggestion}</span>
               <button onClick={() => setActiveSuggestion(null)} className="text-indigo-500 hover:text-indigo-800 text-sm font-bold">
                 ✕
@@ -760,7 +868,9 @@ export default function Home() {
           {attachedFiles.length > 0 && (
             <div className="flex flex-wrap gap-2">
               {attachedFiles.map((file, i) => (
-                <div key={i} className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-gray-100 text-xs text-gray-700 border">
+                <div key={i} className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs border ${
+                  isDarkMode ? 'bg-gray-800 border-gray-700 text-gray-200' : 'bg-gray-100 border-gray-200 text-gray-700'
+                }`}>
                   <span>📎 {file.name}</span>
                   <button
                     onClick={() => setAttachedFiles(prev => prev.filter((_, idx) => idx !== i))}
@@ -775,10 +885,12 @@ export default function Home() {
 
           {/* Recorded Audio Preview */}
           {recordedAudioUrl && (
-            <div className="flex items-center gap-3 p-2 bg-emerald-50 border border-emerald-200 rounded-lg text-xs">
+            <div className={`flex items-center gap-3 p-2 rounded-lg text-xs border ${
+              isDarkMode ? 'bg-emerald-950/40 border-emerald-800 text-emerald-300' : 'bg-emerald-50 border-emerald-200 text-emerald-900'
+            }`}>
               <span>🎙️ Recorded Voice Note</span>
               <audio src={recordedAudioUrl} controls className="h-7 w-48" />
-              <button onClick={() => setRecordedAudioUrl(null)} className="text-red-600 hover:underline">
+              <button onClick={() => setRecordedAudioUrl(null)} className="text-red-500 hover:underline">
                 Discard
               </button>
             </div>
@@ -789,8 +901,10 @@ export default function Home() {
             {/* Extreme Left: Agent Suggests */}
             <button
               onClick={handleTriggerSuggest}
-              title="Agent Suggests (Tips)"
-              className="p-2.5 text-gray-400 hover:text-indigo-600 hover:bg-gray-100 rounded-xl transition-colors"
+              title="Suchi Suggests (Executive Tips)"
+              className={`p-2.5 rounded-xl transition-colors ${
+                isDarkMode ? 'text-gray-400 hover:text-indigo-400 hover:bg-gray-800' : 'text-gray-400 hover:text-indigo-600 hover:bg-gray-100'
+              }`}
             >
               💡
             </button>
@@ -827,10 +941,12 @@ export default function Home() {
               placeholder={
                 isChatLocked
                   ? 'This chat reached its outcome and is locked. Use context in a new chat.'
-                  : 'Message Agent Google...'
+                  : 'Message Suchi (Life OS)...'
               }
-              className={`flex-1 resize-none px-3.5 py-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                isIncognito ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-800'
+              className={`flex-1 resize-none px-3.5 py-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${
+                isDarkMode || isIncognito
+                  ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500'
+                  : 'bg-white border-gray-300 text-gray-800 placeholder-gray-400'
               }`}
             />
 
