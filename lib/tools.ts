@@ -301,6 +301,118 @@ export const functionDeclarations: FunctionDeclaration[] = [
       required: ['fileId'],
     },
   },
+  {
+    name: 'create_form',
+    description: 'Creates a Google Form with custom questions (Multiple Choice, Checkbox, Text). Returns the responder link and edit link.',
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        title: { type: Type.STRING, description: 'Title of the Google Form' },
+        description: { type: Type.STRING, description: 'Description or instructions for respondents' },
+        questions: {
+          type: Type.ARRAY,
+          description: 'Array of questions to include in the form',
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              title: { type: Type.STRING, description: 'The question text' },
+              type: { type: Type.STRING, description: 'Question type: TEXT, MULTIPLE_CHOICE, or CHECKBOX' },
+              options: { type: Type.ARRAY, items: { type: Type.STRING }, description: 'Choices for multiple choice or checkbox' },
+            },
+            required: ['title'],
+          },
+        },
+      },
+      required: ['title'],
+    },
+  },
+  {
+    name: 'create_gemini_notebook',
+    description: 'Creates a comprehensive, structured Gemini Research Notebook in Google Docs with executive synthesis, citations, and key takeaways.',
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        title: { type: Type.STRING, description: 'Notebook title' },
+        topic: { type: Type.STRING, description: 'Core research subject' },
+        sections: {
+          type: Type.ARRAY,
+          description: 'Array of research chapters or sections',
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              heading: { type: Type.STRING },
+              content: { type: Type.STRING },
+              keyTakeaways: { type: Type.ARRAY, items: { type: Type.STRING } },
+              sources: { type: Type.ARRAY, items: { type: Type.STRING } },
+            },
+            required: ['heading', 'content'],
+          },
+        },
+      },
+      required: ['title', 'topic', 'sections'],
+    },
+  },
+  {
+    name: 'create_youtube_playlist',
+    description: 'Creates a curated YouTube Music playlist with direct search links and tracklist.',
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        title: { type: Type.STRING, description: 'Playlist title' },
+        description: { type: Type.STRING, description: 'Playlist theme or description' },
+        tracks: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              title: { type: Type.STRING, description: 'Track title' },
+              artist: { type: Type.STRING, description: 'Artist or band name' },
+            },
+            required: ['title'],
+          },
+        },
+      },
+      required: ['title', 'tracks'],
+    },
+  },
+  {
+    name: 'create_maps_places_list',
+    description: 'Generates a categorized curated guide of places in Google Maps (eateries, stays, tourist spots, hidden gems) with direct Google Maps search and navigation links.',
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        location: { type: Type.STRING, description: 'City, region, or area' },
+        category: { type: Type.STRING, description: 'Category (e.g. Eateries, Hidden Gems, Stays, Tourist Spots)' },
+        places: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              name: { type: Type.STRING, description: 'Name of the place' },
+              category: { type: Type.STRING, description: 'Sub-category: Eatery, Stay, Landmark, Hidden Gem' },
+              description: { type: Type.STRING, description: 'Why this place is recommended' },
+              address: { type: Type.STRING, description: 'Address or neighbourhood' },
+              rating: { type: Type.STRING, description: 'Estimated rating or accolade' },
+            },
+            required: ['name', 'category', 'description'],
+          },
+        },
+      },
+      required: ['location', 'category', 'places'],
+    },
+  },
+  {
+    name: 'generate_image',
+    description: 'Generates high-definition images using an improved artistic prompt and pre-determined aspect ratio (1:1, 16:9, 9:16, 4:3, 3:4).',
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        prompt: { type: Type.STRING, description: 'Detailed visual prompt describing the scene, lighting, style, and subject' },
+        aspectRatio: { type: Type.STRING, description: 'Aspect ratio: 1:1, 16:9, 9:16, 4:3, or 3:4' },
+      },
+      required: ['prompt'],
+    },
+  },
 ];
 
 export async function executeFunction(
@@ -459,6 +571,39 @@ export async function executeFunction(
           ? `Shared file: ${resultData.name || args.fileId}`
           : `Share file: ${args.fileId}`;
         if (resultData.shareLink) action.link = resultData.shareLink;
+        break;
+      }
+      case 'create_form': {
+        resultData = await googleServices.createGoogleForm(accessToken, args.title, args.description, args.questions || []);
+        action.summary = `Created Google Form: ${args.title}`;
+        if (resultData.url) action.link = resultData.url;
+        break;
+      }
+      case 'create_gemini_notebook': {
+        resultData = await googleServices.createGeminiNotebook(accessToken, args.title, args.topic, args.sections || []);
+        action.summary = `Created Gemini Research Notebook: ${args.title}`;
+        if (resultData.url) action.link = resultData.url;
+        break;
+      }
+      case 'create_youtube_playlist': {
+        resultData = await googleServices.createYouTubeMusicPlaylist(accessToken, args.title, args.description, args.tracks || []);
+        action.summary = `Created YouTube Music Playlist: ${args.title} (${args.tracks?.length || 0} tracks)`;
+        if (resultData.url) action.link = resultData.url;
+        break;
+      }
+      case 'create_maps_places_list': {
+        resultData = await googleServices.createGoogleMapsPlacesList(args.location, args.category, args.places || []);
+        action.summary = `Created Google Maps Guide: ${args.category} in ${args.location} (${args.places?.length || 0} spots)`;
+        if (resultData.url) action.link = resultData.url;
+        break;
+      }
+      case 'generate_image': {
+        resultData = await googleServices.generateSuchiImage(args.prompt, args.aspectRatio || '1:1');
+        action.summary = `Generated high-resolution image (${args.aspectRatio || '1:1'})`;
+        if (resultData.imageUrl) {
+          action.imageUrl = resultData.imageUrl;
+          action.link = resultData.imageUrl;
+        }
         break;
       }
       default:

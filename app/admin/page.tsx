@@ -3,6 +3,69 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 
+export interface AdminNoteItem {
+  id: string;
+  category: 'Integration' | 'Home Automation' | 'Voice Assistant' | 'Roadmap';
+  title: string;
+  details: string;
+  specs: string[];
+  status: 'Planned' | 'In Progress' | 'Architecture Ready';
+  priority: 'CRITICAL' | 'HIGH' | 'STRATEGIC';
+  updatedAt: string;
+}
+
+const DEFAULT_ADMIN_NOTES: AdminNoteItem[] = [
+  {
+    id: 'note-msft-graph-api',
+    category: 'Integration',
+    title: 'Microsoft API Integration & Office 365 Bridge',
+    details: 'Complete enterprise-grade integration with Microsoft Graph API, Outlook, OneDrive, and Office suite alongside Google Workspace.',
+    specs: [
+      'Microsoft Graph API v1.0 and beta endpoint integration (https://graph.microsoft.com/v1.0).',
+      'Azure AD / Microsoft Entra ID App registration with multi-tenant OAuth 2.0 PKCE flow.',
+      'Scopes: Mail.ReadWrite, Calendars.ReadWrite, Files.ReadWrite.All, Tasks.ReadWrite, Notes.Create, User.Read.',
+      'Bi-directional cross-cloud synchronization: sync Outlook Calendar with Google Calendar, and OneDrive with Google Drive.',
+      'Outlook email thread tracking, drafting, and user-approved reply sending with cryptographic signing.',
+      'Office documents engine: create, inspect, and parse Word (.docx), Excel (.xlsx), and PowerPoint (.pptx) via open formats.'
+    ],
+    status: 'Architecture Ready',
+    priority: 'CRITICAL',
+    updatedAt: '2026-10-02'
+  },
+  {
+    id: 'note-smart-home-automation',
+    category: 'Home Automation',
+    title: 'Connect Devices & Smart Speakers for Home Automation',
+    details: 'Bridge Suchi with smart speakers and ambient IoT hardware for hands-free home and office automation.',
+    specs: [
+      'Smart speakers integration: Google Nest Hub/Audio, Amazon Alexa Echo, and Apple HomePod.',
+      'Universal Matter & Thread protocol bridge for direct, vendor-agnostic local smart home control.',
+      'Voice-triggered smart home routines: lighting scenes (Philips Hue), climate/thermostats (Nest/Ecobee), door locks, and window shades.',
+      'Home Assistant, Tuya, and Samsung SmartThings secure local webhook triggers with end-to-end payload encryption.',
+      'Context-aware proactive presence: Suchi prepares morning briefings, dims lights during work sprints, and notifies on upcoming tasks through ambient speaker chimes.'
+    ],
+    status: 'In Progress',
+    priority: 'HIGH',
+    updatedAt: '2026-10-02'
+  },
+  {
+    id: 'note-suchi-wake-word-assistant',
+    category: 'Voice Assistant',
+    title: 'Suchi Voice Assistant — Wake Word "Suchi ek kaam hai" & Default Agent',
+    details: 'Full voice assistant capability triggered by "Suchi ek kaam hai" hotword, configurable as the default digital assistant across mobile and desktop devices.',
+    specs: [
+      'Dedicated local on-device wake-word detection engine listening for "Suchi ek kaam hai" (0ms latency, zero cloud audio streaming until hotword matches).',
+      'Configurable as Default Digital Assistant app on Android (android.service.voice.VoiceInteractionService) replacing Google Assistant on long-press home or power button.',
+      'iOS Action Button & Siri Shortcut integration: trigger hands-free voice prompt via "Hey Siri, Suchi ek kaam hai".',
+      'High-cadence natural voice streaming with real-time Speech-to-Text and Text-to-Speech audio response playback.',
+      'Zero-audio privacy guarantee: local Voice Activity Detection (VAD) discards all ambient chatter; audio snippets are never retained or logged.'
+    ],
+    status: 'Architecture Ready',
+    priority: 'CRITICAL',
+    updatedAt: '2026-10-02'
+  }
+];
+
 export default function AdminPage() {
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
   const [loginEmail, setLoginEmail] = useState('');
@@ -10,8 +73,8 @@ export default function AdminPage() {
   const [loginError, setLoginError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  // Tabs: dashboard, users, apps, tiers, skills, bulk-import, credentials, mcp, logs
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'apps' | 'tiers' | 'skills' | 'bulk-import' | 'credentials' | 'mcp' | 'logs'>('dashboard');
+  // Tabs: dashboard, users, apps, tiers, skills, bulk-import, credentials, mcp, logs, notes
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'apps' | 'tiers' | 'skills' | 'bulk-import' | 'credentials' | 'mcp' | 'logs' | 'notes'>('dashboard');
   const [adminData, setAdminData] = useState<any>(null);
 
   // User & OAuth Tester form
@@ -74,6 +137,94 @@ export default function AdminPage() {
   const [bulkMode, setBulkMode] = useState<'merge' | 'replace'>('merge');
   const [bulkStatus, setBulkStatus] = useState('');
 
+  // Notes / Strategic Roadmap State
+  const [adminNotes, setAdminNotes] = useState<AdminNoteItem[]>(DEFAULT_ADMIN_NOTES);
+  const [noteTitle, setNoteTitle] = useState('');
+  const [noteCategory, setNoteCategory] = useState<'Integration' | 'Home Automation' | 'Voice Assistant' | 'Roadmap'>('Integration');
+  const [notePriority, setNotePriority] = useState<'CRITICAL' | 'HIGH' | 'STRATEGIC'>('HIGH');
+  const [noteDetails, setNoteDetails] = useState('');
+  const [noteSpecs, setNoteSpecs] = useState('');
+  const [notesCopyToast, setNotesCopyToast] = useState('');
+
+  // Load and save notes from/to localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('suchi_admin_strategic_notes');
+      if (saved) {
+        setAdminNotes(JSON.parse(saved));
+      }
+    } catch (e) {}
+  }, []);
+
+  function saveNotes(notes: AdminNoteItem[]) {
+    setAdminNotes(notes);
+    try {
+      localStorage.setItem('suchi_admin_strategic_notes', JSON.stringify(notes));
+    } catch (e) {}
+  }
+
+  function handleAddNote(e: React.FormEvent) {
+    e.preventDefault();
+    if (!noteTitle.trim()) return;
+    const newNote: AdminNoteItem = {
+      id: `note-${Date.now()}`,
+      category: noteCategory,
+      title: noteTitle.trim(),
+      details: noteDetails.trim() || 'No description provided.',
+      specs: noteSpecs.split('\n').map(s => s.trim()).filter(Boolean),
+      status: 'Planned',
+      priority: notePriority,
+      updatedAt: new Date().toISOString().split('T')[0],
+    };
+    saveNotes([newNote, ...adminNotes]);
+    setNoteTitle('');
+    setNoteDetails('');
+    setNoteSpecs('');
+  }
+
+  function handleDeleteNote(id: string) {
+    if (confirm('Delete this strategic roadmap note?')) {
+      saveNotes(adminNotes.filter(n => n.id !== id));
+    }
+  }
+
+  function handleToggleNoteStatus(id: string) {
+    const statuses: Array<AdminNoteItem['status']> = ['Planned', 'In Progress', 'Architecture Ready'];
+    const updated = adminNotes.map(n => {
+      if (n.id === id) {
+        const nextIdx = (statuses.indexOf(n.status) + 1) % statuses.length;
+        return { ...n, status: statuses[nextIdx], updatedAt: new Date().toISOString().split('T')[0] };
+      }
+      return n;
+    });
+    saveNotes(updated);
+  }
+
+  function handleResetNotesToDefault() {
+    if (confirm('Reset roadmap notes to default core specifications?')) {
+      saveNotes(DEFAULT_ADMIN_NOTES);
+    }
+  }
+
+  function handleCopyNotesMarkdown() {
+    let md = '# Suchi Life OS — Executive Architecture & Roadmap Notes\n\n';
+    adminNotes.forEach(note => {
+      md += `## [${note.priority}] ${note.title} (${note.status})\n`;
+      md += `**Category**: ${note.category} | **Last Updated**: ${note.updatedAt}\n\n`;
+      md += `${note.details}\n\n`;
+      if (note.specs.length > 0) {
+        md += '### Implementation Specifications:\n';
+        note.specs.forEach(spec => {
+          md += `- ${spec}\n`;
+        });
+      }
+      md += '\n---\n\n';
+    });
+    navigator.clipboard.writeText(md);
+    setNotesCopyToast('All roadmap notes copied to clipboard as Markdown!');
+    setTimeout(() => setNotesCopyToast(''), 3000);
+  }
+
   // PWA Install Prompt for Admin App
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [isInstallable, setIsInstallable] = useState(false);
@@ -97,6 +248,26 @@ export default function AdminPage() {
         document.head.appendChild(manifestEl);
       }
     } catch (e) {}
+
+    // Auto-detect currently connected Google session email
+    async function checkCurrentSession() {
+      try {
+        const sRes = await fetch('/api/auth/session');
+        if (sRes.ok) {
+          const sData = await sRes.json();
+          if (sData.authenticated && sData.user?.email) {
+            setLoginEmail(prev => prev || sData.user.email);
+          } else {
+            setLoginEmail(prev => prev || 'dhruvabalde@gmail.com');
+          }
+        } else {
+          setLoginEmail(prev => prev || 'dhruvabalde@gmail.com');
+        }
+      } catch (e) {
+        setLoginEmail(prev => prev || 'dhruvabalde@gmail.com');
+      }
+    }
+    checkCurrentSession();
 
     const handler = (e: Event) => {
       e.preventDefault();
@@ -522,6 +693,7 @@ export default function AdminPage() {
           { id: 'credentials', label: 'API Key Pool' },
           { id: 'mcp', label: 'App MCP Server' },
           { id: 'logs', label: 'Audit Logs' },
+          { id: 'notes', label: `Roadmap & Notes (${adminNotes.length})` },
         ].map(tab => (
           <button
             key={tab.id}
@@ -1320,6 +1492,220 @@ export default function AdminPage() {
                   </div>
                 ))
               )}
+            </div>
+          </div>
+        )}
+
+        {/* NOTES & STRATEGIC ROADMAP TAB */}
+        {activeTab === 'notes' && (
+          <div className="space-y-6">
+            {/* Top Toolbar */}
+            <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-lg font-bold text-white">Strategic Architecture & Roadmap Notes</h2>
+                  <span className="bg-indigo-900/60 text-indigo-300 border border-indigo-700/60 px-2 py-0.5 rounded text-[11px] font-semibold">
+                    {adminNotes.length} Core Specifications
+                  </span>
+                </div>
+                <p className="text-xs text-gray-400 mt-1">
+                  Architecture guidelines for Microsoft API integration, smart home automation, and the Suchi wake-word voice agent.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={handleCopyNotesMarkdown}
+                  className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-sm"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                  Copy Notes as Markdown
+                </button>
+                <button
+                  type="button"
+                  onClick={handleResetNotesToDefault}
+                  className="px-3 py-1.5 rounded-lg bg-gray-700 hover:bg-gray-600 text-gray-300 text-xs font-medium transition-colors"
+                >
+                  Reset Defaults
+                </button>
+              </div>
+            </div>
+
+            {notesCopyToast && (
+              <div className="p-3 bg-emerald-950/80 border border-emerald-700 text-emerald-300 rounded-xl text-xs flex items-center gap-2 animate-fadeIn">
+                <svg className="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                {notesCopyToast}
+              </div>
+            )}
+
+            {/* Note Cards List */}
+            <div className="space-y-4">
+              {adminNotes.map((note) => {
+                const priorityColor =
+                  note.priority === 'CRITICAL'
+                    ? 'bg-rose-950/60 border-rose-800 text-rose-300'
+                    : note.priority === 'HIGH'
+                    ? 'bg-amber-950/60 border-amber-800 text-amber-300'
+                    : 'bg-indigo-950/60 border-indigo-800 text-indigo-300';
+
+                const statusColor =
+                  note.status === 'Architecture Ready'
+                    ? 'bg-emerald-950/60 border-emerald-800 text-emerald-300'
+                    : note.status === 'In Progress'
+                    ? 'bg-blue-950/60 border-blue-800 text-blue-300'
+                    : 'bg-gray-800 border-gray-700 text-gray-400';
+
+                return (
+                  <div
+                    key={note.id}
+                    className="bg-gray-800 border border-gray-700 hover:border-gray-600 rounded-xl p-5 transition-colors shadow-sm space-y-3"
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded border ${priorityColor}`}>
+                          {note.priority}
+                        </span>
+                        <span className="text-[10px] uppercase font-semibold px-2 py-0.5 rounded bg-gray-700 text-gray-300">
+                          {note.category}
+                        </span>
+                        <h3 className="font-bold text-base text-white">{note.title}</h3>
+                      </div>
+
+                      <div className="flex items-center gap-2 self-end sm:self-auto">
+                        <button
+                          type="button"
+                          onClick={() => handleToggleNoteStatus(note.id)}
+                          title="Click to toggle status (Planned ➔ In Progress ➔ Architecture Ready)"
+                          className={`text-xs px-2.5 py-1 rounded-lg border font-medium flex items-center gap-1.5 transition-colors ${statusColor}`}
+                        >
+                          <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
+                          <span>{note.status}</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteNote(note.id)}
+                          title="Delete Note"
+                          className="p-1 text-gray-400 hover:text-rose-400 rounded hover:bg-gray-700 transition-colors"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+
+                    <p className="text-xs text-gray-300 leading-relaxed">{note.details}</p>
+
+                    {note.specs && note.specs.length > 0 && (
+                      <div className="bg-gray-900/80 border border-gray-700/80 rounded-lg p-3 space-y-1.5 text-xs">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 block mb-1">
+                          Implementation Specs:
+                        </span>
+                        <ul className="space-y-1.5">
+                          {note.specs.map((spec, sIdx) => (
+                            <li key={sIdx} className="text-gray-300 flex items-start gap-2">
+                              <span className="text-emerald-400 mt-0.5 flex-shrink-0">✓</span>
+                              <span className="leading-snug">{spec}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    <div className="flex items-center justify-between text-[11px] text-gray-500 pt-1">
+                      <span>ID: {note.id}</span>
+                      <span>Last updated: {note.updatedAt}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Add New Note Form */}
+            <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
+              <h3 className="text-sm font-bold text-white mb-1">Add Strategic Note or Architecture Directive</h3>
+              <p className="text-xs text-gray-400 mb-4">Record future technical milestones, protocol requirements, or hardware targets.</p>
+
+              <form onSubmit={handleAddNote} className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">Note Title</label>
+                    <input
+                      type="text"
+                      required
+                      value={noteTitle}
+                      onChange={(e) => setNoteTitle(e.target.value)}
+                      placeholder="e.g. Local LLM Fallback with Ollama on Mac/PC"
+                      className="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">Category</label>
+                    <select
+                      value={noteCategory}
+                      onChange={(e) => setNoteCategory(e.target.value as any)}
+                      className="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
+                    >
+                      <option value="Integration">Integration</option>
+                      <option value="Home Automation">Home Automation</option>
+                      <option value="Voice Assistant">Voice Assistant</option>
+                      <option value="Roadmap">Roadmap</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">Priority</label>
+                    <select
+                      value={notePriority}
+                      onChange={(e) => setNotePriority(e.target.value as any)}
+                      className="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
+                    >
+                      <option value="CRITICAL">CRITICAL</option>
+                      <option value="HIGH">HIGH</option>
+                      <option value="STRATEGIC">STRATEGIC</option>
+                    </select>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">Overview Description</label>
+                    <input
+                      type="text"
+                      value={noteDetails}
+                      onChange={(e) => setNoteDetails(e.target.value)}
+                      placeholder="Executive summary of this architectural note"
+                      className="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">
+                    Implementation Specs & Checklist (One point per line)
+                  </label>
+                  <textarea
+                    rows={4}
+                    value={noteSpecs}
+                    onChange={(e) => setNoteSpecs(e.target.value)}
+                    placeholder="Enter technical specifications, endpoints, or required libraries (one per line)..."
+                    className="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+
+                <div className="flex justify-end">
+                  <button
+                    type="submit"
+                    className="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold px-4 py-2 rounded-lg transition-colors shadow-sm"
+                  >
+                    Save Note to Roadmap
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         )}

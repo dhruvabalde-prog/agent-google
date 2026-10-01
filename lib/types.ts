@@ -13,6 +13,15 @@ export interface ChatMessage {
   content: string;
   actions?: ActionResult[];
   pendingDraft?: DraftInfo;
+  pendingImagePrompt?: ImagePromptProposal;
+}
+
+export interface ImagePromptProposal {
+  proposalId: string;
+  originalPrompt: string;
+  improvedPrompt: string;
+  aspectRatio: string;
+  status: 'pending' | 'approved' | 'rejected';
 }
 
 export interface ActionResult {
@@ -20,6 +29,8 @@ export interface ActionResult {
   summary: string;
   success: boolean;
   link?: string;
+  imageUrl?: string;
+  data?: any;
 }
 
 export interface DraftInfo {

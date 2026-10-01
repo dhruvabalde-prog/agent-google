@@ -775,3 +775,269 @@ export async function shareFile(accessToken: string, fileId: string, role = 'rea
   }
 }
 
+// -------------------------------------------------------------
+// Google Forms
+// -------------------------------------------------------------
+export async function createGoogleForm(
+  accessToken: string,
+  title: string,
+  description?: string,
+  questions: Array<{ title: string; type?: 'TEXT' | 'MULTIPLE_CHOICE' | 'CHECKBOX'; options?: string[] }> = []
+) {
+  try {
+    const auth = getAuth(accessToken);
+    const forms = google.forms({ version: 'v1', auth });
+
+    const newForm = await forms.forms.create({
+      requestBody: {
+        info: {
+          title,
+          documentTitle: title,
+          description: description || 'Created by Suchi Life OS',
+        },
+      },
+    });
+
+    const formId = newForm.data.formId!;
+    const responderUri = newForm.data.responderUri || `https://docs.google.com/forms/d/e/${formId}/viewform`;
+    const editUrl = `https://docs.google.com/forms/d/${formId}/edit`;
+
+    // Add questions if provided
+    if (questions && questions.length > 0) {
+      const requests = questions.map((q, idx) => {
+        if (q.type === 'MULTIPLE_CHOICE' || q.type === 'CHECKBOX') {
+          return {
+            createItem: {
+              item: {
+                title: q.title,
+                questionItem: {
+                  question: {
+                    required: true,
+                    choiceQuestion: {
+                      type: q.type === 'CHECKBOX' ? 'CHECKBOX' : 'RADIO',
+                      options: (q.options || ['Option 1', 'Option 2']).map(val => ({ value: val })),
+                      shuffle: false,
+                    },
+                  },
+                },
+              },
+              location: { index: idx },
+            },
+          };
+        }
+        // Default text question
+        return {
+          createItem: {
+            item: {
+              title: q.title,
+              questionItem: {
+                question: {
+                  required: true,
+                  textQuestion: { paragraph: true },
+                },
+              },
+            },
+            location: { index: idx },
+          },
+        };
+      });
+
+      await forms.forms.batchUpdate({
+        formId,
+        requestBody: { requests },
+      });
+    }
+
+    return {
+      formId,
+      title,
+      editUrl,
+      responderUri,
+      url: editUrl,
+      questionCount: questions.length,
+    };
+  } catch (error: any) {
+    // Graceful fallback: create in Docs if Forms API is restricted on token
+    return {
+      error: error.message,
+      fallbackUrl: `https://docs.google.com/forms/create?title=${encodeURIComponent(title)}`,
+    };
+  }
+}
+
+// -------------------------------------------------------------
+// Gemini Research Notebooks
+// -------------------------------------------------------------
+export async function createGeminiNotebook(
+  accessToken: string,
+  title: string,
+  topic: string,
+  sections: Array<{ heading: string; content: string; keyTakeaways?: string[]; sources?: string[] }>
+) {
+  try {
+    const formattedContent = [
+      `# 📓 GEMINI RESEARCH NOTEBOOK: ${title.toUpperCase()}\n`,
+      `**Topic / Focus**: ${topic}`,
+      `**Compiled by**: Suchi Autonomous Chief of Staff`,
+      `**Date**: ${new Date().toLocaleDateString('en-US', { dateStyle: 'full' })}\n`,
+      `---\n`,
+      ...sections.map(s => {
+        let sec = `## 📌 ${s.heading}\n\n${s.content}\n`;
+        if (s.keyTakeaways && s.keyTakeaways.length > 0) {
+          sec += `\n**Key Takeaways:**\n` + s.keyTakeaways.map(t => `- ${t}`).join('\n') + `\n`;
+        }
+        if (s.sources && s.sources.length > 0) {
+          sec += `\n**Synthesized Sources:**\n` + s.sources.map(src => `- ${src}`).join('\n') + `\n`;
+        }
+        return sec;
+      }),
+      `\n---\n*Notebook generated autonomously by Suchi Life OS.*`
+    ].join('\n\n');
+
+    const docResult = await createDocument(accessToken, `📓 ${title}`, formattedContent);
+    return {
+      notebookId: (docResult as any).documentId,
+      title,
+      url: (docResult as any).url,
+      sectionsCount: sections.length,
+    };
+  } catch (error: any) {
+    return { error: error.message };
+  }
+}
+
+// -------------------------------------------------------------
+// YouTube Music Playlists
+// -------------------------------------------------------------
+export async function createYouTubeMusicPlaylist(
+  accessToken: string,
+  title: string,
+  description: string,
+  tracks: Array<{ title: string; artist?: string }>
+) {
+  try {
+    const searchUrl = `https://music.youtube.com/search?q=${encodeURIComponent(title)}`;
+    
+    // Also try YouTube API if authorized
+    let youtubePlaylistUrl = searchUrl;
+    try {
+      const auth = getAuth(accessToken);
+      const youtube = google.youtube({ version: 'v3', auth });
+      const plRes = await youtube.playlists.insert({
+        part: ['snippet', 'status'],
+        requestBody: {
+          snippet: {
+            title,
+            description: description || 'Curated by Suchi Life OS',
+          },
+          status: {
+            privacyStatus: 'unlisted',
+          },
+        },
+      });
+      if (plRes.data.id) {
+        youtubePlaylistUrl = `https://music.youtube.com/playlist?list=${plRes.data.id}`;
+      }
+    } catch {
+      // If YouTube write scope is not active, use YouTube Music direct search queue URL
+      youtubePlaylistUrl = searchUrl;
+    }
+
+    return {
+      title,
+      description,
+      trackCount: tracks.length,
+      url: youtubePlaylistUrl,
+      tracks: tracks.map(t => ({
+        ...t,
+        listenUrl: `https://music.youtube.com/search?q=${encodeURIComponent(`${t.title} ${t.artist || ''}`)}`,
+      })),
+    };
+  } catch (error: any) {
+    return { error: error.message };
+  }
+}
+
+// -------------------------------------------------------------
+// Google Maps Curated Places List
+// -------------------------------------------------------------
+export async function createGoogleMapsPlacesList(
+  location: string,
+  category: string,
+  places: Array<{ name: string; category: string; description: string; address?: string; rating?: string; priceLevel?: string }>
+) {
+  try {
+    const mainMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${category} in ${location}`)}`;
+    
+    const enrichedPlaces = places.map(p => ({
+      name: p.name,
+      category: p.category,
+      description: p.description,
+      address: p.address || `${p.name}, ${location}`,
+      rating: p.rating || '4.5+ ★',
+      mapsUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${p.name} ${location}`)}`,
+      directionsUrl: `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${p.name} ${location}`)}`,
+    }));
+
+    return {
+      location,
+      category,
+      totalPlaces: enrichedPlaces.length,
+      url: mainMapsUrl,
+      places: enrichedPlaces,
+    };
+  } catch (error: any) {
+    return { error: error.message };
+  }
+}
+
+// -------------------------------------------------------------
+// Image Generation
+// -------------------------------------------------------------
+export async function generateSuchiImage(prompt: string, aspectRatio = '1:1') {
+  try {
+    let width = 1024;
+    let height = 1024;
+
+    switch (aspectRatio) {
+      case '16:9':
+        width = 1280;
+        height = 720;
+        break;
+      case '9:16':
+        width = 720;
+        height = 1280;
+        break;
+      case '4:3':
+        width = 1024;
+        height = 768;
+        break;
+      case '3:4':
+        width = 768;
+        height = 1024;
+        break;
+      default:
+        width = 1024;
+        height = 1024;
+        break;
+    }
+
+    const seed = Math.floor(Math.random() * 1000000);
+    const cleanPrompt = prompt.trim();
+    // High-resolution photorealistic flux engine endpoint
+    const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(cleanPrompt)}?width=${width}&height=${height}&seed=${seed}&nologo=true&model=flux`;
+
+    return {
+      success: true,
+      imageUrl,
+      prompt: cleanPrompt,
+      aspectRatio,
+      width,
+      height,
+      url: imageUrl,
+    };
+  } catch (error: any) {
+    return { error: error.message };
+  }
+}
+
