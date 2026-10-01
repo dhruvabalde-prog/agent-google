@@ -74,6 +74,32 @@ export default function Home() {
 
   // Settings & Navigation
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const settingsRef = useRef<HTMLDivElement>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const toastTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const triggerToast = (msg: string) => {
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+    setToastMessage(msg);
+    toastTimeoutRef.current = setTimeout(() => setToastMessage(null), 2500);
+  };
+
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent | TouchEvent) => {
+      if (settingsRef.current && !settingsRef.current.contains(e.target as Node)) {
+        setIsSettingsOpen(false);
+      }
+    };
+    if (isSettingsOpen) {
+      document.addEventListener('mousedown', handleOutsideClick);
+      document.addEventListener('touchstart', handleOutsideClick);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+      document.removeEventListener('touchstart', handleOutsideClick);
+    };
+  }, [isSettingsOpen]);
+
   const [isIncognito, setIsIncognito] = useState(false);
   const [savedNormalChat, setSavedNormalChat] = useState<{
     id: string;
@@ -902,55 +928,62 @@ export default function Home() {
 
         {/* Right: Hub Button, Actions Bell Button & Settings Dropdown */}
         <div className="flex items-center gap-2 sm:gap-2.5">
-          {/* Life OS Hub Button (Tasks, Routines, Goals) */}
-          <Link
-            href="/hub"
-            title="Tasks, Routines & Goals Hub"
-            className={`relative w-10 h-10 rounded-xl border text-xs font-medium transition-all flex items-center justify-center hover:scale-105 active:scale-95 ${
-              isIncognito
-                ? 'border-purple-800/60 bg-purple-950/60 hover:bg-purple-900/60 text-purple-300'
-                : isDarkMode
-                ? 'border-slate-800 bg-slate-900 hover:bg-slate-800 text-emerald-400'
-                : 'border-slate-200 hover:bg-slate-100 text-emerald-600 bg-white shadow-xs'
-            }`}
-          >
-            <svg className="w-5 h-5 text-emerald-500 dark:text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-            </svg>
-          </Link>
-
-          {/* Bell Button (Shows Actions Page / Deck) */}
+          {/* Locked Life OS Hub Button (Tasks, Routines, Goals) */}
           <button
             type="button"
-            onClick={() => { fetchActionCards(); setIsActionsDeckOpen(true); }}
-            title="Suchi Actions & Background Work"
-            className={`relative w-10 h-10 rounded-xl border text-xs font-medium transition-all flex items-center justify-center hover:scale-105 active:scale-95 ${
+            onClick={() => triggerToast('Tasks, Routines & Goals is locked')}
+            title="Tasks, Routines & Goals (Locked)"
+            className={`relative w-10 h-10 rounded-xl border text-xs font-medium transition-all flex items-center justify-center hover:opacity-90 active:scale-95 ${
               isIncognito
-                ? 'border-purple-800/60 bg-purple-950/60 hover:bg-purple-900/60 text-purple-300'
+                ? 'border-purple-800/40 bg-purple-950/40 text-purple-300/80'
                 : isDarkMode
-                ? 'border-slate-800 bg-slate-900 hover:bg-slate-800 text-slate-200'
-                : 'border-slate-200 hover:bg-slate-100 text-slate-700 bg-white shadow-xs'
+                ? 'border-zinc-800 bg-zinc-900/90 text-zinc-400'
+                : 'border-zinc-200/90 hover:bg-zinc-100/80 text-zinc-600 bg-white/90 shadow-2xs'
             }`}
           >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+            <svg className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
             </svg>
-            {unreadActionsCount > 0 && (
-              <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[9px] font-bold text-white shadow-xs animate-pulse">
-                {unreadActionsCount}
-              </span>
-            )}
+            <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-zinc-700 dark:bg-zinc-800 text-zinc-300 border border-zinc-600 dark:border-zinc-700 shadow-2xs">
+              <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+            </span>
           </button>
 
-          <div className="relative">
+          {/* Locked Bell Button (Shows Actions Page / Deck) */}
+          <button
+            type="button"
+            onClick={() => triggerToast('Actions Feed is locked')}
+            title="Actions & Work Feed (Locked)"
+            className={`relative w-10 h-10 rounded-xl border text-xs font-medium transition-all flex items-center justify-center hover:opacity-90 active:scale-95 ${
+              isIncognito
+                ? 'border-purple-800/40 bg-purple-950/40 text-purple-300/80'
+                : isDarkMode
+                ? 'border-zinc-800 bg-zinc-900/90 text-zinc-400'
+                : 'border-zinc-200/90 hover:bg-zinc-100/80 text-zinc-600 bg-white/90 shadow-2xs'
+            }`}
+          >
+            <svg className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+            </svg>
+            <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-zinc-700 dark:bg-zinc-800 text-zinc-300 border border-zinc-600 dark:border-zinc-700 shadow-2xs">
+              <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+            </span>
+          </button>
+
+          {/* Settings Trigger with Click-Outside Ref */}
+          <div ref={settingsRef} className="relative">
             <button
               onClick={() => setIsSettingsOpen(!isSettingsOpen)}
               className={`h-10 px-2 sm:px-2.5 rounded-xl border text-xs font-medium transition-all flex items-center gap-1.5 hover:scale-105 active:scale-95 ${
                 isIncognito
                   ? 'border-purple-800/60 bg-purple-950/60 hover:bg-purple-900/60 text-purple-300'
                   : isDarkMode
-                  ? 'border-slate-800 bg-slate-900 hover:bg-slate-800 text-slate-200'
-                  : 'border-slate-200 hover:bg-slate-100 text-slate-700 bg-white shadow-xs'
+                  ? 'border-zinc-800 bg-zinc-900 hover:bg-zinc-800 text-zinc-200'
+                  : 'border-zinc-200 hover:bg-zinc-100 text-zinc-700 bg-white shadow-2xs'
               }`}
             >
               {user ? (
@@ -960,194 +993,156 @@ export default function Home() {
               )}
             </button>
 
-            {/* Dropdown Menu */}
+            {/* Simplistic, Minimalist Dropdown Menu */}
             {isSettingsOpen && (
-              <div className={`absolute right-0 mt-2 w-60 border rounded-2xl shadow-2xl py-2.5 z-50 text-xs backdrop-blur-md transition-all ${
+              <div className={`absolute right-0 mt-2 w-56 border rounded-2xl shadow-xl py-1.5 z-50 text-xs backdrop-blur-md transition-all ${
                 isIncognito
-                  ? 'bg-[#1a142e] border-purple-800/70 text-purple-100'
+                  ? 'bg-[#151124]/95 border-purple-900/50 text-zinc-300'
                   : isDarkMode
-                  ? 'bg-[#151f30] border-slate-700/80 text-slate-100'
-                  : 'bg-white border-slate-200 text-slate-700'
+                  ? 'bg-zinc-900/95 border-zinc-800 text-zinc-300'
+                  : 'bg-white/95 border-zinc-200 text-zinc-700 shadow-black/5'
               }`}>
                 {user ? (
                   <>
-                    <div className="px-3.5 py-2 border-b border-gray-100 dark:border-gray-800/80 font-semibold text-gray-900 dark:text-gray-100 truncate flex items-center justify-between">
-                      <span className="truncate">{user.name}</span>
-                      <span className="text-[10px] text-gray-400 font-normal">Active</span>
+                    <div className="px-3.5 py-2 border-b border-zinc-100 dark:border-zinc-800/80 mb-1">
+                      <p className="font-semibold text-zinc-900 dark:text-zinc-100 truncate">{user.name}</p>
+                      <p className="text-[10px] text-zinc-400 dark:text-zinc-500 truncate">{user.email}</p>
                     </div>
 
-                    {/* Life OS Hub Option */}
-                    <Link
-                      href="/hub"
-                      onClick={() => setIsSettingsOpen(false)}
-                      className="w-full text-left px-3.5 py-2 hover:bg-black/5 dark:hover:bg-white/5 flex items-center justify-between font-medium text-emerald-600 dark:text-emerald-400"
-                    >
-                      <span className="flex items-center gap-2">
-                        <svg className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-                        </svg>
-                        <span>Tasks, Routines & Goals</span>
-                      </span>
-                      <span className="text-[10px] bg-emerald-100 dark:bg-emerald-950 px-1.5 py-0.5 rounded text-emerald-700 dark:text-emerald-300 font-semibold">
-                        Hub
-                      </span>
-                    </Link>
-
-                    {/* Actions Feed Option */}
+                    {/* Appearance (Theme) Toggle */}
                     <button
-                      onClick={() => { fetchActionCards(); setIsActionsDeckOpen(true); setIsSettingsOpen(false); }}
-                      className="w-full text-left px-3.5 py-2 hover:bg-black/5 dark:hover:bg-white/5 flex items-center justify-between font-medium text-indigo-600 dark:text-indigo-400"
-                    >
-                      <span className="flex items-center gap-2">
-                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                        </svg>
-                        <span>Actions & Work Feed</span>
-                      </span>
-                      {unreadActionsCount > 0 && (
-                        <span className="text-[10px] bg-rose-100 dark:bg-rose-950 px-1.5 py-0.5 rounded text-rose-700 dark:text-rose-300 font-bold">
-                          {unreadActionsCount}
-                        </span>
-                      )}
-                    </button>
-
-                    {/* Install App Option */}
-                    <button
-                      onClick={() => { handleInstallApp(); setIsSettingsOpen(false); }}
-                      className="w-full text-left px-3.5 py-2 hover:bg-black/5 dark:hover:bg-white/5 flex items-center justify-between text-blue-600 dark:text-blue-400 font-medium"
-                    >
-                      <span className="flex items-center gap-2">
-                        <svg className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                        </svg>
-                        <span>Install Suchi App</span>
-                      </span>
-                      {isInstallable && <span className="bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 text-[9px] px-1.5 py-0.5 rounded font-bold">READY</span>}
-                    </button>
-
-                    {/* Light / Dark Mode Toggle */}
-                    <button
+                      type="button"
                       onClick={toggleDarkMode}
-                      className="w-full text-left px-3.5 py-2 hover:bg-black/5 dark:hover:bg-white/5 flex items-center justify-between"
+                      className="w-full text-left px-3 py-2 hover:bg-zinc-100 dark:hover:bg-zinc-800/70 rounded-lg mx-auto flex items-center justify-between transition-colors"
                     >
-                      <span className="flex items-center gap-2">
+                      <span className="flex items-center gap-2.5">
                         {isDarkMode ? (
-                          <svg className="w-3.5 h-3.5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                          <svg className="w-3.5 h-3.5 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
                           </svg>
                         ) : (
-                          <svg className="w-3.5 h-3.5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                          <svg className="w-3.5 h-3.5 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
                           </svg>
                         )}
                         <span>{isDarkMode ? 'Light Mode' : 'Dark Mode'}</span>
                       </span>
-                      <span className="text-[10px] text-gray-400 font-mono">{isDarkMode ? 'DARK' : 'LIGHT'}</span>
-                    </button>
-
-                    {/* Privacy & Security Policy */}
-                    <Link
-                      href="/privacy"
-                      onClick={() => setIsSettingsOpen(false)}
-                      className="w-full text-left px-3.5 py-2 hover:bg-black/5 dark:hover:bg-white/5 flex items-center justify-between text-gray-700 dark:text-gray-300"
-                    >
-                      <span className="flex items-center gap-2">
-                        <svg className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                        </svg>
-                        <span>Privacy & Security</span>
-                      </span>
-                      <span className="text-[10px] text-gray-400">Policy</span>
-                    </Link>
-
-                    {/* Chats Archive */}
-                    <button
-                      onClick={openArchive}
-                      className="w-full text-left px-3.5 py-2 hover:bg-black/5 dark:hover:bg-white/5 flex items-center justify-between"
-                    >
-                      <span className="flex items-center gap-2">
-                        <svg className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
-                        </svg>
-                        <span>Chats Archive</span>
-                      </span>
-                      <span className="text-[10px] text-gray-400">Ctrl+A</span>
-                    </button>
-
-                    {/* Memory (Locked) */}
-                    <button
-                      disabled
-                      title="Memory: Suchi securely stores context given by you across sessions. Memory management controls coming soon."
-                      className="w-full text-left px-3.5 py-2 flex items-center justify-between text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-75"
-                    >
-                      <span className="flex items-center gap-2">
-                        <svg className="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
-                        </svg>
-                        <span>Memory</span>
-                      </span>
-                      <span className="flex items-center gap-1 text-[10px] bg-gray-200 dark:bg-gray-800 text-gray-500 dark:text-gray-400 px-1.5 py-0.5 rounded font-medium">
-                        <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                        </svg>
-                        <span>Locked</span>
-                      </span>
+                      <span className="text-[10px] text-zinc-400 font-mono">{isDarkMode ? 'DARK' : 'LIGHT'}</span>
                     </button>
 
                     {/* Incognito Mode */}
                     <button
-                      onClick={handleToggleIncognito}
-                      className="w-full text-left px-3.5 py-2 hover:bg-black/5 dark:hover:bg-white/5 flex items-center justify-between text-purple-600 dark:text-purple-400 font-medium"
+                      type="button"
+                      onClick={() => { setIsSettingsOpen(false); handleToggleIncognito(); }}
+                      className="w-full text-left px-3 py-2 hover:bg-zinc-100 dark:hover:bg-zinc-800/70 rounded-lg mx-auto flex items-center justify-between transition-colors"
                     >
-                      <span className="flex items-center gap-2">
-                        <svg className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                      <span className="flex items-center gap-2.5">
+                        <svg className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
                         </svg>
                         <span>{isIncognito ? 'Exit Incognito' : 'Incognito Mode'}</span>
                       </span>
-                      <span className="text-[10px] bg-purple-100 dark:bg-purple-950 px-1.5 py-0.5 rounded text-purple-700 dark:text-purple-300 font-semibold">
-                        {isIncognito ? 'Active' : 'Unsaved'}
+                      <span className="text-[10px] text-zinc-400 font-medium">{isIncognito ? 'Active' : 'Off'}</span>
+                    </button>
+
+                    {/* Chats Archive */}
+                    <button
+                      type="button"
+                      onClick={() => { setIsSettingsOpen(false); openArchive(); }}
+                      className="w-full text-left px-3 py-2 hover:bg-zinc-100 dark:hover:bg-zinc-800/70 rounded-lg mx-auto flex items-center justify-between transition-colors"
+                    >
+                      <span className="flex items-center gap-2.5">
+                        <svg className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                        </svg>
+                        <span>Chats Archive</span>
+                      </span>
+                      <span className="text-[10px] text-zinc-400 font-mono">⌘A</span>
+                    </button>
+
+                    {/* Memory (Locked) */}
+                    <button
+                      type="button"
+                      disabled
+                      title="Memory: Suchi securely stores context given by you across sessions. Management controls locked."
+                      className="w-full text-left px-3 py-2 flex items-center justify-between text-zinc-400 dark:text-zinc-500 cursor-not-allowed"
+                    >
+                      <span className="flex items-center gap-2.5">
+                        <svg className="w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
+                        </svg>
+                        <span>Memory</span>
+                      </span>
+                      <span className="text-[10px] text-zinc-400 dark:text-zinc-600 font-medium">Locked</span>
+                    </button>
+
+                    {/* Privacy & Security */}
+                    <Link
+                      href="/privacy"
+                      onClick={() => setIsSettingsOpen(false)}
+                      className="w-full text-left px-3 py-2 hover:bg-zinc-100 dark:hover:bg-zinc-800/70 rounded-lg mx-auto flex items-center justify-between transition-colors"
+                    >
+                      <span className="flex items-center gap-2.5">
+                        <svg className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                        </svg>
+                        <span>Privacy & Security</span>
+                      </span>
+                    </Link>
+
+                    {/* Report Bug / Issue */}
+                    <button
+                      type="button"
+                      onClick={() => { setIsSettingsOpen(false); handleOpenBugModal(); }}
+                      className="w-full text-left px-3 py-2 hover:bg-zinc-100 dark:hover:bg-zinc-800/70 rounded-lg mx-auto flex items-center justify-between transition-colors"
+                    >
+                      <span className="flex items-center gap-2.5">
+                        <svg className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                        <span>Report Bug</span>
                       </span>
                     </button>
 
-                    {/* Send Bug Report / Feedback Option */}
+                    {/* Install App */}
                     <button
-                      onClick={() => { setIsSettingsOpen(false); handleOpenBugModal(); }}
-                      className="w-full text-left px-3.5 py-2 hover:bg-rose-50 dark:hover:bg-rose-950/30 text-rose-600 dark:text-rose-400 flex items-center justify-between font-medium"
+                      type="button"
+                      onClick={() => { setIsSettingsOpen(false); handleInstallApp(); }}
+                      className="w-full text-left px-3 py-2 hover:bg-zinc-100 dark:hover:bg-zinc-800/70 rounded-lg mx-auto flex items-center justify-between transition-colors"
                     >
-                      <span className="flex items-center gap-2">
-                        <svg className="w-3.5 h-3.5 text-rose-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      <span className="flex items-center gap-2.5">
+                        <svg className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                         </svg>
-                        <span>Report Bug / Issue</span>
+                        <span>Install App</span>
                       </span>
-                      <span className="text-[10px] bg-rose-100 dark:bg-rose-950 px-1.5 py-0.5 rounded text-rose-700 dark:text-rose-300">
-                        Help
-                      </span>
+                      {isInstallable && <span className="text-[10px] text-zinc-400 font-mono">PWA</span>}
                     </button>
+
+                    <div className="border-t border-zinc-100 dark:border-zinc-800/80 my-1"></div>
 
                     {/* Delete Chat */}
                     <button
-                      onClick={handleDeleteCurrentChat}
-                      className="w-full text-left px-3.5 py-2 hover:bg-red-50 dark:hover:bg-red-950/30 text-red-600 dark:text-red-400 flex items-center gap-2"
+                      type="button"
+                      onClick={() => { setIsSettingsOpen(false); handleDeleteCurrentChat(); }}
+                      className="w-full text-left px-3 py-2 hover:bg-red-500/10 text-red-600 dark:text-red-400 rounded-lg mx-auto flex items-center gap-2.5 transition-colors"
                     >
-                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                       </svg>
                       <span>Delete Chat</span>
                     </button>
 
-                    <div className="border-t border-gray-100 dark:border-gray-800 my-1"></div>
-
                     {/* Sign Out */}
                     <button
-                      onClick={handleLogout}
-                      className="w-full text-left px-3.5 py-2 hover:bg-black/5 dark:hover:bg-white/5 text-gray-500 dark:text-gray-400 flex items-center gap-2"
+                      type="button"
+                      onClick={() => { setIsSettingsOpen(false); handleLogout(); }}
+                      className="w-full text-left px-3 py-2 hover:bg-zinc-100 dark:hover:bg-zinc-800/70 text-zinc-500 dark:text-zinc-400 rounded-lg mx-auto flex items-center gap-2.5 transition-colors"
                     >
-                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                       </svg>
-                      <span>Disconnect Google / Sign Out</span>
+                      <span>Sign Out</span>
                     </button>
                   </>
                 ) : (
@@ -1695,7 +1690,7 @@ export default function Home() {
                 placeholder={
                   isChatLocked
                     ? 'This chat reached its outcome and is locked. Use context in a new chat.'
-                    : 'suchi ek kaam hai...'
+                    : 'Suchi suno...'
                 }
                 className={`w-full resize-none px-4 pt-3 pb-1 bg-transparent text-base sm:text-sm min-h-[44px] focus:outline-none transition-colors ${
                   isIncognito
@@ -2115,6 +2110,16 @@ export default function Home() {
         <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 bg-emerald-600 text-white px-4 py-2.5 rounded-2xl shadow-xl flex items-center gap-2 text-xs font-semibold animate-bounce">
           <span>✓</span>
           <span>{bugToast}</span>
+        </div>
+      )}
+
+      {/* FLOATING ACTION NOTIFICATION TOAST */}
+      {toastMessage && (
+        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 bg-zinc-900/95 dark:bg-zinc-800 text-zinc-100 border border-zinc-700/80 px-4 py-2 rounded-full shadow-2xl flex items-center gap-2 text-xs font-medium backdrop-blur-md transition-all">
+          <svg className="w-3.5 h-3.5 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+          </svg>
+          <span>{toastMessage}</span>
         </div>
       )}
 

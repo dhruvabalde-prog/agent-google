@@ -51,12 +51,12 @@ const DEFAULT_ADMIN_NOTES: AdminNoteItem[] = [
   {
     id: 'note-suchi-wake-word-assistant',
     category: 'Voice Assistant',
-    title: 'Suchi Voice Assistant — Wake Word "Suchi ek kaam hai" & Default Agent',
-    details: 'Full voice assistant capability triggered by "Suchi ek kaam hai" hotword, configurable as the default digital assistant across mobile and desktop devices.',
+    title: 'Suchi Voice Assistant — Wake Word "Suchi suno" & Default Agent',
+    details: 'Full voice assistant capability triggered by "Suchi suno" hotword, configurable as the default digital assistant across mobile and desktop devices.',
     specs: [
-      'Dedicated local on-device wake-word detection engine listening for "Suchi ek kaam hai" (0ms latency, zero cloud audio streaming until hotword matches).',
+      'Dedicated local on-device wake-word detection engine listening for "Suchi suno" (0ms latency, zero cloud audio streaming until hotword matches).',
       'Configurable as Default Digital Assistant app on Android (android.service.voice.VoiceInteractionService) replacing Google Assistant on long-press home or power button.',
-      'iOS Action Button & Siri Shortcut integration: trigger hands-free voice prompt via "Hey Siri, Suchi ek kaam hai".',
+      'iOS Action Button & Siri Shortcut integration: trigger hands-free voice prompt via "Hey Siri, Suchi suno".',
       'High-cadence natural voice streaming with real-time Speech-to-Text and Text-to-Speech audio response playback.',
       'Zero-audio privacy guarantee: local Voice Activity Detection (VAD) discards all ambient chatter; audio snippets are never retained or logged.'
     ],
