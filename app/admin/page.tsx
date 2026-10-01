@@ -74,9 +74,51 @@ export default function AdminPage() {
   const [bulkMode, setBulkMode] = useState<'merge' | 'replace'>('merge');
   const [bulkStatus, setBulkStatus] = useState('');
 
+  // PWA Install Prompt for Admin App
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [isInstallable, setIsInstallable] = useState(false);
+  const [installHelperOpen, setInstallHelperOpen] = useState(false);
+
   useEffect(() => {
     fetchAdminData();
+
+    // Set page title for Admin Console PWA
+    document.title = 'Suchi Admin Console';
+
+    // Switch manifest link to /manifest-admin.json for Admin PWA standalone installation
+    try {
+      let manifestEl = document.querySelector('link[rel="manifest"]') as HTMLLinkElement | null;
+      if (manifestEl) {
+        manifestEl.href = '/manifest-admin.json';
+      } else {
+        manifestEl = document.createElement('link');
+        manifestEl.rel = 'manifest';
+        manifestEl.href = '/manifest-admin.json';
+        document.head.appendChild(manifestEl);
+      }
+    } catch (e) {}
+
+    const handler = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setIsInstallable(true);
+    };
+    window.addEventListener('beforeinstallprompt', handler);
+    return () => window.removeEventListener('beforeinstallprompt', handler);
   }, []);
+
+  const handleInstallAdminApp = async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        setIsInstallable(false);
+        setDeferredPrompt(null);
+      }
+    } else {
+      setInstallHelperOpen(true);
+    }
+  };
 
   async function fetchAdminData() {
     try {
@@ -373,13 +415,46 @@ export default function AdminPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-medium py-2.5 rounded-lg text-sm transition-colors"
+              className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-medium py-2.5 rounded-lg text-sm transition-colors shadow-lg shadow-indigo-600/20"
             >
               {isLoading ? 'Verifying...' : 'Unlock Console'}
             </button>
           </form>
 
-          <div className="mt-6 text-center">
+          {/* Download Admin App PWA Button */}
+          <div className="mt-5 pt-5 border-t border-gray-700/60">
+            <button
+              type="button"
+              onClick={handleInstallAdminApp}
+              className="w-full bg-slate-700/80 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-600 rounded-xl px-4 py-2.5 text-xs font-semibold flex items-center justify-center gap-2 transition-all shadow-sm"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 text-indigo-400">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+              Download Suchi Admin App (PWA)
+            </button>
+
+            {installHelperOpen && (
+              <div className="mt-3 text-left bg-gray-900/90 border border-gray-700 rounded-xl p-3.5 text-[11px] text-gray-300 space-y-1.5 shadow-inner">
+                <p className="font-semibold text-indigo-300 flex items-center gap-1.5">
+                  <span>📱</span> Install Suchi Admin App on Device:
+                </p>
+                <p>• <b>Chrome / Edge (Desktop & Android):</b> Click the Install icon in your browser address bar or menu ➔ &quot;Install Suchi Admin Console&quot;.</p>
+                <p>• <b>Safari (iPhone / iPad):</b> Tap Share <span className="text-blue-400 font-bold">⎋</span> ➔ &quot;Add to Home Screen&quot;.</p>
+                <button
+                  type="button"
+                  onClick={() => setInstallHelperOpen(false)}
+                  className="mt-2 text-[10px] text-gray-400 hover:text-white underline block text-right w-full"
+                >
+                  Close instructions
+                </button>
+              </div>
+            )}
+          </div>
+
+          <div className="mt-4 text-center">
             <Link href="/" className="text-xs text-gray-400 hover:text-white underline">
               ← Return to Chat
             </Link>
@@ -409,6 +484,18 @@ export default function AdminPage() {
         </div>
 
         <div className="flex items-center gap-2 self-end sm:self-auto">
+          <button
+            onClick={handleInstallAdminApp}
+            className="text-xs bg-slate-700/90 hover:bg-slate-700 text-indigo-300 border border-slate-600 px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors"
+            title="Install Suchi Admin App"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5 text-indigo-400">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            Download App
+          </button>
           <Link href="/" className="text-xs bg-gray-700 hover:bg-gray-600 text-white px-3 py-1.5 rounded-lg transition-colors">
             Go to Chat
           </Link>
