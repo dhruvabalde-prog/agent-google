@@ -127,6 +127,8 @@ export default function AdminPage() {
         const data = await res.json();
         setAdminData(data);
         setIsAdminLoggedIn(true);
+        // Automatically run live GCP Console tracking diagnostics
+        handleRunGcpAudit();
       } else {
         setIsAdminLoggedIn(false);
       }
@@ -576,6 +578,64 @@ export default function AdminPage() {
                   <p className="text-gray-400 mt-1">Data firewall filters identity tokens before export.</p>
                 </div>
               </div>
+            </div>
+
+            {/* Google Cloud Console Live Tracking Card */}
+            <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-700 pb-3 mb-4">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                  <h2 className="text-base font-bold text-white">Google Cloud Console Tracking (Project #143315250482)</h2>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleRunGcpAudit}
+                    disabled={isAuditingGcp}
+                    className="text-xs bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-medium px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1"
+                  >
+                    <span>{isAuditingGcp ? 'Auditing...' : 'Run Audit'}</span>
+                  </button>
+                  <a
+                    href="https://console.cloud.google.com/apis/dashboard?project=143315250482"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-xs bg-gray-700 hover:bg-gray-600 text-gray-200 px-3 py-1.5 rounded-lg transition-colors"
+                  >
+                    Open GCP Console ↗
+                  </a>
+                </div>
+              </div>
+
+              {gcpAudit ? (
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 text-xs">
+                  <div className="p-3 bg-gray-700/30 rounded border border-gray-700">
+                    <span className="text-[10px] text-gray-400 uppercase font-semibold">Gemini API Status</span>
+                    <p className="text-emerald-400 font-bold mt-1">{gcpAudit.diagnostics.geminiAi.status}</p>
+                    <p className="text-[11px] text-gray-400 mt-0.5">{gcpAudit.diagnostics.geminiAi.latencyMs}ms latency</p>
+                  </div>
+                  <div className="p-3 bg-gray-700/30 rounded border border-gray-700">
+                    <span className="text-[10px] text-gray-400 uppercase font-semibold">OAuth Client Status</span>
+                    <p className="text-emerald-400 font-bold mt-1">{gcpAudit.diagnostics.oauthClient.status}</p>
+                    <p className="text-[11px] text-gray-400 mt-0.5 truncate">{gcpAudit.diagnostics.oauthClient.clientIdMasked}</p>
+                  </div>
+                  <div className="p-3 bg-gray-700/30 rounded border border-gray-700">
+                    <span className="text-[10px] text-gray-400 uppercase font-semibold">OAuth Test Users</span>
+                    <p className="text-indigo-400 font-bold mt-1">{gcpAudit.testUsers.count} / 100 Whitelisted</p>
+                    <p className="text-[11px] text-gray-400 mt-0.5">{gcpAudit.testUsers.remainingSlots} slots remaining</p>
+                  </div>
+                  <div className="p-3 bg-gray-700/30 rounded border border-gray-700">
+                    <span className="text-[10px] text-gray-400 uppercase font-semibold">Database Persistence</span>
+                    <p className={`font-bold mt-1 ${gcpAudit.diagnostics.database.isPersistent ? 'text-emerald-400' : 'text-amber-400'}`}>
+                      {gcpAudit.diagnostics.database.isPersistent ? 'POSTGRES ACTIVE' : 'IN-MEMORY RESILIENT'}
+                    </p>
+                    <p className="text-[11px] text-gray-400 mt-0.5">Auto-synced state</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-xs text-gray-400 py-2 flex items-center gap-2">
+                  <span className="animate-spin text-sm">🔄</span> Connecting live telemetry to Google Cloud Project 143315250482...
+                </div>
+              )}
             </div>
           </div>
         )}
