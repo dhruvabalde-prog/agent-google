@@ -38,6 +38,7 @@ interface ActionCardsDeckProps {
   onRejectDraft?: (draftId: string) => Promise<void>;
   onMarkReviewed?: (cardId: string) => void;
   isDarkMode?: boolean;
+  isIncognito?: boolean;
 }
 
 export default function ActionCardsDeck({
@@ -48,6 +49,7 @@ export default function ActionCardsDeck({
   onRejectDraft,
   onMarkReviewed,
   isDarkMode = false,
+  isIncognito = false,
 }: ActionCardsDeckProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
@@ -177,7 +179,11 @@ export default function ActionCardsDeck({
   return (
     <div
       className={`fixed inset-0 z-50 flex flex-col h-[100dvh] w-full select-none overflow-hidden transition-colors ${
-        isDarkMode ? 'bg-gray-950 text-gray-100' : 'bg-slate-900 text-white'
+        isIncognito
+          ? 'bg-[#0f0c1b] text-purple-100'
+          : isDarkMode
+          ? 'bg-[#0b0f19] text-gray-100'
+          : 'bg-slate-900 text-white'
       }`}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}

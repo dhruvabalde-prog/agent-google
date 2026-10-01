@@ -133,6 +133,73 @@ export default function Home() {
   const [actionCards, setActionCards] = useState<ActionCardItem[]>([]);
   const [unreadActionsCount, setUnreadActionsCount] = useState<number>(0);
 
+  // Bug Reporting & Telemetry State
+  const [isBugModalOpen, setIsBugModalOpen] = useState<boolean>(false);
+  const [bugIssueType, setBugIssueType] = useState<string>('tool_failure');
+  const [bugDescription, setBugDescription] = useState<string>('');
+  const [bugTargetMessage, setBugTargetMessage] = useState<ChatMessage | null>(null);
+  const [isSubmittingBug, setIsSubmittingBug] = useState<boolean>(false);
+  const [bugToast, setBugToast] = useState<string | null>(null);
+
+  function handleOpenBugModal(msg?: ChatMessage) {
+    setBugTargetMessage(msg || null);
+    if (msg && msg.actions && msg.actions.some(a => !a.success)) {
+      setBugIssueType('tool_failure');
+    } else if (msg && msg.content && msg.content.includes('Sorry, something went wrong')) {
+      setBugIssueType('tool_failure');
+    } else {
+      setBugIssueType('other');
+    }
+    setBugDescription('');
+    setIsBugModalOpen(true);
+  }
+
+  async function handleSubmitBugReport() {
+    setIsSubmittingBug(true);
+    try {
+      const helpOptIn = typeof window !== 'undefined' ? localStorage.getItem('help_suchi_improve') !== 'false' : true;
+      const failedAction = bugTargetMessage?.actions?.find(a => !a.success);
+
+      const payload = {
+        userEmail: user?.email || 'user@suchi.ai',
+        userName: user?.name || 'Suchi User',
+        issueType: bugIssueType,
+        summary: bugDescription.slice(0, 100) || (failedAction ? `Tool ${failedAction.tool} failed: ${failedAction.summary}` : 'Issue encountered in Suchi chat'),
+        userDescription: bugDescription,
+        lastUserMessage: messages.filter(m => m.role === 'user').slice(-1)[0]?.content || '',
+        lastAssistantResponse: bugTargetMessage?.content || messages.filter(m => m.role === 'assistant').slice(-1)[0]?.content || '',
+        failedAction: failedAction || null,
+        diagnostics: {
+          userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'Unknown',
+          platform: typeof navigator !== 'undefined' ? navigator.platform : 'Unknown',
+          screenSize: typeof window !== 'undefined' ? `${window.innerWidth}x${window.innerHeight}` : 'Unknown',
+          url: typeof window !== 'undefined' ? window.location.href : '/',
+          helpOptIn,
+          systemStatus: 'Online',
+        },
+      };
+
+      const res = await fetch('/api/bugs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        setIsBugModalOpen(false);
+        setBugToast('Bug report sent to engineering. Thank you for helping Suchi get better!');
+        setTimeout(() => setBugToast(null), 5000);
+      } else {
+        alert('Could not submit bug report. Please try again.');
+      }
+    } catch (e) {
+      console.error('Failed to submit bug report:', e);
+      alert('Network error submitting bug report.');
+    } finally {
+      setIsSubmittingBug(false);
+    }
+  }
+
   async function fetchActionCards() {
     try {
       const res = await fetch('/api/actions');
@@ -752,47 +819,63 @@ export default function Home() {
 
   return (
     <div className={`flex flex-col h-[100dvh] overflow-hidden ${
-      isDarkMode
-        ? (isIncognito ? 'bg-purple-950 text-purple-100' : 'bg-gray-950 text-gray-100')
-        : (isIncognito ? 'bg-purple-900 text-white' : 'bg-gray-50 text-gray-900')
+      isIncognito
+        ? 'bg-[#0f0c1b] text-purple-100 selection:bg-purple-500/30'
+        : isDarkMode
+        ? 'bg-[#0b0f19] text-slate-100 selection:bg-blue-500/30'
+        : 'bg-[#f8fafc] text-slate-900 selection:bg-blue-500/20'
     }`}>
-      {/* HEADER */}
-      <header className={`h-14 border-b px-3 sm:px-4 flex items-center justify-between z-20 transition-colors ${
-        isDarkMode
-          ? (isIncognito ? 'bg-purple-900/80 border-purple-800' : 'bg-gray-900 border-gray-800 text-white')
-          : (isIncognito ? 'bg-purple-900 border-purple-800 text-white' : 'bg-white border-gray-200 text-gray-900')
+      {/* HEADER - Sized comfortable & pretty for phones & desktops */}
+      <header className={`h-16 border-b px-3.5 sm:px-5 flex items-center justify-between z-20 transition-all ${
+        isIncognito
+          ? 'bg-[#151125]/90 border-purple-900/40 backdrop-blur-md text-purple-100'
+          : isDarkMode
+          ? 'bg-[#111827]/90 border-slate-800/80 backdrop-blur-md text-slate-100'
+          : 'bg-white/90 border-slate-200/80 backdrop-blur-md text-slate-800 shadow-xs'
       }`}>
         {/* Left: Brand - Suchi with Compass Needle */}
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <span className="w-7 h-7 rounded-lg bg-slate-950 border border-slate-800 flex items-center justify-center p-1 shadow-sm">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="18" height="18">
+        <div className="flex items-center gap-2.5 flex-shrink-0">
+          <span className={`w-8 h-8 rounded-xl flex items-center justify-center p-1.5 shadow-sm transition-all ${
+            isIncognito
+              ? 'bg-purple-950 border border-purple-700/60 shadow-purple-950/50'
+              : isDarkMode
+              ? 'bg-slate-900 border border-slate-800'
+              : 'bg-slate-950 border border-slate-800'
+          }`}>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="20" height="20">
               <circle cx="16" cy="16" r="12" fill="none" stroke="#475569" strokeWidth="2"/>
-              <polygon points="16,6.5 19,16 16,14.5" fill="#38bdf8"/>
+              <polygon points="16,6.5 19,16 16,14.5" fill={isIncognito ? '#a855f7' : '#38bdf8'}/>
               <polygon points="16,25.5 19,16 16,17.5" fill="#94a3b8"/>
               <circle cx="16" cy="16" r="2.5" fill="#ffffff"/>
             </svg>
           </span>
           <div className="flex items-baseline gap-1.5">
-            <span className="font-bold text-sm tracking-tight">Suchi</span>
-            <span className="text-[9px] uppercase font-bold tracking-wider text-blue-500 bg-blue-500/10 border border-blue-500/20 px-1 py-0.2 rounded">
+            <span className="font-bold text-base tracking-tight">Suchi</span>
+            <span className={`text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded-full border ${
+              isIncognito
+                ? 'text-purple-400 bg-purple-500/10 border-purple-500/20'
+                : 'text-blue-500 bg-blue-500/10 border-blue-500/20'
+            }`}>
               Life OS
             </span>
           </div>
           {isIncognito && (
-            <span className="text-[10px] bg-purple-900/60 text-purple-300 font-bold px-1.5 py-0.5 rounded-full border border-purple-700">
-              INCOGNITO
+            <span className="text-[10px] bg-purple-500/15 text-purple-300 font-semibold px-2 py-0.5 rounded-full border border-purple-500/30">
+              Incognito
             </span>
           )}
         </div>
 
         {/* Center: Meaningful Outcome Pinned */}
         {meaningfulOutcome && (
-          <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium max-w-[140px] sm:max-w-xs md:max-w-md truncate border transition-all ${
+          <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium max-w-[130px] sm:max-w-xs md:max-w-md truncate border transition-all ${
             outcomeStatus === 'PROPOSED'
-              ? 'bg-amber-50 border-amber-300 text-amber-900 animate-pulse'
+              ? 'bg-amber-500/10 border-amber-500/40 text-amber-400 animate-pulse'
               : outcomeStatus === 'LOCKED'
-              ? 'bg-gray-100 border-gray-300 text-gray-600'
-              : 'bg-blue-50 border-blue-200 text-blue-800'
+              ? 'bg-slate-800/60 border-slate-700 text-slate-400'
+              : isIncognito
+              ? 'bg-purple-900/30 border-purple-700/50 text-purple-200'
+              : 'bg-blue-500/10 border-blue-500/30 text-blue-600 dark:text-blue-400'
           }`}>
             <span className="truncate">🎯 {meaningfulOutcome}</span>
             {!isChatLocked && outcomeStatus === 'PROPOSED' && (
@@ -800,37 +883,56 @@ export default function Home() {
                 <button
                   onClick={handleConfirmOutcome}
                   title="Confirm outcome achieved & lock chat"
-                  className="p-1 hover:bg-amber-200 rounded text-green-700"
+                  className="p-1 hover:bg-amber-200/20 rounded text-emerald-400 font-bold"
                 >
                   ✓
                 </button>
                 <button
                   onClick={handleContinueChat}
                   title="Continue conversation"
-                  className="p-1 hover:bg-amber-200 rounded text-gray-600"
+                  className="p-1 hover:bg-amber-200/20 rounded text-gray-400"
                 >
                   →
                 </button>
               </div>
             )}
-            {isChatLocked && <span className="text-[10px] bg-gray-200 px-1.5 py-0.5 rounded ml-1">Locked</span>}
+            {isChatLocked && <span className="text-[10px] bg-gray-700/50 px-1.5 py-0.5 rounded ml-1">Locked</span>}
           </div>
         )}
 
-        {/* Right: Actions Bell Button & Settings Dropdown */}
-        <div className="flex items-center gap-2">
+        {/* Right: Hub Button, Actions Bell Button & Settings Dropdown */}
+        <div className="flex items-center gap-2 sm:gap-2.5">
+          {/* Life OS Hub Button (Tasks, Routines, Goals) */}
+          <Link
+            href="/hub"
+            title="Tasks, Routines & Goals Hub"
+            className={`relative w-10 h-10 rounded-xl border text-xs font-medium transition-all flex items-center justify-center hover:scale-105 active:scale-95 ${
+              isIncognito
+                ? 'border-purple-800/60 bg-purple-950/60 hover:bg-purple-900/60 text-purple-300'
+                : isDarkMode
+                ? 'border-slate-800 bg-slate-900 hover:bg-slate-800 text-emerald-400'
+                : 'border-slate-200 hover:bg-slate-100 text-emerald-600 bg-white shadow-xs'
+            }`}
+          >
+            <svg className="w-5 h-5 text-emerald-500 dark:text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+            </svg>
+          </Link>
+
           {/* Bell Button (Shows Actions Page / Deck) */}
           <button
             type="button"
             onClick={() => { fetchActionCards(); setIsActionsDeckOpen(true); }}
             title="Suchi Actions & Background Work"
-            className={`relative p-2 rounded-lg border text-xs font-medium transition-colors flex items-center justify-center ${
-              isDarkMode
-                ? 'border-gray-700 bg-gray-800 hover:bg-gray-700 text-gray-200'
-                : 'border-gray-200 hover:bg-gray-100 text-gray-700 bg-white'
+            className={`relative w-10 h-10 rounded-xl border text-xs font-medium transition-all flex items-center justify-center hover:scale-105 active:scale-95 ${
+              isIncognito
+                ? 'border-purple-800/60 bg-purple-950/60 hover:bg-purple-900/60 text-purple-300'
+                : isDarkMode
+                ? 'border-slate-800 bg-slate-900 hover:bg-slate-800 text-slate-200'
+                : 'border-slate-200 hover:bg-slate-100 text-slate-700 bg-white shadow-xs'
             }`}
           >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
             </svg>
             {unreadActionsCount > 0 && (
@@ -843,34 +945,58 @@ export default function Home() {
           <div className="relative">
             <button
               onClick={() => setIsSettingsOpen(!isSettingsOpen)}
-              className={`flex items-center gap-1.5 p-1.5 rounded-lg border text-xs font-medium transition-colors ${
-                isDarkMode
-                  ? 'border-gray-700 bg-gray-800 hover:bg-gray-700 text-gray-200'
-                  : 'border-gray-200 hover:bg-gray-100 text-gray-700'
+              className={`h-10 px-2 sm:px-2.5 rounded-xl border text-xs font-medium transition-all flex items-center gap-1.5 hover:scale-105 active:scale-95 ${
+                isIncognito
+                  ? 'border-purple-800/60 bg-purple-950/60 hover:bg-purple-900/60 text-purple-300'
+                  : isDarkMode
+                  ? 'border-slate-800 bg-slate-900 hover:bg-slate-800 text-slate-200'
+                  : 'border-slate-200 hover:bg-slate-100 text-slate-700 bg-white shadow-xs'
               }`}
             >
               {user ? (
                 <img src={user.picture} alt={user.name} className="w-6 h-6 rounded-full" />
               ) : (
-                <span>Settings ▾</span>
+                <span className="px-1 font-medium">Settings ▾</span>
               )}
             </button>
 
             {/* Dropdown Menu */}
             {isSettingsOpen && (
-              <div className={`absolute right-0 mt-2 w-56 border rounded-xl shadow-xl py-2 z-50 text-xs ${
-                isDarkMode ? 'bg-gray-900 border-gray-700 text-gray-200' : 'bg-white border-gray-200 text-gray-700'
+              <div className={`absolute right-0 mt-2 w-60 border rounded-2xl shadow-2xl py-2.5 z-50 text-xs backdrop-blur-md transition-all ${
+                isIncognito
+                  ? 'bg-[#1a142e] border-purple-800/70 text-purple-100'
+                  : isDarkMode
+                  ? 'bg-[#151f30] border-slate-700/80 text-slate-100'
+                  : 'bg-white border-slate-200 text-slate-700'
               }`}>
                 {user ? (
                   <>
-                    <div className="px-3 py-2 border-b border-gray-100 dark:border-gray-800 font-semibold text-gray-900 dark:text-gray-100 truncate">
-                      {user.name}
+                    <div className="px-3.5 py-2 border-b border-gray-100 dark:border-gray-800/80 font-semibold text-gray-900 dark:text-gray-100 truncate flex items-center justify-between">
+                      <span className="truncate">{user.name}</span>
+                      <span className="text-[10px] text-gray-400 font-normal">Active</span>
                     </div>
+
+                    {/* Life OS Hub Option */}
+                    <Link
+                      href="/hub"
+                      onClick={() => setIsSettingsOpen(false)}
+                      className="w-full text-left px-3.5 py-2 hover:bg-black/5 dark:hover:bg-white/5 flex items-center justify-between font-medium text-emerald-600 dark:text-emerald-400"
+                    >
+                      <span className="flex items-center gap-2">
+                        <svg className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                        </svg>
+                        <span>Tasks, Routines & Goals</span>
+                      </span>
+                      <span className="text-[10px] bg-emerald-100 dark:bg-emerald-950 px-1.5 py-0.5 rounded text-emerald-700 dark:text-emerald-300 font-semibold">
+                        Hub
+                      </span>
+                    </Link>
 
                     {/* Actions Feed Option */}
                     <button
                       onClick={() => { fetchActionCards(); setIsActionsDeckOpen(true); setIsSettingsOpen(false); }}
-                      className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center justify-between font-medium text-indigo-600 dark:text-indigo-400"
+                      className="w-full text-left px-3.5 py-2 hover:bg-black/5 dark:hover:bg-white/5 flex items-center justify-between font-medium text-indigo-600 dark:text-indigo-400"
                     >
                       <span className="flex items-center gap-2">
                         <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -888,7 +1014,7 @@ export default function Home() {
                     {/* Install App Option */}
                     <button
                       onClick={() => { handleInstallApp(); setIsSettingsOpen(false); }}
-                      className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center justify-between text-blue-600 dark:text-blue-400 font-medium"
+                      className="w-full text-left px-3.5 py-2 hover:bg-black/5 dark:hover:bg-white/5 flex items-center justify-between text-blue-600 dark:text-blue-400 font-medium"
                     >
                       <span className="flex items-center gap-2">
                         <svg className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -902,7 +1028,7 @@ export default function Home() {
                     {/* Light / Dark Mode Toggle */}
                     <button
                       onClick={toggleDarkMode}
-                      className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center justify-between"
+                      className="w-full text-left px-3.5 py-2 hover:bg-black/5 dark:hover:bg-white/5 flex items-center justify-between"
                     >
                       <span className="flex items-center gap-2">
                         {isDarkMode ? (
@@ -923,7 +1049,7 @@ export default function Home() {
                     <Link
                       href="/privacy"
                       onClick={() => setIsSettingsOpen(false)}
-                      className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center justify-between text-gray-700 dark:text-gray-300"
+                      className="w-full text-left px-3.5 py-2 hover:bg-black/5 dark:hover:bg-white/5 flex items-center justify-between text-gray-700 dark:text-gray-300"
                     >
                       <span className="flex items-center gap-2">
                         <svg className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -937,7 +1063,7 @@ export default function Home() {
                     {/* Chats Archive */}
                     <button
                       onClick={openArchive}
-                      className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center justify-between"
+                      className="w-full text-left px-3.5 py-2 hover:bg-black/5 dark:hover:bg-white/5 flex items-center justify-between"
                     >
                       <span className="flex items-center gap-2">
                         <svg className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -952,7 +1078,7 @@ export default function Home() {
                     <button
                       disabled
                       title="Memory: Suchi securely stores context given by you across sessions. Memory management controls coming soon."
-                      className="w-full text-left px-3 py-2 flex items-center justify-between text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-75"
+                      className="w-full text-left px-3.5 py-2 flex items-center justify-between text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-75"
                     >
                       <span className="flex items-center gap-2">
                         <svg className="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -971,7 +1097,7 @@ export default function Home() {
                     {/* Incognito Mode */}
                     <button
                       onClick={handleToggleIncognito}
-                      className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center justify-between text-purple-700 dark:text-purple-400 font-medium"
+                      className="w-full text-left px-3.5 py-2 hover:bg-black/5 dark:hover:bg-white/5 flex items-center justify-between text-purple-600 dark:text-purple-400 font-medium"
                     >
                       <span className="flex items-center gap-2">
                         <svg className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -979,15 +1105,31 @@ export default function Home() {
                         </svg>
                         <span>{isIncognito ? 'Exit Incognito' : 'Incognito Mode'}</span>
                       </span>
-                      <span className="text-[10px] bg-purple-100 dark:bg-purple-950 px-1.5 py-0.5 rounded text-purple-700 dark:text-purple-300">
+                      <span className="text-[10px] bg-purple-100 dark:bg-purple-950 px-1.5 py-0.5 rounded text-purple-700 dark:text-purple-300 font-semibold">
                         {isIncognito ? 'Active' : 'Unsaved'}
+                      </span>
+                    </button>
+
+                    {/* Send Bug Report / Feedback Option */}
+                    <button
+                      onClick={() => { setIsSettingsOpen(false); handleOpenBugModal(); }}
+                      className="w-full text-left px-3.5 py-2 hover:bg-rose-50 dark:hover:bg-rose-950/30 text-rose-600 dark:text-rose-400 flex items-center justify-between font-medium"
+                    >
+                      <span className="flex items-center gap-2">
+                        <svg className="w-3.5 h-3.5 text-rose-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                        <span>Report Bug / Issue</span>
+                      </span>
+                      <span className="text-[10px] bg-rose-100 dark:bg-rose-950 px-1.5 py-0.5 rounded text-rose-700 dark:text-rose-300">
+                        Help
                       </span>
                     </button>
 
                     {/* Delete Chat */}
                     <button
                       onClick={handleDeleteCurrentChat}
-                      className="w-full text-left px-3 py-2 hover:bg-red-50 dark:hover:bg-red-950/30 text-red-600 dark:text-red-400 flex items-center gap-2"
+                      className="w-full text-left px-3.5 py-2 hover:bg-red-50 dark:hover:bg-red-950/30 text-red-600 dark:text-red-400 flex items-center gap-2"
                     >
                       <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -1000,7 +1142,7 @@ export default function Home() {
                     {/* Sign Out */}
                     <button
                       onClick={handleLogout}
-                      className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 flex items-center gap-2"
+                      className="w-full text-left px-3.5 py-2 hover:bg-black/5 dark:hover:bg-white/5 text-gray-500 dark:text-gray-400 flex items-center gap-2"
                     >
                       <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
@@ -1069,10 +1211,12 @@ export default function Home() {
                   <button
                     key={i}
                     onClick={() => sendMessage(s)}
-                    className={`px-3.5 py-2 rounded-full border text-xs shadow-sm transition-all text-left ${
-                      isDarkMode
-                        ? 'border-gray-800 bg-gray-900 hover:bg-gray-800 text-gray-300 hover:border-gray-700'
-                        : 'border-gray-200 bg-white hover:bg-gray-50 text-gray-700 hover:border-gray-300'
+                    className={`px-3.5 py-2 rounded-full border text-xs shadow-sm transition-all text-left hover:scale-[1.02] active:scale-[0.98] ${
+                      isIncognito
+                        ? 'border-purple-800/60 bg-[#1a142e] hover:bg-purple-900/40 text-purple-200 hover:border-purple-600'
+                        : isDarkMode
+                        ? 'border-slate-800 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:border-slate-700'
+                        : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700 hover:border-slate-300 shadow-xs'
                     }`}
                   >
                     ✦ {s}
@@ -1139,20 +1283,24 @@ export default function Home() {
                     <div
                       className={`max-w-[88%] sm:max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed relative ${
                         isUser
-                          ? 'bg-blue-600 text-white rounded-br-sm shadow-sm'
+                          ? isIncognito
+                            ? 'bg-gradient-to-r from-purple-600 via-indigo-600 to-indigo-700 text-white rounded-br-xs shadow-md shadow-purple-950/40'
+                            : 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-br-xs shadow-sm shadow-blue-900/10'
                           : isIncognito
-                          ? 'bg-gray-900 border border-gray-800 text-gray-200 rounded-bl-sm'
+                          ? 'bg-[#181428] border border-purple-800/40 text-purple-100 rounded-bl-xs shadow-xs'
                           : isDarkMode
-                          ? 'bg-gray-900 border border-gray-800 text-gray-100 rounded-bl-sm shadow-sm'
-                          : 'bg-white border border-gray-200 text-gray-800 rounded-bl-sm shadow-sm'
+                          ? 'bg-[#151e2e] border border-slate-800 text-slate-100 rounded-bl-xs shadow-xs'
+                          : 'bg-white border border-slate-200/90 text-slate-800 rounded-bl-xs shadow-xs'
                       }`}
                     >
                       <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
 
-                      {/* Floating Message Action Buttons (Copy, Edit, TTS) */}
+                      {/* Floating Message Action Buttons (Copy, Edit, TTS, Report) */}
                       <div className={`mt-2 pt-1.5 flex items-center gap-1 border-t ${
                         isUser
-                          ? 'border-blue-500/40 text-blue-100'
+                          ? 'border-white/20 text-white/80'
+                          : isIncognito
+                          ? 'border-purple-800/30 text-purple-400'
                           : 'border-gray-100 dark:border-gray-800 text-gray-400'
                       }`}>
                         {/* Copy Button */}
@@ -1211,7 +1359,41 @@ export default function Home() {
                             )}
                           </button>
                         )}
+
+                        {/* Report Bug / Issue Button */}
+                        {isAssistant && (
+                          <button
+                            onClick={() => handleOpenBugModal(msg)}
+                            title="Report bug or incomplete work to Suchi engineering"
+                            className="p-1 rounded hover:bg-rose-50 dark:hover:bg-rose-950/40 text-gray-400 hover:text-rose-500 transition-colors inline-flex items-center gap-1 text-[11px] ml-auto"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                            <span className="text-[10px]">Report</span>
+                          </button>
+                        )}
                       </div>
+                    </div>
+                  )}
+
+                  {/* Incomplete Work / Tool Failure High-Visibility Banner */}
+                  {isAssistant && (msg.actions?.some(a => !a.success) || (msg.content && msg.content.includes('Sorry, something went wrong'))) && (
+                    <div className="mt-2.5 max-w-[88%] sm:max-w-[80%] p-3 rounded-2xl bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-900/60 flex items-center justify-between gap-3 text-xs shadow-xs">
+                      <div className="flex items-center gap-2 text-rose-800 dark:text-rose-200">
+                        <span className="text-base">⚠️</span>
+                        <div className="text-left">
+                          <span className="font-semibold block">Work could not be completed properly</span>
+                          <span className="text-[11px] text-rose-600 dark:text-rose-300">Suchi encountered a tool or permission failure</span>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleOpenBugModal(msg)}
+                        className="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs shadow-sm flex items-center gap-1.5 transition-transform active:scale-95 flex-shrink-0"
+                      >
+                        <span>Send Bug Report</span>
+                        <span>→</span>
+                      </button>
                     </div>
                   )}
 
@@ -1455,24 +1637,32 @@ export default function Home() {
           )}
 
           {/* Input Controls Row: Left Highlighted Suggestions | Center Embedded Typebar | Right Highlighted Mic/Send */}
-          <div className="flex items-end gap-2">
-            {/* Extreme Left: Suggestions Button (HIGHLIGHTED) */}
+          <div className="flex items-end gap-2 sm:gap-2.5">
+            {/* Extreme Left: Suggestions Button (HIGHLIGHTED & PROPERLY SIZED) */}
             <button
               type="button"
               onClick={handleTriggerSuggest}
               title="Suchi Suggestions & Strategy Tips"
-              className="p-2.5 rounded-xl border border-amber-300 dark:border-amber-600/80 bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/60 shadow-xs flex-shrink-0 flex items-center justify-center transition-all hover:scale-105 active:scale-95"
+              className={`w-11 h-11 sm:w-12 sm:h-12 rounded-2xl border shadow-sm flex-shrink-0 flex items-center justify-center transition-all hover:scale-105 active:scale-95 ${
+                isIncognito
+                  ? 'border-purple-600/70 bg-purple-950/80 text-purple-300 hover:bg-purple-900/80 shadow-purple-950/40'
+                  : isDarkMode
+                  ? 'border-amber-500/50 bg-amber-950/40 text-amber-400 hover:bg-amber-900/40 shadow-amber-950/30'
+                  : 'border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100 shadow-amber-100'
+              }`}
             >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
               </svg>
             </button>
 
-            {/* Center: Type Bar with Embedded Buttons Inside at Bottom */}
-            <div className={`flex-1 flex flex-col rounded-2xl border transition-all ${
-              isDarkMode || isIncognito
-                ? 'bg-gray-800 border-gray-700 focus-within:border-blue-500'
-                : 'bg-white border-gray-300 focus-within:border-blue-500 shadow-xs'
+            {/* Center: Type Bar with Embedded Buttons Inside at Bottom Extreme Right */}
+            <div className={`flex-1 flex flex-col rounded-2xl sm:rounded-3xl border transition-all ${
+              isIncognito
+                ? 'bg-[#1a152e] border-purple-800/50 focus-within:border-purple-500 focus-within:ring-2 focus-within:ring-purple-500/20'
+                : isDarkMode
+                ? 'bg-[#162032] border-slate-700/80 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/20'
+                : 'bg-white border-slate-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100 shadow-xs'
             }`}>
               <textarea
                 ref={textareaRef}
@@ -1507,22 +1697,35 @@ export default function Home() {
                     ? 'This chat reached its outcome and is locked. Use context in a new chat.'
                     : 'suchi ek kaam hai...'
                 }
-                className={`w-full resize-none px-3.5 pt-2.5 pb-1 bg-transparent text-sm focus:outline-none transition-colors ${
-                  isDarkMode || isIncognito ? 'text-white placeholder-gray-500' : 'text-gray-900 placeholder-gray-400'
+                className={`w-full resize-none px-4 pt-3 pb-1 bg-transparent text-base sm:text-sm min-h-[44px] focus:outline-none transition-colors ${
+                  isIncognito
+                    ? 'text-purple-100 placeholder-purple-400/60'
+                    : isDarkMode
+                    ? 'text-white placeholder-slate-400'
+                    : 'text-slate-900 placeholder-slate-400'
                 }`}
               />
 
-              {/* 3 Embedded Buttons Inside the Type Bar (Camera, Attach File, Archive) */}
-              <div className="flex items-center justify-between px-2 pb-1.5 pt-0.5">
-                <div className="flex items-center gap-0.5 text-gray-500 dark:text-gray-400">
+              {/* Inside Type Bar Row: Left File count | Extreme Right: 3 Embedded Buttons (Camera, Attach File, Archive) */}
+              <div className="flex items-center justify-between px-3 pb-2 pt-0.5">
+                <div className="flex items-center">
+                  {attachedFiles.length > 0 && (
+                    <span className="text-[11px] text-blue-600 dark:text-blue-400 font-medium px-1">
+                      {attachedFiles.length}/10 files attached
+                    </span>
+                  )}
+                </div>
+
+                {/* Extreme Right Embedded Buttons */}
+                <div className="flex items-center gap-1 sm:gap-1.5 text-gray-500 dark:text-gray-400 ml-auto">
                   {/* Camera Button */}
                   <button
                     type="button"
                     onClick={() => cameraInputRef.current?.click()}
                     title="Capture / Attach Photo"
-                    className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/60 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+                    className="w-8 h-8 sm:w-8.5 sm:h-8.5 rounded-lg flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/10 text-gray-500 dark:text-gray-300 transition-colors"
                   >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                    <svg className="w-4 h-4 sm:w-4.5 sm:h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                       <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
@@ -1541,9 +1744,9 @@ export default function Home() {
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
                     title="Attach Files (up to 10)"
-                    className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/60 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+                    className="w-8 h-8 sm:w-8.5 sm:h-8.5 rounded-lg flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/10 text-gray-500 dark:text-gray-300 transition-colors"
                   >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                    <svg className="w-4 h-4 sm:w-4.5 sm:h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
                     </svg>
                   </button>
@@ -1560,32 +1763,30 @@ export default function Home() {
                     type="button"
                     onClick={() => { fetchArchiveChats(); setIsAttachFromArchiveOpen(true); }}
                     title="Attach context from Chats Archive folder"
-                    className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/60 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+                    className="w-8 h-8 sm:w-8.5 sm:h-8.5 rounded-lg flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/10 text-gray-500 dark:text-gray-300 transition-colors"
                   >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                    <svg className="w-4 h-4 sm:w-4.5 sm:h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
                     </svg>
                   </button>
                 </div>
-
-                {attachedFiles.length > 0 && (
-                  <span className="text-[10px] text-blue-600 dark:text-blue-400 font-medium pr-1">
-                    {attachedFiles.length}/10 files
-                  </span>
-                )}
               </div>
             </div>
 
-            {/* Extreme Right: Mic / Send Button (HIGHLIGHTED) */}
+            {/* Extreme Right: Mic / Send Button (HIGHLIGHTED & PROPERLY SIZED) */}
             {input.trim() || attachedFiles.length > 0 || recordedAudioUrl ? (
               <button
                 type="button"
                 onClick={() => sendMessage()}
                 disabled={isLoading || isChatLocked}
                 title="Send message"
-                className="p-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white shadow-md transition-all flex-shrink-0 flex items-center justify-center disabled:opacity-50 hover:scale-105 active:scale-95"
+                className={`w-11 h-11 sm:w-12 sm:h-12 rounded-2xl shadow-md transition-all flex-shrink-0 flex items-center justify-center disabled:opacity-50 hover:scale-105 active:scale-95 ${
+                  isIncognito
+                    ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-purple-950/50'
+                    : 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-blue-900/20'
+                }`}
               >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
+                <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M5 10l7-7m0 0l7 7m-7-7v18" />
                 </svg>
               </button>
@@ -1594,10 +1795,14 @@ export default function Home() {
                 type="button"
                 onClick={toggleAudioRecording}
                 title={isRecording ? 'Stop recording' : 'Record voice note'}
-                className={`p-2.5 rounded-xl border shadow-xs flex-shrink-0 flex items-center justify-center transition-all hover:scale-105 active:scale-95 ${
+                className={`w-11 h-11 sm:w-12 sm:h-12 rounded-2xl border shadow-sm flex-shrink-0 flex items-center justify-center transition-all hover:scale-105 active:scale-95 ${
                   isRecording
                     ? 'bg-red-600 border-red-600 text-white animate-pulse'
-                    : 'border-blue-300 dark:border-blue-600/80 bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/60'
+                    : isIncognito
+                    ? 'border-purple-600/70 bg-purple-950/80 text-purple-300 hover:bg-purple-900/80 shadow-purple-950/40'
+                    : isDarkMode
+                    ? 'border-blue-500/50 bg-blue-950/40 text-blue-400 hover:bg-blue-900/40 shadow-blue-950/30'
+                    : 'border-blue-300 bg-blue-50 text-blue-600 hover:bg-blue-100 shadow-blue-100'
                 }`}
               >
                 {isRecording ? (
@@ -1606,7 +1811,7 @@ export default function Home() {
                     {recordingSeconds}s
                   </span>
                 ) : (
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
                   </svg>
                 )}
@@ -1790,6 +1995,129 @@ export default function Home() {
         </div>
       )}
 
+      {/* BUG REPORTING & INCOMPLETE WORK MODAL */}
+      {isBugModalOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className={`rounded-3xl max-w-lg w-full p-6 shadow-2xl border flex flex-col space-y-4 transition-all ${
+            isIncognito
+              ? 'bg-[#18132b] border-purple-800 text-purple-100'
+              : isDarkMode
+              ? 'bg-gray-900 border-gray-700 text-gray-100'
+              : 'bg-white border-gray-200 text-gray-800'
+          }`}>
+            <div className="flex items-center justify-between pb-3 border-b border-gray-200 dark:border-gray-800">
+              <div className="flex items-center gap-2">
+                <span className="p-2 rounded-xl bg-rose-500/10 text-rose-500 border border-rose-500/20 text-base">
+                  🐞
+                </span>
+                <div>
+                  <h3 className="text-base font-bold text-gray-900 dark:text-gray-100">Send Bug Report to Engineering</h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Help Suchi get better by reporting errors and incomplete work</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsBugModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-lg font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Category Selector */}
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-1.5">
+                Issue Category
+              </label>
+              <select
+                value={bugIssueType}
+                onChange={(e) => setBugIssueType(e.target.value)}
+                className={`w-full p-2.5 rounded-xl border text-xs font-medium focus:outline-none focus:ring-2 focus:ring-rose-500 ${
+                  isDarkMode || isIncognito
+                    ? 'bg-gray-800 border-gray-700 text-white'
+                    : 'bg-gray-50 border-gray-200 text-gray-900'
+                }`}
+              >
+                <option value="tool_failure">Google Workspace Tool Failed (Docs, Sheets, Slides, Tasks, Gmail)</option>
+                <option value="wrong_answer">Wrong Answer / Logical Reasoning Glitch</option>
+                <option value="infinite_loading">Hanging / Infinite Loading / Request Timeout</option>
+                <option value="auth_error">Google Cloud Permission or Access Denied Error</option>
+                <option value="ui_glitch">Display, Theme or Button Layout Problem</option>
+                <option value="other">Other Unspecified Issue</option>
+              </select>
+            </div>
+
+            {/* User Explanation Textarea */}
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-1.5">
+                What went wrong? (Optional details)
+              </label>
+              <textarea
+                rows={3}
+                value={bugDescription}
+                onChange={(e) => setBugDescription(e.target.value)}
+                placeholder="e.g. I asked to create a spreadsheet but it stopped after 2 rows, or button did not respond..."
+                className={`w-full p-3 rounded-xl border text-xs resize-none focus:outline-none focus:ring-2 focus:ring-rose-500 ${
+                  isDarkMode || isIncognito
+                    ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500'
+                    : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400'
+                }`}
+              />
+            </div>
+
+            {/* Pre-collected Diagnostics Summary */}
+            <div className={`p-3 rounded-xl border text-[11px] space-y-1 ${
+              isDarkMode || isIncognito ? 'bg-gray-950/60 border-gray-800 text-gray-400' : 'bg-gray-50 border-gray-200 text-gray-600'
+            }`}>
+              <div className="flex items-center justify-between font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                <span>Auto-Captured Telemetry</span>
+                <span className="text-[10px] text-emerald-500">Ready to Send</span>
+              </div>
+              <p><strong>User:</strong> {user?.email || 'Anonymous'}</p>
+              <p><strong>Device:</strong> {typeof navigator !== 'undefined' ? navigator.platform : 'Web'} ({typeof window !== 'undefined' ? `${window.innerWidth}x${window.innerHeight}` : 'Standard'})</p>
+              {bugTargetMessage?.actions?.some(a => !a.success) && (
+                <p className="text-rose-500">
+                  <strong>Failed Action:</strong> {bugTargetMessage.actions.find(a => !a.success)?.tool}
+                </p>
+              )}
+            </div>
+
+            {/* Modal Actions */}
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setIsBugModalOpen(false)}
+                className="px-4 py-2 rounded-xl text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSubmitBugReport}
+                disabled={isSubmittingBug}
+                className="px-4 py-2 rounded-xl text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white shadow-md transition-all disabled:opacity-50 flex items-center gap-1.5"
+              >
+                {isSubmittingBug ? (
+                  <span>Sending...</span>
+                ) : (
+                  <>
+                    <span>Submit to Engineering</span>
+                    <span>→</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* FLOATING SUCCESS TOAST */}
+      {bugToast && (
+        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 bg-emerald-600 text-white px-4 py-2.5 rounded-2xl shadow-xl flex items-center gap-2 text-xs font-semibold animate-bounce">
+          <span>✓</span>
+          <span>{bugToast}</span>
+        </div>
+      )}
+
       {/* FULLSCREEN ACTIONS DECK (1 card per viewport, no scroll, auto swipe-up) */}
       <ActionCardsDeck
         isOpen={isActionsDeckOpen}
@@ -1806,6 +2134,7 @@ export default function Home() {
           }).catch(() => {});
         }}
         isDarkMode={isDarkMode}
+        isIncognito={isIncognito}
       />
     </div>
   );

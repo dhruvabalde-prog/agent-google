@@ -73,9 +73,41 @@ export default function AdminPage() {
   const [loginError, setLoginError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  // Tabs: dashboard, users, apps, tiers, skills, bulk-import, credentials, mcp, logs, notes
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'apps' | 'tiers' | 'skills' | 'bulk-import' | 'credentials' | 'mcp' | 'logs' | 'notes'>('dashboard');
+  // Tabs: dashboard, users, apps, tiers, skills, bulk-import, credentials, mcp, logs, notes, bugs
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'apps' | 'tiers' | 'skills' | 'bulk-import' | 'credentials' | 'mcp' | 'logs' | 'notes' | 'bugs'>('dashboard');
   const [adminData, setAdminData] = useState<any>(null);
+
+  // Bug Reports & Telemetry State
+  const [bugReports, setBugReports] = useState<any[]>([]);
+  const [bugFilter, setBugFilter] = useState<'all' | 'OPEN' | 'INVESTIGATING' | 'RESOLVED'>('all');
+  const [selectedBugPayload, setSelectedBugPayload] = useState<string | null>(null);
+
+  async function fetchBugReports() {
+    try {
+      const res = await fetch('/api/bugs');
+      if (res.ok) {
+        const data = await res.json();
+        setBugReports(data.reports || []);
+      }
+    } catch (e) {
+      console.error('Failed to fetch bug reports:', e);
+    }
+  }
+
+  async function handleUpdateBugStatus(reportId: string, status: string) {
+    try {
+      const res = await fetch('/api/bugs', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reportId, status }),
+      });
+      if (res.ok) {
+        fetchBugReports();
+      }
+    } catch (e) {
+      console.error('Failed to update bug status:', e);
+    }
+  }
 
   // User & OAuth Tester form
   const [newUserEmail, setNewUserEmail] = useState('');
@@ -298,8 +330,9 @@ export default function AdminPage() {
         const data = await res.json();
         setAdminData(data);
         setIsAdminLoggedIn(true);
-        // Automatically run live GCP Console tracking diagnostics
+        // Automatically run live GCP Console tracking diagnostics & fetch bug reports
         handleRunGcpAudit();
+        fetchBugReports();
       } else {
         setIsAdminLoggedIn(false);
       }
@@ -694,6 +727,7 @@ export default function AdminPage() {
           { id: 'mcp', label: 'App MCP Server' },
           { id: 'logs', label: 'Audit Logs' },
           { id: 'notes', label: `Roadmap & Notes (${adminNotes.length})` },
+          { id: 'bugs', label: `Bug Reports & Telemetry (${bugReports.length})` },
         ].map(tab => (
           <button
             key={tab.id}
@@ -1706,6 +1740,259 @@ export default function AdminPage() {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* BUG REPORTS & USER TELEMETRY TAB */}
+        {activeTab === 'bugs' && (
+          <div className="space-y-6">
+            {/* Header & Stats */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gray-800 border border-gray-700 rounded-xl p-5">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-lg font-bold text-white">Suchi Bug Reports & Incomplete Work Telemetry</h2>
+                  <span className="text-[10px] bg-rose-500/20 text-rose-300 font-bold px-2 py-0.5 rounded-full border border-rose-500/30">
+                    Live Diagnostics
+                  </span>
+                </div>
+                <p className="text-xs text-gray-400 mt-1">
+                  Specific reports sent by users when an action failed, error occurred, or work was not done properly.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={fetchBugReports}
+                  className="text-xs bg-gray-700 hover:bg-gray-600 text-white px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  <span>Refresh</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Metrics Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div className="bg-gray-800 border border-gray-700 rounded-xl p-4">
+                <span className="text-xs text-gray-400 uppercase font-semibold">Total Reports</span>
+                <p className="text-2xl font-bold text-white mt-1">{bugReports.length}</p>
+              </div>
+              <div className="bg-gray-800 border border-gray-700 rounded-xl p-4">
+                <span className="text-xs text-rose-400 uppercase font-semibold">Open Issues</span>
+                <p className="text-2xl font-bold text-rose-400 mt-1">
+                  {bugReports.filter(b => b.status === 'OPEN').length}
+                </p>
+              </div>
+              <div className="bg-gray-800 border border-gray-700 rounded-xl p-4">
+                <span className="text-xs text-amber-400 uppercase font-semibold">Investigating</span>
+                <p className="text-2xl font-bold text-amber-400 mt-1">
+                  {bugReports.filter(b => b.status === 'INVESTIGATING').length}
+                </p>
+              </div>
+              <div className="bg-gray-800 border border-gray-700 rounded-xl p-4">
+                <span className="text-xs text-emerald-400 uppercase font-semibold">Resolved</span>
+                <p className="text-2xl font-bold text-emerald-400 mt-1">
+                  {bugReports.filter(b => b.status === 'RESOLVED').length}
+                </p>
+              </div>
+            </div>
+
+            {/* Filter Tabs */}
+            <div className="flex gap-2">
+              {(['all', 'OPEN', 'INVESTIGATING', 'RESOLVED'] as const).map(f => (
+                <button
+                  key={f}
+                  onClick={() => setBugFilter(f)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize transition-colors ${
+                    bugFilter === f
+                      ? 'bg-indigo-600 text-white shadow-xs'
+                      : 'bg-gray-800 text-gray-400 hover:text-white border border-gray-700'
+                  }`}
+                >
+                  {f === 'all' ? 'All Reports' : f.toLowerCase()}
+                </button>
+              ))}
+            </div>
+
+            {/* Bug Reports Cards List */}
+            <div className="space-y-4">
+              {bugReports
+                .filter(b => (bugFilter === 'all' ? true : b.status === bugFilter))
+                .map(report => (
+                  <div
+                    key={report.id}
+                    className="bg-gray-800/90 border border-gray-700 rounded-2xl p-5 space-y-4 shadow-sm"
+                  >
+                    {/* Top Row: User & Status Controls */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-gray-700/80">
+                      <div className="flex items-center gap-3">
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                          report.status === 'OPEN'
+                            ? 'bg-rose-950 border border-rose-700 text-rose-300'
+                            : report.status === 'INVESTIGATING'
+                            ? 'bg-amber-950 border border-amber-700 text-amber-300'
+                            : 'bg-emerald-950 border border-emerald-700 text-emerald-300'
+                        }`}>
+                          {report.status}
+                        </span>
+                        <span className="text-xs font-semibold text-white">{report.userEmail}</span>
+                        {report.userName && (
+                          <span className="text-[11px] text-gray-400">({report.userName})</span>
+                        )}
+                        <span className="text-[10px] text-gray-500 font-mono">
+                          {new Date(report.createdAt).toLocaleString()}
+                        </span>
+                      </div>
+
+                      {/* Status Action Buttons */}
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={() => handleUpdateBugStatus(report.id, 'INVESTIGATING')}
+                          className={`px-2 py-1 rounded text-[10px] font-medium transition-colors ${
+                            report.status === 'INVESTIGATING'
+                              ? 'bg-amber-600 text-white'
+                              : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                          }`}
+                        >
+                          Investigating
+                        </button>
+                        <button
+                          onClick={() => handleUpdateBugStatus(report.id, 'RESOLVED')}
+                          className={`px-2 py-1 rounded text-[10px] font-medium transition-colors ${
+                            report.status === 'RESOLVED'
+                              ? 'bg-emerald-600 text-white'
+                              : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                          }`}
+                        >
+                          Mark Resolved ✓
+                        </button>
+                        <button
+                          onClick={() => handleUpdateBugStatus(report.id, 'OPEN')}
+                          className={`px-2 py-1 rounded text-[10px] font-medium transition-colors ${
+                            report.status === 'OPEN'
+                              ? 'bg-rose-600 text-white'
+                              : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                          }`}
+                        >
+                          Reopen
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Summary & Issue Type */}
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="px-2 py-0.5 rounded bg-indigo-950/80 border border-indigo-700/50 text-indigo-300 text-[10px] font-mono uppercase">
+                          {report.issueType.replace('_', ' ')}
+                        </span>
+                        <h3 className="text-sm font-bold text-gray-100">{report.summary}</h3>
+                      </div>
+                      {report.userDescription && (
+                        <div className="mt-2 p-3 bg-gray-900/90 rounded-xl border border-gray-700/60 text-xs text-gray-300">
+                          <span className="text-gray-500 font-semibold uppercase text-[10px] block mb-1">
+                            User Explanation:
+                          </span>
+                          <p className="italic">"{report.userDescription}"</p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Chat Context Snippet */}
+                    {(report.lastUserMessage || report.lastAssistantResponse) && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                        {report.lastUserMessage && (
+                          <div className="p-3 bg-gray-900/60 rounded-xl border border-gray-700/40">
+                            <span className="text-[10px] uppercase font-semibold text-blue-400 block mb-1">
+                              Last User Message:
+                            </span>
+                            <p className="text-gray-300 line-clamp-3 font-mono text-[11px]">
+                              {report.lastUserMessage}
+                            </p>
+                          </div>
+                        )}
+                        {report.lastAssistantResponse && (
+                          <div className="p-3 bg-gray-900/60 rounded-xl border border-gray-700/40">
+                            <span className="text-[10px] uppercase font-semibold text-indigo-400 block mb-1">
+                              Last Assistant Response:
+                            </span>
+                            <p className="text-gray-300 line-clamp-3 font-mono text-[11px]">
+                              {report.lastAssistantResponse}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Failed Action Data */}
+                    {report.failedAction && (
+                      <div className="p-3 bg-rose-950/30 rounded-xl border border-rose-900/50 text-xs">
+                        <span className="text-[10px] uppercase font-semibold text-rose-400 block mb-1">
+                          Failed Action Details:
+                        </span>
+                        <pre className="text-rose-200 font-mono text-[11px] whitespace-pre-wrap overflow-x-auto">
+                          {JSON.stringify(report.failedAction, null, 2)}
+                        </pre>
+                      </div>
+                    )}
+
+                    {/* System & Device Diagnostics */}
+                    <div className="pt-2 border-t border-gray-700/60 flex flex-wrap items-center justify-between gap-3 text-[11px] text-gray-400">
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <span><strong>Platform:</strong> {report.diagnostics?.platform}</span>
+                        <span><strong>Screen:</strong> {report.diagnostics?.screenSize}</span>
+                        <span>
+                          <strong>Help Opt-in:</strong>{' '}
+                          {report.diagnostics?.helpOptIn ? (
+                            <span className="text-emerald-400">Active ✓</span>
+                          ) : (
+                            <span className="text-gray-500">Anonymous</span>
+                          )}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => {
+                            setSelectedBugPayload(
+                              selectedBugPayload === report.id ? null : report.id
+                            );
+                          }}
+                          className="text-[11px] text-indigo-400 hover:text-indigo-300 underline"
+                        >
+                          {selectedBugPayload === report.id ? 'Hide Diagnostics JSON' : 'Inspect Diagnostics JSON'}
+                        </button>
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(JSON.stringify(report, null, 2));
+                            alert('Diagnostics JSON copied to clipboard!');
+                          }}
+                          className="px-2 py-0.5 rounded bg-gray-700 hover:bg-gray-600 text-gray-200 text-[10px]"
+                        >
+                          Copy JSON
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Raw Diagnostics JSON Viewer */}
+                    {selectedBugPayload === report.id && (
+                      <div className="p-3 bg-black/80 rounded-xl border border-gray-800 text-[11px] font-mono text-emerald-400 overflow-x-auto max-h-60">
+                        <pre>{JSON.stringify(report, null, 2)}</pre>
+                      </div>
+                    )}
+                  </div>
+                ))}
+
+              {bugReports.length === 0 && (
+                <div className="text-center py-12 bg-gray-800/50 rounded-2xl border border-gray-700">
+                  <p className="text-gray-400 text-sm">No bug reports received yet.</p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    When users encounter tool errors or click 'Send Bug Report', their diagnostics will populate here.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         )}

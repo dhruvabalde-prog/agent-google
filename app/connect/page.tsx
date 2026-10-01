@@ -61,6 +61,16 @@ export default function ConnectPage() {
   const [includeCalendarTasks, setIncludeCalendarTasks] = useState(true);
   const [includeGmail, setIncludeGmail] = useState(true);
   const [showAdvancedPermissions, setShowAdvancedPermissions] = useState(false);
+  const [helpSuchiImprove, setHelpSuchiImprove] = useState(true);
+
+  useEffect(() => {
+    try {
+      const savedImprove = localStorage.getItem('help_suchi_improve');
+      if (savedImprove !== null) {
+        setHelpSuchiImprove(savedImprove === 'true');
+      }
+    } catch (e) {}
+  }, []);
 
   const handleConnect = () => {
     setIsConnecting(true);
@@ -69,6 +79,9 @@ export default function ConnectPage() {
         localStorage.setItem('agent_preferred_name', name.trim());
       } catch (e) {}
     }
+    try {
+      localStorage.setItem('help_suchi_improve', helpSuchiImprove ? 'true' : 'false');
+    } catch (e) {}
     const tools: string[] = [];
     if (includeDocsSheets) tools.push('docs', 'sheets');
     if (includeSlides) tools.push('slides');
@@ -228,6 +241,30 @@ export default function ConnectPage() {
                 </div>
               )}
             </div>
+
+            {/* Help Suchi Get Better (Optional Tick Mark) */}
+            <label className="flex items-start gap-2.5 p-3 rounded-xl bg-slate-950/60 border border-slate-800 hover:border-slate-700 cursor-pointer transition-colors text-left">
+              <input
+                type="checkbox"
+                checked={helpSuchiImprove}
+                onChange={(e) => {
+                  setHelpSuchiImprove(e.target.checked);
+                  try {
+                    localStorage.setItem('help_suchi_improve', e.target.checked ? 'true' : 'false');
+                  } catch (err) {}
+                }}
+                className="mt-0.5 w-4 h-4 rounded bg-slate-800 border-slate-600 text-blue-600 focus:ring-blue-500 cursor-pointer"
+              />
+              <div className="flex-1">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-semibold text-white">Help Suchi get better</span>
+                  <span className="text-[9px] bg-slate-800 text-slate-400 px-1.5 py-0.2 rounded font-medium">Optional</span>
+                </div>
+                <p className="text-[10px] text-slate-400 leading-normal mt-0.5">
+                  Share anonymous telemetry and bug diagnostics to help our engineering team continuously train and improve Suchi's reasoning.
+                </p>
+              </div>
+            </label>
 
             <button
               onClick={handleConnect}
