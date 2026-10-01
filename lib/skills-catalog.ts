@@ -41,7 +41,8 @@ export const INITIAL_SUBSCRIPTION_TIERS: SubscriptionTier[] = [
   { id: 'ADMIN', name: 'Admin', description: 'Unrestricted enterprise capability', dailyTokenLimit: 1000000 },
 ];
 
-export const INITIAL_53_SKILLS: SkillDefinition[] = skillsJson as SkillDefinition[];
+export const INITIAL_100_SKILLS: SkillDefinition[] = skillsJson as SkillDefinition[];
+export const INITIAL_53_SKILLS: SkillDefinition[] = INITIAL_100_SKILLS;
 
 /**
  * Smart skill matcher that finds the most relevant skill for the user's prompt

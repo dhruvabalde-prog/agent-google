@@ -22,6 +22,35 @@ export default function AdminPage() {
   const [newUserIsTester, setNewUserIsTester] = useState(true);
   const [userFormMessage, setUserFormMessage] = useState('');
   const [copyToast, setCopyToast] = useState('');
+  const [gcpAudit, setGcpAudit] = useState<any>(null);
+  const [isAuditingGcp, setIsAuditingGcp] = useState(false);
+
+  async function handleRunGcpAudit() {
+    setIsAuditingGcp(true);
+    try {
+      const res = await fetch('/api/admin/gcp/audit');
+      if (res.ok) {
+        const data = await res.json();
+        setGcpAudit(data);
+      }
+    } catch (e) {
+      console.error('GCP audit failed:', e);
+    } finally {
+      setIsAuditingGcp(false);
+    }
+  }
+
+  function handleDownloadTestersCsv() {
+    const testers = (adminData?.users || []).filter((u: any) => u.is_oauth_tester).map((u: any) => u.email);
+    const csvContent = 'data:text/csv;charset=utf-8,Email Address\n' + testers.join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `suchi-gcp-test-users-${Date.now()}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
 
   // Forms
   const [newKeyProvider, setNewKeyProvider] = useState('gemini');
@@ -365,11 +394,16 @@ export default function AdminPage() {
       {/* Admin Header */}
       <header className="bg-gray-800 border-b border-gray-700 px-4 sm:px-6 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <span className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center font-bold text-white text-sm">
-            AG
+          <span className="w-8 h-8 rounded-lg bg-slate-950 border border-slate-700 flex items-center justify-center p-1 shadow">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="22" height="22">
+              <circle cx="16" cy="16" r="12" fill="none" stroke="#475569" strokeWidth="2"/>
+              <polygon points="16,6.5 19,16 16,14.5" fill="#38bdf8"/>
+              <polygon points="16,25.5 19,16 16,17.5" fill="#94a3b8"/>
+              <circle cx="16" cy="16" r="2.5" fill="#ffffff"/>
+            </svg>
           </span>
           <div>
-            <h1 className="font-bold text-base sm:text-lg text-white">Agent Google Admin Panel</h1>
+            <h1 className="font-bold text-base sm:text-lg text-white">Suchi Admin Console</h1>
             <p className="text-xs text-emerald-400">Authenticated: {adminData?.admin?.email} ({adminData?.admin?.role})</p>
           </div>
         </div>
@@ -394,7 +428,7 @@ export default function AdminPage() {
           { id: 'users', label: `Users & Cloud Testers (${adminData?.stats?.testUsersCount || adminData?.users?.length || 1})` },
           { id: 'apps', label: `Cloud APIs & Apps (${adminData?.apps?.length || 20})` },
           { id: 'tiers', label: 'Subscription Tiers' },
-          { id: 'skills', label: `Skills (${adminData?.skills?.length || 53})` },
+          { id: 'skills', label: `100 Life OS Skills (${adminData?.skills?.length || 100})` },
           { id: 'bulk-import', label: 'Bulk MD Import' },
           { id: 'credentials', label: 'API Key Pool' },
           { id: 'mcp', label: 'App MCP Server' },
@@ -479,21 +513,99 @@ export default function AdminPage() {
 
                 <div className="flex flex-wrap items-center gap-2">
                   <button
+                    onClick={handleRunGcpAudit}
+                    disabled={isAuditingGcp}
+                    className="text-xs bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-semibold px-3 py-2 rounded-lg flex items-center gap-1.5 transition-colors shadow"
+                  >
+                    <span>{isAuditingGcp ? '🔄 Testing GCP APIs...' : '⚡ Audit GCP Project'}</span>
+                  </button>
+                  <button
                     onClick={handleCopyAllTesters}
                     className="text-xs bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-3 py-2 rounded-lg flex items-center gap-1.5 transition-colors shadow"
                   >
-                    <span>📋 Copy All Tester Emails</span>
+                    <span>📋 Copy All Emails</span>
+                  </button>
+                  <button
+                    onClick={handleDownloadTestersCsv}
+                    className="text-xs bg-gray-700 hover:bg-gray-600 text-gray-200 font-semibold px-3 py-2 rounded-lg flex items-center gap-1.5 transition-colors border border-gray-600 shadow"
+                  >
+                    <span>📥 Download CSV</span>
                   </button>
                   <a
-                    href="https://console.cloud.google.com/apis/credentials/consent"
+                    href="https://console.cloud.google.com/apis/credentials/consent?project=143315250482"
                     target="_blank"
                     rel="noreferrer"
                     className="text-xs bg-gray-700 hover:bg-gray-600 text-white font-medium px-3 py-2 rounded-lg flex items-center gap-1.5 transition-colors border border-gray-600"
                   >
-                    <span>↗ Open Cloud Console</span>
+                    <span>↗ Open GCP Console</span>
                   </a>
                 </div>
               </div>
+
+              {gcpAudit && (
+                <div className="mt-4 p-4 rounded-xl bg-gray-900 border border-gray-700 text-xs space-y-3">
+                  <div className="flex items-center justify-between border-b border-gray-800 pb-2">
+                    <span className="font-bold text-white flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                      <span>Live Google Cloud Diagnostics (Project #{gcpAudit.diagnostics.projectNumber})</span>
+                    </span>
+                    <span className="text-[11px] text-gray-400 font-mono">
+                      {new Date(gcpAudit.timestamp).toLocaleTimeString()}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="p-2.5 rounded-lg bg-gray-800/80 border border-gray-700">
+                      <span className="text-[10px] text-gray-400 uppercase font-semibold">Gemini AI Model</span>
+                      <p className="text-emerald-400 font-bold mt-0.5">{gcpAudit.diagnostics.geminiAi.status}</p>
+                      <p className="text-[11px] text-gray-400">Latency: {gcpAudit.diagnostics.geminiAi.latencyMs}ms ({gcpAudit.diagnostics.geminiAi.model})</p>
+                    </div>
+
+                    <div className="p-2.5 rounded-lg bg-gray-800/80 border border-gray-700">
+                      <span className="text-[10px] text-gray-400 uppercase font-semibold">OAuth Credentials</span>
+                      <p className="text-indigo-400 font-bold mt-0.5">{gcpAudit.diagnostics.oauthClient.status}</p>
+                      <p className="text-[11px] text-gray-400 font-mono truncate">{gcpAudit.diagnostics.oauthClient.clientIdMasked}</p>
+                    </div>
+
+                    <div className="p-2.5 rounded-lg bg-gray-800/80 border border-gray-700">
+                      <span className="text-[10px] text-gray-400 uppercase font-semibold">Database Persistence</span>
+                      <p className={`font-bold mt-0.5 ${gcpAudit.diagnostics.database.isPersistent ? 'text-emerald-400' : 'text-amber-400'}`}>
+                        {gcpAudit.diagnostics.database.isPersistent ? 'PostgreSQL Active' : 'In-Memory Fallback'}
+                      </p>
+                      <p className="text-[11px] text-gray-400 truncate">{gcpAudit.diagnostics.database.status}</p>
+                    </div>
+                  </div>
+
+                  <div className="pt-2 flex flex-wrap gap-2 text-[11px]">
+                    <a
+                      href={gcpAudit.gcpLinks.credentials}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-blue-400 hover:underline flex items-center gap-1"
+                    >
+                      ↗ OAuth Client Credentials
+                    </a>
+                    <span className="text-gray-600">•</span>
+                    <a
+                      href={gcpAudit.gcpLinks.apisDashboard}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-blue-400 hover:underline flex items-center gap-1"
+                    >
+                      ↗ APIs & Services Dashboard
+                    </a>
+                    <span className="text-gray-600">•</span>
+                    <a
+                      href={gcpAudit.gcpLinks.apiLibrary}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-blue-400 hover:underline flex items-center gap-1"
+                    >
+                      ↗ GCP API Library
+                    </a>
+                  </div>
+                </div>
+              )}
 
               {copyToast && (
                 <div className="mt-3 bg-emerald-900/50 border border-emerald-600 text-emerald-200 text-xs px-3 py-2 rounded-lg font-medium">
@@ -801,8 +913,8 @@ export default function AdminPage() {
             <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
                 <div>
-                  <h2 className="text-base font-bold text-white">Skills Catalog ({adminData?.skills?.length || 53} Skills)</h2>
-                  <p className="text-xs text-gray-400">All 53 modular skills organized across 9 departments</p>
+                  <h2 className="text-base font-bold text-white">100 Life OS Skills Catalog ({adminData?.skills?.length || 100} Skills)</h2>
+                  <p className="text-xs text-gray-400">All 100 modular Life OS skills organized across 8 core life departments</p>
                 </div>
                 <button
                   onClick={() => setActiveTab('bulk-import')}

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { encryptSession } from '@/lib/auth';
 import { UserSession } from '@/lib/types';
+import { upsertUser } from '@/lib/db';
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
@@ -8,7 +9,8 @@ export async function GET(request: Request) {
   const error = searchParams.get('error');
 
   if (error || !code) {
-    return NextResponse.redirect(`${origin}/?error=auth_failed`);
+    const errorType = error === 'access_denied' ? 'access_denied' : 'auth_failed';
+    return NextResponse.redirect(`${origin}/connect?error=${errorType}`);
   }
 
   const redirectUri = `${origin}/api/auth/callback`;
@@ -46,6 +48,18 @@ export async function GET(request: Request) {
 
     const userData = await userRes.json();
 
+    // Auto-register user in DB as authenticated test user
+    try {
+      await upsertUser({
+        email: userData.email,
+        name: userData.name,
+        picture: userData.picture,
+        is_oauth_tester: true,
+      });
+    } catch (dbErr) {
+      console.warn('DB upsert error in OAuth callback:', dbErr);
+    }
+
     const session: UserSession = {
       accessToken: tokenData.access_token,
       refreshToken: tokenData.refresh_token,
@@ -69,6 +83,6 @@ export async function GET(request: Request) {
     return response;
   } catch (err) {
     console.error('OAuth callback error:', err);
-    return NextResponse.redirect(`${origin}/?error=auth_failed`);
+    return NextResponse.redirect(`${origin}/connect?error=auth_failed`);
   }
 }

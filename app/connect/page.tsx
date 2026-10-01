@@ -8,8 +8,32 @@ export default function ConnectPage() {
   const [isConnecting, setIsConnecting] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [isInstallable, setIsInstallable] = useState(false);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   useEffect(() => {
+    // Check error param
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const err = params.get('error');
+      if (err) setAuthError(err);
+    } catch (e) {}
+
+    // Check existing session
+    async function checkExistingSession() {
+      try {
+        const res = await fetch('/api/auth/session');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.authenticated && data.user) {
+            setCurrentUser(data.user);
+          }
+        }
+      } catch (e) {}
+    }
+    checkExistingSession();
+
+    // PWA Install Prompt
     const handler = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e);
@@ -32,6 +56,12 @@ export default function ConnectPage() {
     }
   };
 
+  const [includeDocsSheets, setIncludeDocsSheets] = useState(true);
+  const [includeSlides, setIncludeSlides] = useState(true);
+  const [includeCalendarTasks, setIncludeCalendarTasks] = useState(true);
+  const [includeGmail, setIncludeGmail] = useState(true);
+  const [showAdvancedPermissions, setShowAdvancedPermissions] = useState(false);
+
   const handleConnect = () => {
     setIsConnecting(true);
     if (name.trim()) {
@@ -39,7 +69,13 @@ export default function ConnectPage() {
         localStorage.setItem('agent_preferred_name', name.trim());
       } catch (e) {}
     }
-    window.location.href = '/api/auth/login';
+    const tools: string[] = [];
+    if (includeDocsSheets) tools.push('docs', 'sheets');
+    if (includeSlides) tools.push('slides');
+    if (includeCalendarTasks) tools.push('calendar', 'tasks');
+    if (includeGmail) tools.push('gmail');
+    const query = tools.length > 0 ? `?tools=${tools.join(',')}` : '';
+    window.location.href = `/api/auth/login${query}`;
   };
 
   return (
@@ -61,51 +97,165 @@ export default function ConnectPage() {
           LIFE OPERATING SYSTEM
         </div>
         <h1 className="text-2xl font-bold text-white mb-2">Welcome to Suchi</h1>
-        <p className="text-xs text-slate-400 mb-8 max-w-xs">
+        <p className="text-xs text-slate-400 mb-6 max-w-xs">
           Your autonomous Chief of Staff. Directing your attention to what matters, automating the rest.
         </p>
 
-        <div className="w-full space-y-4 text-left">
-          <div>
-            <label htmlFor="name-input" className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">
-              Your Name
-            </label>
-            <input
-              id="name-input"
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Dhruva"
-              className="w-full px-4 py-3 rounded-xl bg-slate-800/80 border border-slate-700 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-            />
+        {/* Access Denied Warning Banner */}
+        {authError === 'access_denied' && (
+          <div className="w-full mb-6 p-4 rounded-2xl bg-amber-950/60 border border-amber-700/80 text-left text-xs text-amber-200">
+            <div className="flex items-center gap-2 font-bold text-amber-300 mb-1">
+              <span>⚠️</span>
+              <span>Google Cloud Access Restricted</span>
+            </div>
+            <p className="text-[11px] text-amber-200/90 leading-relaxed">
+              While our Google Cloud OAuth screen is in <strong>Testing</strong> mode, only registered Test Users can sign in. Please contact the administrator (<span className="text-amber-100 font-mono underline">dhruvabalde@gmail.com</span>) to whitelist your Gmail address in Google Cloud Console.
+            </p>
           </div>
+        )}
 
-          <button
-            onClick={handleConnect}
-            disabled={isConnecting}
-            className="w-full py-3.5 px-4 bg-white hover:bg-slate-100 rounded-xl shadow text-sm font-semibold text-slate-900 flex items-center justify-center gap-3 transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50"
-          >
-            <svg viewBox="0 0 24 24" width="20" height="20">
-              <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
-              <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-              <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-              <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-            </svg>
-            <span>{isConnecting ? 'Opening Google Sign-In...' : 'Connect Google Workspace'}</span>
-          </button>
+        {authError === 'auth_failed' && (
+          <div className="w-full mb-6 p-3 rounded-xl bg-red-950/60 border border-red-800 text-left text-xs text-red-200">
+            <span>⚠️ Authentication could not be completed. Please try again.</span>
+          </div>
+        )}
 
-          {/* Install App Button */}
-          <button
-            onClick={handleInstallApp}
-            className="w-full py-2.5 px-4 bg-slate-800 hover:bg-slate-700/80 border border-slate-700 rounded-xl text-xs font-medium text-slate-300 flex items-center justify-center gap-2 transition-colors"
-          >
-            <svg className="w-4 h-4 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-            </svg>
-            <span>Install Suchi App (PWA)</span>
-            {isInstallable && <span className="bg-blue-600 text-white text-[9px] px-1.5 py-0.2 rounded font-bold">READY</span>}
-          </button>
-        </div>
+        {/* If Already Connected User */}
+        {currentUser ? (
+          <div className="w-full space-y-4 mb-2">
+            <div className="p-4 rounded-2xl bg-slate-800/80 border border-emerald-900/50 text-left flex items-center gap-3">
+              {currentUser.picture ? (
+                <img src={currentUser.picture} alt={currentUser.name} className="w-10 h-10 rounded-full border border-emerald-500/40" />
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-emerald-700 flex items-center justify-center font-bold text-white">
+                  {currentUser.name?.[0] || 'U'}
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-sm text-white truncate">{currentUser.name}</span>
+                  <span className="text-[9px] bg-emerald-900/60 text-emerald-300 px-1.5 py-0.5 rounded font-bold">CONNECTED</span>
+                </div>
+                <p className="text-xs text-slate-400 truncate">{currentUser.email}</p>
+              </div>
+            </div>
+
+            <Link
+              href="/"
+              className="w-full py-3.5 px-4 bg-blue-600 hover:bg-blue-500 rounded-xl shadow text-sm font-semibold text-white flex items-center justify-center gap-2 transition-all hover:scale-[1.01] active:scale-[0.99]"
+            >
+              <span>Open Suchi Chat →</span>
+            </Link>
+
+            <button
+              onClick={() => setCurrentUser(null)}
+              className="text-xs text-slate-400 hover:text-slate-200 underline pt-1 block mx-auto"
+            >
+              Switch Account or Update Permissions
+            </button>
+          </div>
+        ) : (
+          <div className="w-full space-y-4 text-left">
+            <div>
+              <label htmlFor="name-input" className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                Your Preferred Name
+              </label>
+              <input
+                id="name-input"
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="e.g. Dhruva"
+                className="w-full px-4 py-2.5 rounded-xl bg-slate-800/80 border border-slate-700 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+              />
+            </div>
+
+            {/* Granular Permission Controls Accordion */}
+            <div className="border border-slate-800 rounded-xl bg-slate-950/60 p-3 text-xs">
+              <button
+                type="button"
+                onClick={() => setShowAdvancedPermissions(!showAdvancedPermissions)}
+                className="w-full flex items-center justify-between text-slate-300 font-semibold"
+              >
+                <span className="flex items-center gap-1.5">
+                  <span>🛡️</span>
+                  <span>Customize Permissions & Tools</span>
+                </span>
+                <span className="text-[10px] text-blue-400">{showAdvancedPermissions ? 'Hide ▲' : 'Edit ▼'}</span>
+              </button>
+
+              {showAdvancedPermissions && (
+                <div className="mt-3 pt-3 border-t border-slate-800 space-y-2.5 text-[11px] text-slate-400">
+                  <p className="text-[10px] text-slate-500">
+                    Select strictly the tools you wish Suchi to access. Admin & cloud infrastructure APIs are never requested from you.
+                  </p>
+                  <label className="flex items-center gap-2 cursor-pointer hover:text-slate-200">
+                    <input
+                      type="checkbox"
+                      checked={includeDocsSheets}
+                      onChange={(e) => setIncludeDocsSheets(e.target.checked)}
+                      className="rounded bg-slate-800 border-slate-700 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span>Google Docs & Sheets (Documents, spreadsheets & analysis)</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer hover:text-slate-200">
+                    <input
+                      type="checkbox"
+                      checked={includeSlides}
+                      onChange={(e) => setIncludeSlides(e.target.checked)}
+                      className="rounded bg-slate-800 border-slate-700 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span>Google Slides (Presentations & executive decks)</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer hover:text-slate-200">
+                    <input
+                      type="checkbox"
+                      checked={includeCalendarTasks}
+                      onChange={(e) => setIncludeCalendarTasks(e.target.checked)}
+                      className="rounded bg-slate-800 border-slate-700 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span>Google Calendar & Tasks (Schedules & reminders)</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer hover:text-slate-200">
+                    <input
+                      type="checkbox"
+                      checked={includeGmail}
+                      onChange={(e) => setIncludeGmail(e.target.checked)}
+                      className="rounded bg-slate-800 border-slate-700 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span>Gmail (Read & draft replies with mandatory approval)</span>
+                  </label>
+                </div>
+              )}
+            </div>
+
+            <button
+              onClick={handleConnect}
+              disabled={isConnecting}
+              className="w-full py-3.5 px-4 bg-white hover:bg-slate-100 rounded-xl shadow text-sm font-semibold text-slate-900 flex items-center justify-center gap-3 transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50"
+            >
+              <svg viewBox="0 0 24 24" width="20" height="20">
+                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
+                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+              </svg>
+              <span>{isConnecting ? 'Opening Google Sign-In...' : 'Connect Google Workspace'}</span>
+            </button>
+
+            {/* Install App Button */}
+            <button
+              onClick={handleInstallApp}
+              className="w-full py-2.5 px-4 bg-slate-800 hover:bg-slate-700/80 border border-slate-700 rounded-xl text-xs font-medium text-slate-300 flex items-center justify-center gap-2 transition-colors"
+            >
+              <svg className="w-4 h-4 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+              <span>Install Suchi App (PWA)</span>
+              {isInstallable && <span className="bg-blue-600 text-white text-[9px] px-1.5 py-0.2 rounded font-bold">READY</span>}
+            </button>
+          </div>
+        )}
 
         <div className="mt-8 border-t border-slate-800 pt-5 w-full flex items-center justify-between text-xs text-slate-400">
           <Link href="/privacy" className="text-slate-400 hover:text-white transition-colors underline">

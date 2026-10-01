@@ -48,7 +48,7 @@ export async function GET() {
       data_firewall: 'zero-pii-leakage-enabled'
     },
     info: {
-      name: 'Agent Google Sovereign MCP Server',
+      name: 'Suchi Life OS Sovereign MCP Server',
       version: '1.0.0'
     }
   }, {

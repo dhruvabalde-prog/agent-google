@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
   try {
     const session = await getSession();
     if (!session) {
-      return NextResponse.json({ error: 'Please sign in with Google to chat with Agent Google.' }, { status: 401 });
+      return NextResponse.json({ error: 'Please connect your Google Workspace to chat with Suchi.' }, { status: 401 });
     }
 
     const refreshedSession = await refreshTokenIfNeeded(session);

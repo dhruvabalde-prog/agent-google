@@ -74,6 +74,13 @@ export default function Home() {
   // Settings & Navigation
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isIncognito, setIsIncognito] = useState(false);
+  const [savedNormalChat, setSavedNormalChat] = useState<{
+    id: string;
+    messages: ChatMessage[];
+    meaningfulOutcome: string;
+    outcomeStatus: string;
+    isChatLocked: boolean;
+  } | null>(null);
 
   // Archive Modal & Attach From Archive
   const [isArchiveOpen, setIsArchiveOpen] = useState(false);
@@ -185,7 +192,7 @@ export default function Home() {
       }
     } else {
       alert(
-        'To install Agent Google:\n\n' +
+        'To install Suchi:\n\n' +
         '• iPhone/iPad (Safari): Tap the Share icon, then select "Add to Home Screen".\n' +
         '• Android (Chrome): Tap the three-dot menu ⋮, then select "Install app" or "Add to Home screen".\n' +
         '• PC/Mac (Chrome/Edge): Click the install icon in the URL bar.'
@@ -193,18 +200,70 @@ export default function Home() {
     }
   };
 
-  // Incognito auto-exit on tab change or window blur
+  // Toggle Incognito: The existing chat stays exactly the same way (never converted into incognito).
+  // Incognito is ALWAYS a new chat and is not saved in archive.
+  function handleToggleIncognito() {
+    if (!isIncognito) {
+      // Switching ON Incognito: preserve existing chat
+      setSavedNormalChat({
+        id: currentChatId,
+        messages: [...messages],
+        meaningfulOutcome,
+        outcomeStatus,
+        isChatLocked,
+      });
+      const incognitoId = crypto.randomUUID();
+      setCurrentChatId(incognitoId);
+      setMessages([]);
+      setMeaningfulOutcome('');
+      setOutcomeStatus('NONE');
+      setIsChatLocked(false);
+      setIsIncognito(true);
+    } else {
+      // Switching OFF Incognito: restore normal chat or reset to fresh normal chat
+      if (savedNormalChat) {
+        setCurrentChatId(savedNormalChat.id);
+        setMessages(savedNormalChat.messages);
+        setMeaningfulOutcome(savedNormalChat.meaningfulOutcome);
+        setOutcomeStatus(savedNormalChat.outcomeStatus);
+        setIsChatLocked(savedNormalChat.isChatLocked);
+        setSavedNormalChat(null);
+      } else {
+        setCurrentChatId(crypto.randomUUID());
+        setMessages([]);
+        setMeaningfulOutcome('');
+        setOutcomeStatus('NONE');
+        setIsChatLocked(false);
+      }
+      setIsIncognito(false);
+    }
+    setIsSettingsOpen(false);
+  }
+
+  // Incognito auto-exit on tab change or window blur without losing previous normal chat
   useEffect(() => {
     function handleVisibilityChange() {
       if (document.hidden && isIncognito) {
+        if (savedNormalChat) {
+          setCurrentChatId(savedNormalChat.id);
+          setMessages(savedNormalChat.messages);
+          setMeaningfulOutcome(savedNormalChat.meaningfulOutcome);
+          setOutcomeStatus(savedNormalChat.outcomeStatus);
+          setIsChatLocked(savedNormalChat.isChatLocked);
+          setSavedNormalChat(null);
+        } else {
+          setCurrentChatId(crypto.randomUUID());
+          setMessages([]);
+          setMeaningfulOutcome('');
+          setOutcomeStatus('NONE');
+          setIsChatLocked(false);
+        }
         setIsIncognito(false);
-        setMessages([]);
-        alert('Incognito session closed for security.');
       }
     }
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [isIncognito]);
+  }, [isIncognito, savedNormalChat]);
 
   // Dynamic progress cycling
   useEffect(() => {
@@ -306,7 +365,7 @@ export default function Home() {
       // Build markdown representation
       let md = `# ${meaningfulOutcome || 'Conversation Summary'}\n\n## Dialogue\n`;
       messages.forEach(m => {
-        md += `\n### ${m.role === 'user' ? 'User' : 'Agent Google'}\n${m.content}\n`;
+        md += `\n### ${m.role === 'user' ? 'User' : 'Suchi'}\n${m.content}\n`;
       });
 
       await fetch(`/api/chats/${currentChatId}/lock`, {
@@ -664,16 +723,34 @@ export default function Home() {
                       <span className="text-[10px] text-gray-400">Ctrl+A</span>
                     </button>
 
+                    {/* Memory (Locked) */}
+                    <button
+                      disabled
+                      title="Memory: Suchi securely stores context given by you across sessions. Memory management controls coming soon."
+                      className="w-full text-left px-3 py-2 flex items-center justify-between text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-75"
+                    >
+                      <span className="flex items-center gap-1.5">
+                        <span>🧠</span>
+                        <span>Memory</span>
+                      </span>
+                      <span className="flex items-center gap-1 text-[10px] bg-gray-200 dark:bg-gray-800 text-gray-500 dark:text-gray-400 px-1.5 py-0.5 rounded font-medium">
+                        <span>🔒</span>
+                        <span>Locked</span>
+                      </span>
+                    </button>
+
                     {/* Incognito Mode */}
                     <button
-                      onClick={() => { setIsIncognito(!isIncognito); setIsSettingsOpen(false); }}
+                      onClick={handleToggleIncognito}
                       className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center justify-between text-purple-700 dark:text-purple-400 font-medium"
                     >
                       <span className="flex items-center gap-1.5">
-                        <span>🔒</span>
+                        <span>🕵️</span>
                         <span>{isIncognito ? 'Exit Incognito' : 'Incognito Mode'}</span>
                       </span>
-                      <span className="text-[10px]">RAM only</span>
+                      <span className="text-[10px] bg-purple-100 dark:bg-purple-950 px-1.5 py-0.5 rounded text-purple-700 dark:text-purple-300">
+                        {isIncognito ? 'Active' : 'Unsaved'}
+                      </span>
                     </button>
 
                     {/* Delete Chat */}
