@@ -10,9 +10,18 @@ export default function AdminPage() {
   const [loginError, setLoginError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  // Tabs: dashboard, users, tiers, skills, bulk-import, credentials, mcp, logs
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'tiers' | 'skills' | 'bulk-import' | 'credentials' | 'mcp' | 'logs'>('dashboard');
+  // Tabs: dashboard, users, apps, tiers, skills, bulk-import, credentials, mcp, logs
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'apps' | 'tiers' | 'skills' | 'bulk-import' | 'credentials' | 'mcp' | 'logs'>('dashboard');
   const [adminData, setAdminData] = useState<any>(null);
+
+  // User & OAuth Tester form
+  const [newUserEmail, setNewUserEmail] = useState('');
+  const [newUserName, setNewUserName] = useState('');
+  const [newUserRole, setNewUserRole] = useState('USER');
+  const [newUserTier, setNewUserTier] = useState('BEGINNER');
+  const [newUserIsTester, setNewUserIsTester] = useState(true);
+  const [userFormMessage, setUserFormMessage] = useState('');
+  const [copyToast, setCopyToast] = useState('');
 
   // Forms
   const [newKeyProvider, setNewKeyProvider] = useState('gemini');
@@ -88,6 +97,63 @@ export default function AdminPage() {
   }
 
   // User Actions
+  async function handleAddNewUser(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newUserEmail.trim()) return;
+    setUserFormMessage('');
+    try {
+      const res = await fetch('/api/admin/actions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'ADD_USER',
+          payload: {
+            email: newUserEmail.trim(),
+            name: newUserName.trim(),
+            role: newUserRole,
+            subscription_tier: newUserTier,
+            is_oauth_tester: newUserIsTester,
+          },
+        }),
+      });
+      if (res.ok) {
+        setUserFormMessage(`✓ Added user ${newUserEmail.trim()} successfully.`);
+        setNewUserEmail('');
+        setNewUserName('');
+        fetchAdminData();
+        setTimeout(() => setUserFormMessage(''), 3000);
+      }
+    } catch {
+      setUserFormMessage('Failed to add user.');
+    }
+  }
+
+  async function handleToggleTestUser(email: string, isTester: boolean) {
+    await fetch('/api/admin/actions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'TOGGLE_TEST_USER', payload: { email, is_oauth_tester: isTester } }),
+    });
+    fetchAdminData();
+  }
+
+  function handleCopyAllTesters() {
+    const testers = (adminData?.users || []).filter((u: any) => u.is_oauth_tester).map((u: any) => u.email);
+    const text = testers.join(', ');
+    navigator.clipboard.writeText(text);
+    setCopyToast(`Copied ${testers.length} test user emails to clipboard!`);
+    setTimeout(() => setCopyToast(''), 3500);
+  }
+
+  async function handleToggleApp(appId: string, enabled: boolean) {
+    await fetch('/api/admin/actions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'TOGGLE_APP', payload: { appId, enabled } }),
+    });
+    fetchAdminData();
+  }
+
   async function handleUserTierChange(email: string, tier: string) {
     await fetch('/api/admin/actions', {
       method: 'POST',
@@ -325,7 +391,8 @@ export default function AdminPage() {
       <nav className="bg-gray-800/60 border-b border-gray-700 px-4 sm:px-6 flex gap-4 text-xs sm:text-sm font-medium overflow-x-auto whitespace-nowrap">
         {[
           { id: 'dashboard', label: 'Dashboard' },
-          { id: 'users', label: 'Users' },
+          { id: 'users', label: `Users & Cloud Testers (${adminData?.stats?.testUsersCount || adminData?.users?.length || 1})` },
+          { id: 'apps', label: `Cloud APIs & Apps (${adminData?.apps?.length || 20})` },
           { id: 'tiers', label: 'Subscription Tiers' },
           { id: 'skills', label: `Skills (${adminData?.skills?.length || 53})` },
           { id: 'bulk-import', label: 'Bulk MD Import' },
@@ -366,8 +433,8 @@ export default function AdminPage() {
                 <p className="text-2xl font-bold text-white mt-1">{adminData?.tiers?.length || 4}</p>
               </div>
               <div className="bg-gray-800 border border-gray-700 rounded-xl p-4">
-                <span className="text-xs text-gray-400 uppercase font-semibold">Pooled API Keys</span>
-                <p className="text-2xl font-bold text-white mt-1">{adminData?.stats?.totalKeys || 1}</p>
+                <span className="text-xs text-gray-400 uppercase font-semibold">Cloud APIs Enabled</span>
+                <p className="text-2xl font-bold text-white mt-1">{adminData?.stats?.activeApps || 20} / 20</p>
               </div>
             </div>
 
@@ -392,62 +459,274 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* USERS TAB */}
+        {/* USERS & GOOGLE CLOUD TESTERS TAB */}
         {activeTab === 'users' && (
-          <div className="bg-gray-800 border border-gray-700 rounded-xl overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-700 flex justify-between items-center">
-              <div>
-                <h2 className="text-base font-bold text-white">Users & Subscription Tiers</h2>
-                <p className="text-xs text-gray-400">Modify user subscription tiers and access permissions globally</p>
+          <div className="space-y-6">
+            {/* Google Cloud OAuth Testing Module */}
+            <div className="bg-gray-800 border border-indigo-900/50 rounded-xl p-6 shadow-lg">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-700 pb-4">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-base font-bold text-white">Google Cloud OAuth Test Users Whitelist</h2>
+                    <span className="bg-amber-900/50 text-amber-300 text-[10px] font-bold px-2 py-0.5 rounded border border-amber-700">
+                      OAUTH STATUS: TESTING (MAX 100)
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1">
+                    While the Google Cloud OAuth Consent Screen is in <strong>Testing</strong> mode, only registered Test Users can sign in with Google.
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={handleCopyAllTesters}
+                    className="text-xs bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-3 py-2 rounded-lg flex items-center gap-1.5 transition-colors shadow"
+                  >
+                    <span>📋 Copy All Tester Emails</span>
+                  </button>
+                  <a
+                    href="https://console.cloud.google.com/apis/credentials/consent"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-xs bg-gray-700 hover:bg-gray-600 text-white font-medium px-3 py-2 rounded-lg flex items-center gap-1.5 transition-colors border border-gray-600"
+                  >
+                    <span>↗ Open Cloud Console</span>
+                  </a>
+                </div>
+              </div>
+
+              {copyToast && (
+                <div className="mt-3 bg-emerald-900/50 border border-emerald-600 text-emerald-200 text-xs px-3 py-2 rounded-lg font-medium">
+                  {copyToast}
+                </div>
+              )}
+
+              {/* Add User / Whitelist Tester Form */}
+              <form onSubmit={handleAddNewUser} className="mt-5 bg-gray-900/60 p-4 rounded-xl border border-gray-700/60">
+                <h3 className="text-xs font-bold text-gray-200 uppercase tracking-wider mb-3">Add User & Whitelist Cloud Tester</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                  <div>
+                    <label className="block text-[11px] text-gray-400 mb-1">Gmail Address *</label>
+                    <input
+                      type="email"
+                      required
+                      placeholder="user@gmail.com"
+                      value={newUserEmail}
+                      onChange={(e) => setNewUserEmail(e.target.value)}
+                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] text-gray-400 mb-1">Full Name</label>
+                    <input
+                      type="text"
+                      placeholder="Jane Doe"
+                      value={newUserName}
+                      onChange={(e) => setNewUserName(e.target.value)}
+                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] text-gray-400 mb-1">Subscription Tier</label>
+                    <select
+                      value={newUserTier}
+                      onChange={(e) => setNewUserTier(e.target.value)}
+                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    >
+                      {adminData?.tiers?.map((t: any) => (
+                        <option key={t.id} value={t.id}>{t.name} ({t.id})</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[11px] text-gray-400 mb-1">Role</label>
+                    <select
+                      value={newUserRole}
+                      onChange={(e) => setNewUserRole(e.target.value)}
+                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    >
+                      <option value="USER">Standard User</option>
+                      <option value="ADMIN">Admin</option>
+                      <option value="SUPER_ADMIN">Super Admin</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="mt-3 flex items-center justify-between">
+                  <label className="flex items-center gap-2 cursor-pointer text-xs text-gray-300">
+                    <input
+                      type="checkbox"
+                      checked={newUserIsTester}
+                      onChange={(e) => setNewUserIsTester(e.target.checked)}
+                      className="rounded bg-gray-800 border-gray-700 text-indigo-600 focus:ring-indigo-500"
+                    />
+                    <span>Automatically grant Google Cloud OAuth Tester status</span>
+                  </label>
+
+                  <button
+                    type="submit"
+                    className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs px-4 py-1.5 rounded-lg transition-colors"
+                  >
+                    + Add & Save User
+                  </button>
+                </div>
+
+                {userFormMessage && (
+                  <p className="mt-2 text-xs text-emerald-400">{userFormMessage}</p>
+                )}
+              </form>
+            </div>
+
+            {/* Users Table */}
+            <div className="bg-gray-800 border border-gray-700 rounded-xl overflow-hidden">
+              <div className="px-6 py-4 border-b border-gray-700 flex justify-between items-center">
+                <div>
+                  <h2 className="text-base font-bold text-white">Registered Users & Account Tiers</h2>
+                  <p className="text-xs text-gray-400">Total Users: {adminData?.users?.length || 0} | Whitelisted Testers: {adminData?.stats?.testUsersCount || 0}</p>
+                </div>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs sm:text-sm text-gray-300">
+                  <thead className="bg-gray-700/50 text-xs uppercase text-gray-400">
+                    <tr>
+                      <th className="px-4 sm:px-6 py-3">Gmail Address</th>
+                      <th className="px-4 sm:px-6 py-3">Role</th>
+                      <th className="px-4 sm:px-6 py-3">Subscription Tier</th>
+                      <th className="px-4 sm:px-6 py-3">Cloud OAuth Tester</th>
+                      <th className="px-4 sm:px-6 py-3">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-700">
+                    {adminData?.users?.map((u: any) => (
+                      <tr key={u.email} className="hover:bg-gray-700/30">
+                        <td className="px-4 sm:px-6 py-3 font-medium text-white">
+                          <div className="flex flex-col">
+                            <span>{u.email}</span>
+                            {u.name && <span className="text-[11px] text-gray-400">{u.name}</span>}
+                          </div>
+                        </td>
+                        <td className="px-4 sm:px-6 py-3">
+                          <span className={`text-[10px] px-2 py-0.5 rounded font-semibold ${
+                            u.role === 'SUPER_ADMIN' ? 'bg-purple-900/60 text-purple-300' : 'bg-gray-700 text-gray-300'
+                          }`}>
+                            {u.role}
+                          </span>
+                        </td>
+                        <td className="px-4 sm:px-6 py-3">
+                          <select
+                            value={u.subscription_tier}
+                            onChange={(e) => handleUserTierChange(u.email, e.target.value)}
+                            className="bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white"
+                          >
+                            {adminData?.tiers?.map((t: any) => (
+                              <option key={t.id} value={t.id}>{t.name} ({t.id})</option>
+                            ))}
+                          </select>
+                        </td>
+                        <td className="px-4 sm:px-6 py-3">
+                          <button
+                            onClick={() => handleToggleTestUser(u.email, !u.is_oauth_tester)}
+                            className={`text-xs px-2.5 py-1 rounded-full font-semibold transition-colors ${
+                              u.is_oauth_tester
+                                ? 'bg-emerald-900/60 text-emerald-300 border border-emerald-700 hover:bg-emerald-900'
+                                : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
+                            }`}
+                          >
+                            {u.is_oauth_tester ? '✓ Whitelisted' : '+ Grant Tester'}
+                          </button>
+                        </td>
+                        <td className="px-4 sm:px-6 py-3">
+                          {u.role !== 'SUPER_ADMIN' && (
+                            <button
+                              onClick={() => handleDeleteUser(u.email)}
+                              className="text-xs text-red-400 hover:text-red-300 hover:underline"
+                            >
+                              Delete
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs sm:text-sm text-gray-300">
-                <thead className="bg-gray-700/50 text-xs uppercase text-gray-400">
-                  <tr>
-                    <th className="px-4 sm:px-6 py-3">Gmail Address</th>
-                    <th className="px-4 sm:px-6 py-3">Role</th>
-                    <th className="px-4 sm:px-6 py-3">Subscription Tier</th>
-                    <th className="px-4 sm:px-6 py-3">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-700">
-                  {adminData?.users?.map((u: any) => (
-                    <tr key={u.email} className="hover:bg-gray-700/30">
-                      <td className="px-4 sm:px-6 py-3 font-medium text-white">{u.email}</td>
-                      <td className="px-4 sm:px-6 py-3">
-                        <span className={`text-[10px] px-2 py-0.5 rounded font-semibold ${
-                          u.role === 'SUPER_ADMIN' ? 'bg-purple-900/60 text-purple-300' : 'bg-gray-700 text-gray-300'
-                        }`}>
-                          {u.role}
-                        </span>
-                      </td>
-                      <td className="px-4 sm:px-6 py-3">
-                        <select
-                          value={u.subscription_tier}
-                          onChange={(e) => handleUserTierChange(u.email, e.target.value)}
-                          className="bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white"
-                        >
-                          {adminData?.tiers?.map((t: any) => (
-                            <option key={t.id} value={t.id}>{t.name} ({t.id})</option>
-                          ))}
-                        </select>
-                      </td>
-                      <td className="px-4 sm:px-6 py-3">
-                        {u.role !== 'SUPER_ADMIN' && (
-                          <button
-                            onClick={() => handleDeleteUser(u.email)}
-                            className="text-xs text-red-400 hover:text-red-300 hover:underline"
-                          >
-                            Delete
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          </div>
+        )}
+
+        {/* APPS & INTEGRATIONS TAB */}
+        {activeTab === 'apps' && (
+          <div className="space-y-6">
+            <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-base font-bold text-white">Google Cloud Apps & Workspace Integrations</h2>
+                  <p className="text-xs text-gray-400 mt-1">
+                    Centralized inventory of all 20 enabled Google APIs, operational health, and subscription tier routing.
+                  </p>
+                </div>
+                <a
+                  href="https://console.cloud.google.com/apis/dashboard"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-xs bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-3 py-2 rounded-lg flex items-center gap-1.5 self-start sm:self-auto transition-colors"
+                >
+                  <span>↗ Google Cloud APIs Dashboard</span>
+                </a>
+              </div>
             </div>
+
+            {/* Categories */}
+            {['Workspace & Productivity', 'AI & Analytics', 'Cloud Infrastructure', 'Security & Operations'].map(category => {
+              const categoryApps = (adminData?.apps || []).filter((a: any) => a.category === category);
+              if (categoryApps.length === 0) return null;
+
+              return (
+                <div key={category} className="space-y-3">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 px-1">{category} ({categoryApps.length})</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {categoryApps.map((app: any) => (
+                      <div key={app.id} className="bg-gray-800 border border-gray-700 rounded-xl p-4 flex flex-col justify-between">
+                        <div>
+                          <div className="flex items-center justify-between gap-2 mb-1.5">
+                            <span className="font-semibold text-sm text-white">{app.name}</span>
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${
+                              app.status === 'ACTIVE IN APP'
+                                ? 'bg-emerald-900/50 text-emerald-300 border-emerald-700'
+                                : 'bg-sky-900/50 text-sky-300 border-sky-700'
+                            }`}>
+                              {app.status}
+                            </span>
+                          </div>
+                          <p className="text-xs text-gray-400 mb-3">{app.description}</p>
+                        </div>
+
+                        <div className="pt-3 border-t border-gray-700/60 flex items-center justify-between text-xs">
+                          <div className="flex flex-wrap gap-1">
+                            {app.allowedTiers?.map((tier: string) => (
+                              <span key={tier} className="bg-gray-700 text-gray-300 text-[10px] px-1.5 py-0.5 rounded">
+                                {tier}
+                              </span>
+                            ))}
+                          </div>
+
+                          <button
+                            onClick={() => handleToggleApp(app.id, !app.enabled)}
+                            className={`px-3 py-1 rounded font-semibold text-xs transition-colors ${
+                              app.enabled
+                                ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                                : 'bg-gray-700 hover:bg-gray-600 text-gray-400'
+                            }`}
+                          >
+                            {app.enabled ? 'Enabled' : 'Disabled'}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
 

@@ -6,6 +6,14 @@ function getAuth(accessToken: string) {
   return auth;
 }
 
+export function cleanFileId(idOrUrl: string): string {
+  if (!idOrUrl) return '';
+  const str = String(idOrUrl).trim();
+  const match = str.match(/\/d\/([a-zA-Z0-9_-]+)/);
+  if (match) return match[1];
+  return str.replace(/^[<"']|[>"']$/g, '').trim();
+}
+
 // Google Docs
 export async function createDocument(accessToken: string, title: string, content: string) {
   try {
@@ -48,8 +56,9 @@ export async function readDocument(accessToken: string, documentId: string) {
   try {
     const auth = getAuth(accessToken);
     const docs = google.docs({ version: 'v1', auth });
+    const targetDocId = cleanFileId(documentId);
     
-    const res = await docs.documents.get({ documentId });
+    const res = await docs.documents.get({ documentId: targetDocId });
     let content = '';
     
     res.data.body?.content?.forEach((element) => {
@@ -62,7 +71,7 @@ export async function readDocument(accessToken: string, documentId: string) {
       }
     });
     
-    return { documentId, title: res.data.title, content };
+    return { documentId: targetDocId, title: res.data.title, content };
   } catch (error: any) {
     return { error: error.message };
   }
@@ -72,8 +81,9 @@ export async function updateDocument(accessToken: string, documentId: string, co
   try {
     const auth = getAuth(accessToken);
     const docs = google.docs({ version: 'v1', auth });
+    const targetDocId = cleanFileId(documentId);
     
-    const docRes = await docs.documents.get({ documentId });
+    const docRes = await docs.documents.get({ documentId: targetDocId });
     const endIndex = docRes.data.body?.content?.[docRes.data.body.content.length - 1]?.endIndex || 2;
     
     const requests: any[] = [];
@@ -114,8 +124,9 @@ export async function deleteFile(accessToken: string, fileId: string) {
   try {
     const auth = getAuth(accessToken);
     const drive = google.drive({ version: 'v3', auth });
+    const targetFileId = cleanFileId(fileId);
     
-    await drive.files.delete({ fileId });
+    await drive.files.delete({ fileId: targetFileId });
     return { success: true };
   } catch (error: any) {
     return { error: error.message };
@@ -184,13 +195,14 @@ export async function readSpreadsheet(accessToken: string, spreadsheetId: string
   try {
     const auth = getAuth(accessToken);
     const sheets = google.sheets({ version: 'v4', auth });
+    const targetId = cleanFileId(spreadsheetId);
     
     const res = await sheets.spreadsheets.values.get({
-      spreadsheetId,
+      spreadsheetId: targetId,
       range,
     });
     
-    return { spreadsheetId, range, values: res.data.values || [] };
+    return { spreadsheetId: targetId, range, values: res.data.values || [] };
   } catch (error: any) {
     return { error: error.message };
   }
@@ -200,15 +212,16 @@ export async function updateSpreadsheet(accessToken: string, spreadsheetId: stri
   try {
     const auth = getAuth(accessToken);
     const sheets = google.sheets({ version: 'v4', auth });
+    const targetId = cleanFileId(spreadsheetId);
     
     const res = await sheets.spreadsheets.values.update({
-      spreadsheetId,
+      spreadsheetId: targetId,
       range,
       valueInputOption: 'USER_ENTERED',
       requestBody: { values },
     });
     
-    return { updatedRange: res.data.updatedRange, updatedRows: res.data.updatedRows };
+    return { updatedRange: res.data.updatedRange, updatedRows: res.data.updatedRows, spreadsheetId: targetId };
   } catch (error: any) {
     return { error: error.message };
   }
@@ -239,6 +252,7 @@ export async function addSlide(accessToken: string, presentationId: string, titl
   try {
     const auth = getAuth(accessToken);
     const slides = google.slides({ version: 'v1', auth });
+    const targetPresentationId = cleanFileId(presentationId);
     
     const uniqueSuffix = Math.random().toString(36).substring(2, 8);
     const slideId = `slide_${Date.now()}_${uniqueSuffix}`;
@@ -338,7 +352,7 @@ export async function addSlide(accessToken: string, presentationId: string, titl
     }
     
     await slides.presentations.batchUpdate({
-      presentationId,
+      presentationId: targetPresentationId,
       requestBody: {
         requests,
       },
@@ -347,7 +361,7 @@ export async function addSlide(accessToken: string, presentationId: string, titl
     return {
       success: true,
       slideId,
-      presentationId,
+      presentationId: targetPresentationId,
     };
   } catch (error: any) {
     return { error: error.message };
@@ -727,25 +741,33 @@ export async function shareFile(accessToken: string, fileId: string, role = 'rea
   try {
     const auth = getAuth(accessToken);
     const drive = google.drive({ version: 'v3', auth });
-    const requestBody: any = { role, type };
+    const targetFileId = cleanFileId(fileId);
+
+    // Normalize roles (reader, commenter, writer)
+    let normalizedRole = (role || 'reader').toLowerCase().trim();
+    if (normalizedRole === 'editor' || normalizedRole === 'edit') normalizedRole = 'writer';
+    if (normalizedRole === 'viewer' || normalizedRole === 'view') normalizedRole = 'reader';
+    if (normalizedRole === 'comment') normalizedRole = 'commenter';
+
+    const requestBody: any = { role: normalizedRole, type };
     if (type === 'user' && emailAddress) {
-      requestBody.emailAddress = emailAddress;
+      requestBody.emailAddress = emailAddress.trim();
     }
     await drive.permissions.create({
-      fileId,
+      fileId: targetFileId,
       requestBody,
       fields: 'id',
     });
     const fileRes = await drive.files.get({
-      fileId,
+      fileId: targetFileId,
       fields: 'webViewLink, name',
     });
     return {
       success: true,
-      fileId,
+      fileId: targetFileId,
       name: fileRes.data.name,
       shareLink: fileRes.data.webViewLink,
-      role,
+      role: normalizedRole,
       type,
     };
   } catch (error: any) {

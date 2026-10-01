@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminSession } from '@/lib/admin-auth';
-import { getAllUsers, getAllSkills, getAllSubscriptionTiers, getAllApiKeys, getAuditLogs } from '@/lib/db';
+import { getAllUsers, getAllSkills, getAllSubscriptionTiers, getAllApiKeys, getAuditLogs, getAllApps } from '@/lib/db';
 
 export async function GET(request: NextRequest) {
   const session = await getAdminSession();
@@ -8,16 +8,18 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const [users, skills, tiers, apiKeys, auditLogs] = await Promise.all([
+  const [users, skills, tiers, apiKeys, auditLogs, apps] = await Promise.all([
     getAllUsers(),
     getAllSkills(),
     getAllSubscriptionTiers(),
     getAllApiKeys(),
     getAuditLogs(),
+    getAllApps(),
   ]);
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://agent-google-green.vercel.app';
   const mcpEndpoint = `${appUrl}/api/mcp`;
+  const oauthTestUsers = users.filter((u: any) => u.is_oauth_tester);
 
   return NextResponse.json({
     admin: session,
@@ -26,12 +28,23 @@ export async function GET(request: NextRequest) {
     tiers,
     apiKeys,
     auditLogs,
+    apps,
     mcpEndpoint,
+    cloudProject: {
+      publishingStatus: 'Testing',
+      maxTestUsers: 100,
+      activeTestUsersCount: oauthTestUsers.length,
+      oauthConsentUrl: 'https://console.cloud.google.com/apis/credentials/consent',
+      apisDashboardUrl: 'https://console.cloud.google.com/apis/dashboard',
+      credentialsUrl: 'https://console.cloud.google.com/apis/credentials',
+    },
     stats: {
       totalUsers: users.length,
+      testUsersCount: oauthTestUsers.length,
       activeSkills: skills.filter(s => s.enabled).length,
       totalTiers: tiers.length,
       totalKeys: apiKeys.length,
+      activeApps: apps.filter(a => a.enabled).length,
     }
   });
 }

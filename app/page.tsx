@@ -371,8 +371,12 @@ export default function Home() {
           }
         };
 
+        const mimeType = (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported('audio/webm'))
+          ? 'audio/webm'
+          : ((typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported('audio/mp4')) ? 'audio/mp4' : '');
+
         mediaRecorder.onstop = () => {
-          const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+          const audioBlob = new Blob(audioChunksRef.current, { type: mimeType || 'audio/webm' });
           const url = URL.createObjectURL(audioBlob);
           setRecordedAudioUrl(url);
           stream.getTracks().forEach(track => track.stop());
@@ -410,7 +414,7 @@ export default function Home() {
     const userMessage: ChatMessage = {
       id: crypto.randomUUID(),
       role: 'user',
-      content: promptText || 'Attached voice note',
+      content: fullPrompt || 'Attached voice note',
     };
 
     setMessages(prev => [...prev, userMessage]);
@@ -953,6 +957,7 @@ export default function Home() {
                   }
                   return true;
                 })
+                .sort((a, b) => (b.is_starred ? 1 : 0) - (a.is_starred ? 1 : 0))
                 .map(chat => (
                   <div
                     key={chat.id}
@@ -1021,7 +1026,7 @@ export default function Home() {
             <p className="text-xs text-gray-500 mb-4">Select one or multiple chats to attach their Markdown transcripts as context</p>
 
             <div className="flex-1 overflow-y-auto divide-y divide-gray-100 border rounded-xl mb-4 max-h-60">
-              {archiveChats.map(c => (
+              {archiveChats.slice().sort((a, b) => (b.is_starred ? 1 : 0) - (a.is_starred ? 1 : 0)).map(c => (
                 <label key={c.id} className="p-3 flex items-center gap-3 hover:bg-gray-50 cursor-pointer text-xs">
                   <input
                     type="checkbox"

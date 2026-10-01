@@ -53,11 +53,207 @@ const memoryStore: MemoryStore = {
   auditLogs: [],
 };
 
+export interface CloudAppIntegration {
+  id: string;
+  name: string;
+  category: 'Workspace & Productivity' | 'AI & Analytics' | 'Cloud Infrastructure' | 'Security & Operations';
+  description: string;
+  status: 'ACTIVE IN APP' | 'STANDBY IN CLOUD CONSOLE';
+  enabled: boolean;
+  allowedTiers: string[];
+}
+
+export const INITIAL_CLOUD_APPS: CloudAppIntegration[] = [
+  {
+    id: 'docs',
+    name: 'Google Docs API',
+    category: 'Workspace & Productivity',
+    description: 'Document creation, batch reading, inline styling, and structured content updates.',
+    status: 'ACTIVE IN APP',
+    enabled: true,
+    allowedTiers: ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'ADMIN'],
+  },
+  {
+    id: 'sheets',
+    name: 'Google Sheets API',
+    category: 'Workspace & Productivity',
+    description: 'Automated spreadsheet generation, grid value extraction, formula writes, and row appending.',
+    status: 'ACTIVE IN APP',
+    enabled: true,
+    allowedTiers: ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'ADMIN'],
+  },
+  {
+    id: 'slides',
+    name: 'Google Slides API',
+    category: 'Workspace & Productivity',
+    description: 'Presentation decks, slide layout creation, text block formatting, and deck sharing.',
+    status: 'ACTIVE IN APP',
+    enabled: true,
+    allowedTiers: ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'ADMIN'],
+  },
+  {
+    id: 'drive',
+    name: 'Google Drive API',
+    category: 'Workspace & Productivity',
+    description: 'File metadata indexing, search queries, permissions sharing, and deletion.',
+    status: 'ACTIVE IN APP',
+    enabled: true,
+    allowedTiers: ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'ADMIN'],
+  },
+  {
+    id: 'calendar',
+    name: 'Google Calendar API',
+    category: 'Workspace & Productivity',
+    description: 'Primary calendar event scheduling, attendee notifications, agenda querying, and reschedule.',
+    status: 'ACTIVE IN APP',
+    enabled: true,
+    allowedTiers: ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'ADMIN'],
+  },
+  {
+    id: 'tasks',
+    name: 'Google Tasks API',
+    category: 'Workspace & Productivity',
+    description: 'Task lists, quick action note-taking, due date alerts, and completion tracking.',
+    status: 'ACTIVE IN APP',
+    enabled: true,
+    allowedTiers: ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'ADMIN'],
+  },
+  {
+    id: 'gmail',
+    name: 'Gmail API',
+    category: 'Workspace & Productivity',
+    description: 'Thread search, MIME drafting, safety-guarded reply workflows, and draft approvals.',
+    status: 'ACTIVE IN APP',
+    enabled: true,
+    allowedTiers: ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'ADMIN'],
+  },
+  {
+    id: 'gemini',
+    name: 'Gemini API',
+    category: 'AI & Analytics',
+    description: 'Multimodal generative AI reasoning, tool call function orchestration, and live grounded search.',
+    status: 'ACTIVE IN APP',
+    enabled: true,
+    allowedTiers: ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'ADMIN'],
+  },
+  {
+    id: 'bigquery',
+    name: 'BigQuery API',
+    category: 'AI & Analytics',
+    description: 'Enterprise data warehousing, SQL query execution, and large-scale data analytics.',
+    status: 'STANDBY IN CLOUD CONSOLE',
+    enabled: true,
+    allowedTiers: ['INTERMEDIATE', 'ADVANCED', 'ADMIN'],
+  },
+  {
+    id: 'storage',
+    name: 'Cloud Storage API (GCS)',
+    category: 'Cloud Infrastructure',
+    description: 'Object storage buckets, media asset hosting, and scalable file persistence.',
+    status: 'STANDBY IN CLOUD CONSOLE',
+    enabled: true,
+    allowedTiers: ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'ADMIN'],
+  },
+  {
+    id: 'firestore',
+    name: 'Cloud Firestore API',
+    category: 'Cloud Infrastructure',
+    description: 'NoSQL document database, real-time sync, and client-side data persistence.',
+    status: 'STANDBY IN CLOUD CONSOLE',
+    enabled: true,
+    allowedTiers: ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'ADMIN'],
+  },
+  {
+    id: 'meet',
+    name: 'Google Meet API',
+    category: 'Workspace & Productivity',
+    description: 'Video conferencing management, meeting room links generation, and transcript access.',
+    status: 'STANDBY IN CLOUD CONSOLE',
+    enabled: true,
+    allowedTiers: ['INTERMEDIATE', 'ADVANCED', 'ADMIN'],
+  },
+  {
+    id: 'forms',
+    name: 'Google Forms API',
+    category: 'Workspace & Productivity',
+    description: 'Form creation, response retrieval, quiz configuration, and survey analytics.',
+    status: 'STANDBY IN CLOUD CONSOLE',
+    enabled: true,
+    allowedTiers: ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'ADMIN'],
+  },
+  {
+    id: 'chat',
+    name: 'Google Chat API',
+    category: 'Workspace & Productivity',
+    description: 'Workspace space messaging, webhook notifications, and conversational bot integration.',
+    status: 'STANDBY IN CLOUD CONSOLE',
+    enabled: true,
+    allowedTiers: ['INTERMEDIATE', 'ADVANCED', 'ADMIN'],
+  },
+  {
+    id: 'people',
+    name: 'People API (Contacts)',
+    category: 'Workspace & Productivity',
+    description: 'Contact book lookup, relationship graphs, profile metadata, and email directory.',
+    status: 'STANDBY IN CLOUD CONSOLE',
+    enabled: true,
+    allowedTiers: ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'ADMIN'],
+  },
+  {
+    id: 'identitytoolkit',
+    name: 'Identity Toolkit API',
+    category: 'Security & Operations',
+    description: 'Federated identity authentication, Google Sign-in verification, and session token auth.',
+    status: 'ACTIVE IN APP',
+    enabled: true,
+    allowedTiers: ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'ADMIN'],
+  },
+  {
+    id: 'remoteconfig',
+    name: 'Firebase Remote Config API',
+    category: 'Security & Operations',
+    description: 'Dynamic feature flags, client-side configuration changes, and runtime parameters.',
+    status: 'STANDBY IN CLOUD CONSOLE',
+    enabled: true,
+    allowedTiers: ['ADVANCED', 'ADMIN'],
+  },
+  {
+    id: 'pubsub',
+    name: 'Cloud Pub/Sub API',
+    category: 'Cloud Infrastructure',
+    description: 'Asynchronous event ingestion, real-time message streaming, and distributed microservices.',
+    status: 'STANDBY IN CLOUD CONSOLE',
+    enabled: true,
+    allowedTiers: ['ADVANCED', 'ADMIN'],
+  },
+  {
+    id: 'logging',
+    name: 'Cloud Logging API',
+    category: 'Security & Operations',
+    description: 'Centralized observability, security audit logs, error reporting, and runtime monitoring.',
+    status: 'ACTIVE IN APP',
+    enabled: true,
+    allowedTiers: ['ADMIN'],
+  },
+  {
+    id: 'serviceusage',
+    name: 'Service Usage API',
+    category: 'Security & Operations',
+    description: 'Enables, lists, and audits all Google Cloud APIs activated inside the Cloud Console project.',
+    status: 'ACTIVE IN APP',
+    enabled: true,
+    allowedTiers: ['ADMIN'],
+  },
+];
+
 // Seed all 53 skills
 INITIAL_53_SKILLS.forEach(s => memoryStore.skills.set(s.id, s));
 
 // Seed default subscription tiers
 INITIAL_SUBSCRIPTION_TIERS.forEach(t => memoryStore.tiers.set(t.id, t));
+
+// Seed cloud apps
+INITIAL_CLOUD_APPS.forEach(a => memoryStore.apps.set(a.id, a));
 
 // Seed superadmin user
 memoryStore.users.set(SUPER_ADMIN_EMAIL.toLowerCase(), {
@@ -66,6 +262,7 @@ memoryStore.users.set(SUPER_ADMIN_EMAIL.toLowerCase(), {
   name: 'Super Admin',
   role: 'SUPER_ADMIN',
   subscription_tier: 'ADMIN',
+  is_oauth_tester: true,
   created_at: new Date().toISOString(),
 });
 
@@ -99,7 +296,19 @@ export async function initDb() {
           picture TEXT,
           role TEXT NOT NULL DEFAULT 'USER',
           subscription_tier TEXT NOT NULL DEFAULT 'BEGINNER',
+          is_oauth_tester BOOLEAN DEFAULT TRUE,
           created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+        );
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS is_oauth_tester BOOLEAN DEFAULT TRUE;
+
+        CREATE TABLE IF NOT EXISTS apps (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          category TEXT NOT NULL,
+          description TEXT,
+          status TEXT DEFAULT 'STANDBY IN CLOUD CONSOLE',
+          enabled BOOLEAN DEFAULT TRUE,
+          allowed_tiers TEXT[] DEFAULT ARRAY['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'ADMIN']
         );
 
         CREATE TABLE IF NOT EXISTS subscription_tiers (
@@ -193,23 +402,24 @@ export async function getUserByEmail(email: string) {
   return memoryStore.users.get(normalized) || null;
 }
 
-export async function upsertUser(user: { email: string; name?: string; picture?: string; role?: string; subscription_tier?: string }) {
+export async function upsertUser(user: { email: string; name?: string; picture?: string; role?: string; subscription_tier?: string; is_oauth_tester?: boolean }) {
   await initDb();
   const normalized = user.email.toLowerCase();
   const isSuper = normalized === SUPER_ADMIN_EMAIL.toLowerCase();
   const role = isSuper ? 'SUPER_ADMIN' : (user.role || 'USER');
   const tier = isSuper ? 'ADMIN' : (user.subscription_tier || 'BEGINNER');
+  const isTester = user.is_oauth_tester !== undefined ? user.is_oauth_tester : true;
 
   if (pool && isPgAvailable) {
     try {
       const res = await pool.query(`
-        INSERT INTO users (id, email, name, picture, role, subscription_tier)
-        VALUES ($1, $2, $3, $4, $5, $6)
+        INSERT INTO users (id, email, name, picture, role, subscription_tier, is_oauth_tester)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
         ON CONFLICT (email) DO UPDATE SET
           name = COALESCE(EXCLUDED.name, users.name),
           picture = COALESCE(EXCLUDED.picture, users.picture)
         RETURNING *
-      `, [crypto.randomUUID(), normalized, user.name || '', user.picture || '', role, tier]);
+      `, [crypto.randomUUID(), normalized, user.name || '', user.picture || '', role, tier, isTester]);
       return res.rows[0];
     } catch (e) {
       console.warn('PG error in upsertUser:', e);
@@ -224,10 +434,73 @@ export async function upsertUser(user: { email: string; name?: string; picture?:
     picture: user.picture || existing.picture || '',
     role: isSuper ? 'SUPER_ADMIN' : (existing.role || role),
     subscription_tier: isSuper ? 'ADMIN' : (existing.subscription_tier || tier),
+    is_oauth_tester: existing.is_oauth_tester !== undefined ? existing.is_oauth_tester : isTester,
     created_at: existing.created_at || new Date().toISOString(),
   };
   memoryStore.users.set(normalized, updated);
   return updated;
+}
+
+export async function addUser(user: { email: string; name?: string; role?: string; subscription_tier?: string; is_oauth_tester?: boolean }) {
+  await initDb();
+  const normalized = user.email.toLowerCase();
+  const isSuper = normalized === SUPER_ADMIN_EMAIL.toLowerCase();
+  const role = isSuper ? 'SUPER_ADMIN' : (user.role || 'USER');
+  const tier = isSuper ? 'ADMIN' : (user.subscription_tier || 'BEGINNER');
+  const isTester = user.is_oauth_tester !== undefined ? user.is_oauth_tester : true;
+
+  if (pool && isPgAvailable) {
+    try {
+      const res = await pool.query(`
+        INSERT INTO users (id, email, name, role, subscription_tier, is_oauth_tester)
+        VALUES ($1, $2, $3, $4, $5, $6)
+        ON CONFLICT (email) DO UPDATE SET
+          name = EXCLUDED.name,
+          role = EXCLUDED.role,
+          subscription_tier = EXCLUDED.subscription_tier,
+          is_oauth_tester = EXCLUDED.is_oauth_tester
+        RETURNING *
+      `, [crypto.randomUUID(), normalized, user.name || '', role, tier, isTester]);
+      return res.rows[0];
+    } catch (e) {
+      console.warn('PG error in addUser:', e);
+    }
+  }
+
+  const record = {
+    id: crypto.randomUUID(),
+    email: normalized,
+    name: user.name || '',
+    picture: '',
+    role,
+    subscription_tier: tier,
+    is_oauth_tester: isTester,
+    created_at: new Date().toISOString(),
+  };
+  memoryStore.users.set(normalized, record);
+  return record;
+}
+
+export async function toggleTestUser(email: string, isTester: boolean) {
+  await initDb();
+  const normalized = email.toLowerCase();
+  if (pool && isPgAvailable) {
+    try {
+      await pool.query('UPDATE users SET is_oauth_tester = $1 WHERE email = $2', [isTester, normalized]);
+    } catch (e) {
+      console.warn('PG error in toggleTestUser:', e);
+    }
+  }
+  const u = memoryStore.users.get(normalized);
+  if (u) {
+    u.is_oauth_tester = isTester;
+    memoryStore.users.set(normalized, u);
+  }
+}
+
+export async function getOAuthTestUsers() {
+  const all = await getAllUsers();
+  return all.filter((u: any) => u.is_oauth_tester);
 }
 
 export async function getAllUsers() {
@@ -275,6 +548,52 @@ export async function deleteUser(email: string) {
     }
   }
   memoryStore.users.delete(normalized);
+}
+
+// ----------------- APPS & INTEGRATIONS METHODS -----------------
+export async function getAllApps(): Promise<CloudAppIntegration[]> {
+  await initDb();
+  if (pool && isPgAvailable) {
+    try {
+      const res = await pool.query('SELECT * FROM apps ORDER BY category ASC, name ASC');
+      if (res.rows.length > 0) return res.rows;
+    } catch (e) {
+      console.warn('PG error in getAllApps:', e);
+    }
+  }
+  return Array.from(memoryStore.apps.values());
+}
+
+export async function toggleApp(appId: string, enabled: boolean) {
+  await initDb();
+  if (pool && isPgAvailable) {
+    try {
+      await pool.query('UPDATE apps SET enabled = $1 WHERE id = $2', [enabled, appId]);
+    } catch (e) {
+      console.warn('PG error in toggleApp:', e);
+    }
+  }
+  const app = memoryStore.apps.get(appId);
+  if (app) {
+    app.enabled = enabled;
+    memoryStore.apps.set(appId, app);
+  }
+}
+
+export async function updateAppTiers(appId: string, allowedTiers: string[]) {
+  await initDb();
+  if (pool && isPgAvailable) {
+    try {
+      await pool.query('UPDATE apps SET allowed_tiers = $1 WHERE id = $2', [allowedTiers, appId]);
+    } catch (e) {
+      console.warn('PG error in updateAppTiers:', e);
+    }
+  }
+  const app = memoryStore.apps.get(appId);
+  if (app) {
+    app.allowedTiers = allowedTiers;
+    memoryStore.apps.set(appId, app);
+  }
 }
 
 // ----------------- SUBSCRIPTION TIERS METHODS -----------------

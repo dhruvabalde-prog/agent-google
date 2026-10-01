@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminSession } from '@/lib/admin-auth';
 import {
+  addUser,
   updateUserTier,
   deleteUser,
+  toggleTestUser,
   saveSubscriptionTier,
   deleteSubscriptionTier,
   saveSkill,
@@ -12,6 +14,8 @@ import {
   bulkImportSkillsFromMarkdown,
   addApiKey,
   deleteApiKey,
+  toggleApp,
+  updateAppTiers,
   logAdminAction,
 } from '@/lib/db';
 
@@ -26,7 +30,23 @@ export async function POST(request: NextRequest) {
     const { action, payload } = body;
 
     switch (action) {
-      // User Actions
+      // User & OAuth Tester Actions
+      case 'ADD_USER':
+        const added = await addUser({
+          email: payload.email,
+          name: payload.name,
+          role: payload.role || 'USER',
+          subscription_tier: payload.subscription_tier || 'BEGINNER',
+          is_oauth_tester: payload.is_oauth_tester !== false,
+        });
+        await logAdminAction(session.email, 'ADD_USER', payload.email, `Added user (OAuth Tester: ${payload.is_oauth_tester !== false})`);
+        return NextResponse.json({ success: true, user: added });
+
+      case 'TOGGLE_TEST_USER':
+        await toggleTestUser(payload.email, payload.is_oauth_tester);
+        await logAdminAction(session.email, 'TOGGLE_TEST_USER', payload.email, `OAuth Tester set to: ${payload.is_oauth_tester}`);
+        return NextResponse.json({ success: true });
+
       case 'UPDATE_USER_TIER':
         await updateUserTier(payload.email, payload.tier, payload.role);
         await logAdminAction(session.email, 'UPDATE_USER_TIER', payload.email, `Tier changed to ${payload.tier}`);
@@ -35,6 +55,17 @@ export async function POST(request: NextRequest) {
       case 'DELETE_USER':
         await deleteUser(payload.email);
         await logAdminAction(session.email, 'DELETE_USER', payload.email, 'Deleted user');
+        return NextResponse.json({ success: true });
+
+      // Google Cloud Apps & Integrations Actions
+      case 'TOGGLE_APP':
+        await toggleApp(payload.appId, payload.enabled);
+        await logAdminAction(session.email, 'TOGGLE_APP', payload.appId, `App enabled: ${payload.enabled}`);
+        return NextResponse.json({ success: true });
+
+      case 'UPDATE_APP_TIERS':
+        await updateAppTiers(payload.appId, payload.allowedTiers);
+        await logAdminAction(session.email, 'UPDATE_APP_TIERS', payload.appId, `Allowed tiers: ${payload.allowedTiers.join(', ')}`);
         return NextResponse.json({ success: true });
 
       // Subscription Tier Actions
