@@ -1,5 +1,7 @@
 import { Pool } from 'pg';
 import bcrypt from 'bcryptjs';
+import { encryptData, decryptData } from './crypto';
+import { INITIAL_53_SKILLS, INITIAL_SUBSCRIPTION_TIERS, SubscriptionTier, SkillDefinition, parseSkillsFromMarkdown } from './skills-catalog';
 
 // Super Admin seed configuration
 export const SUPER_ADMIN_EMAIL = process.env.SUPER_ADMIN_EMAIL || 'dhruvabalde@gmail.com';
@@ -28,12 +30,13 @@ if (rawDbUrl && !hasPlaceholder) {
   }
 }
 
-// In-Memory resilient fallback store if Postgres is still waiting for the user's password
+// In-Memory resilient fallback store
 interface MemoryStore {
   users: Map<string, any>;
   chats: Map<string, any>;
   messages: Map<string, any[]>;
-  skills: Map<string, any>;
+  skills: Map<string, SkillDefinition>;
+  tiers: Map<string, SubscriptionTier>;
   apps: Map<string, any>;
   apiKeys: Map<string, any>;
   auditLogs: any[];
@@ -44,22 +47,17 @@ const memoryStore: MemoryStore = {
   chats: new Map(),
   messages: new Map(),
   skills: new Map(),
+  tiers: new Map(),
   apps: new Map(),
   apiKeys: new Map(),
   auditLogs: [],
 };
 
-// Seed default skills
-const DEFAULT_SKILLS = [
-  { id: 'web-research', name: 'Deep Web Research', department: 'Research', description: 'Autonomous multi-query web research and fact extraction', enabled: true, allowedTiers: ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'ADMIN'] },
-  { id: 'presentation-builder', name: 'Presentation Builder', department: 'Presentations', description: 'Generate professional Google Slides with structured content', enabled: true, allowedTiers: ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'ADMIN'] },
-  { id: 'document-author', name: 'Executive Document Author', department: 'Writing', description: 'Human-grade Google Docs without robotic tropes', enabled: true, allowedTiers: ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'ADMIN'] },
-  { id: 'spreadsheet-architect', name: 'Data & Sheets Architect', department: 'Spreadsheets', description: 'Build Google Sheets with formulas, headers and formatted data', enabled: true, allowedTiers: ['INTERMEDIATE', 'ADVANCED', 'ADMIN'] },
-  { id: 'email-triage', name: 'Gmail Triage & Drafting', department: 'Productivity', description: 'Read incoming threads and draft replies for user approval', enabled: true, allowedTiers: ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'ADMIN'] },
-  { id: 'calendar-task-manager', name: 'Calendar & Tasks Scheduler', department: 'Productivity', description: 'Schedule events and maintain structured task lists', enabled: true, allowedTiers: ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'ADMIN'] },
-];
+// Seed all 53 skills
+INITIAL_53_SKILLS.forEach(s => memoryStore.skills.set(s.id, s));
 
-DEFAULT_SKILLS.forEach(s => memoryStore.skills.set(s.id, s));
+// Seed default subscription tiers
+INITIAL_SUBSCRIPTION_TIERS.forEach(t => memoryStore.tiers.set(t.id, t));
 
 // Seed superadmin user
 memoryStore.users.set(SUPER_ADMIN_EMAIL.toLowerCase(), {
@@ -87,7 +85,6 @@ if (process.env.GEMINI_API_KEY) {
   });
 }
 
-// Auto-initialize Postgres tables if available
 let tablesInitialized = false;
 export async function initDb() {
   if (!pool || !isPgAvailable || tablesInitialized) return;
@@ -103,6 +100,13 @@ export async function initDb() {
           role TEXT NOT NULL DEFAULT 'USER',
           subscription_tier TEXT NOT NULL DEFAULT 'BEGINNER',
           created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+        );
+
+        CREATE TABLE IF NOT EXISTS subscription_tiers (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          description TEXT,
+          daily_token_limit INTEGER DEFAULT 50000
         );
 
         CREATE TABLE IF NOT EXISTS chats (
@@ -163,13 +167,6 @@ export async function initDb() {
           created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
         );
       `);
-
-      // Seed SuperAdmin into Postgres
-      await client.query(`
-        INSERT INTO users (id, email, name, role, subscription_tier)
-        VALUES ('usr_superadmin', $1, 'Super Admin', 'SUPER_ADMIN', 'ADMIN')
-        ON CONFLICT (email) DO UPDATE SET role = 'SUPER_ADMIN', subscription_tier = 'ADMIN'
-      `, [SUPER_ADMIN_EMAIL.toLowerCase()]);
 
       tablesInitialized = true;
     } finally {
@@ -267,7 +264,65 @@ export async function updateUserTier(email: string, tier: string, role?: string)
   }
 }
 
-// ----------------- CHAT METHODS -----------------
+export async function deleteUser(email: string) {
+  await initDb();
+  const normalized = email.toLowerCase();
+  if (pool && isPgAvailable) {
+    try {
+      await pool.query('DELETE FROM users WHERE email = $1', [normalized]);
+    } catch (e) {
+      console.warn('PG error in deleteUser:', e);
+    }
+  }
+  memoryStore.users.delete(normalized);
+}
+
+// ----------------- SUBSCRIPTION TIERS METHODS -----------------
+export async function getAllSubscriptionTiers(): Promise<SubscriptionTier[]> {
+  await initDb();
+  if (pool && isPgAvailable) {
+    try {
+      const res = await pool.query('SELECT * FROM subscription_tiers ORDER BY daily_token_limit ASC');
+      if (res.rows.length > 0) return res.rows;
+    } catch (e) {
+      console.warn('PG error in getAllSubscriptionTiers:', e);
+    }
+  }
+  return Array.from(memoryStore.tiers.values());
+}
+
+export async function saveSubscriptionTier(tier: SubscriptionTier) {
+  await initDb();
+  if (pool && isPgAvailable) {
+    try {
+      await pool.query(`
+        INSERT INTO subscription_tiers (id, name, description, daily_token_limit)
+        VALUES ($1, $2, $3, $4)
+        ON CONFLICT (id) DO UPDATE SET
+          name = EXCLUDED.name,
+          description = EXCLUDED.description,
+          daily_token_limit = EXCLUDED.daily_token_limit
+      `, [tier.id.toUpperCase(), tier.name, tier.description || '', tier.dailyTokenLimit || 50000]);
+    } catch (e) {
+      console.warn('PG error in saveSubscriptionTier:', e);
+    }
+  }
+  memoryStore.tiers.set(tier.id.toUpperCase(), tier);
+}
+
+export async function deleteSubscriptionTier(tierId: string) {
+  await initDb();
+  if (pool && isPgAvailable) {
+    try {
+      await pool.query('DELETE FROM subscription_tiers WHERE id = $1', [tierId.toUpperCase()]);
+    } catch (e) {
+      console.warn('PG error in deleteSubscriptionTier:', e);
+    }
+  }
+  memoryStore.tiers.delete(tierId.toUpperCase());
+}
+
+// ----------------- CHAT METHODS (ENCRYPTED) -----------------
 export async function getChatsByUser(email: string) {
   await initDb();
   const normalized = email.toLowerCase();
@@ -277,7 +332,10 @@ export async function getChatsByUser(email: string) {
         'SELECT * FROM chats WHERE user_email = $1 AND is_incognito = FALSE ORDER BY is_starred DESC, updated_at DESC',
         [normalized]
       );
-      return res.rows;
+      return res.rows.map(r => ({
+        ...r,
+        markdown_content: decryptData(r.markdown_content || ''),
+      }));
     } catch (e) {
       console.warn('PG error in getChatsByUser:', e);
     }
@@ -287,7 +345,11 @@ export async function getChatsByUser(email: string) {
     .sort((a, b) => {
       if (a.is_starred !== b.is_starred) return a.is_starred ? -1 : 1;
       return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
-    });
+    })
+    .map(c => ({
+      ...c,
+      markdown_content: decryptData(c.markdown_content || ''),
+    }));
 }
 
 export async function getChatById(chatId: string) {
@@ -295,12 +357,21 @@ export async function getChatById(chatId: string) {
   if (pool && isPgAvailable) {
     try {
       const res = await pool.query('SELECT * FROM chats WHERE id = $1', [chatId]);
-      if (res.rows.length > 0) return res.rows[0];
+      if (res.rows.length > 0) {
+        const row = res.rows[0];
+        row.markdown_content = decryptData(row.markdown_content || '');
+        return row;
+      }
     } catch (e) {
       console.warn('PG error in getChatById:', e);
     }
   }
-  return memoryStore.chats.get(chatId) || null;
+  const chat = memoryStore.chats.get(chatId);
+  if (!chat) return null;
+  return {
+    ...chat,
+    markdown_content: decryptData(chat.markdown_content || ''),
+  };
 }
 
 export async function saveChat(chat: any) {
@@ -308,6 +379,9 @@ export async function saveChat(chat: any) {
   const now = new Date().toISOString();
   chat.updated_at = now;
   if (!chat.created_at) chat.created_at = now;
+
+  // AES-256-GCM Encrypt markdown content before saving to DB
+  const encryptedMd = encryptData(chat.markdown_content || '');
 
   if (pool && isPgAvailable) {
     try {
@@ -328,7 +402,7 @@ export async function saveChat(chat: any) {
       `, [
         chat.id, chat.user_email.toLowerCase(), chat.title, chat.meaningful_outcome || null,
         chat.outcome_status || 'NONE', chat.is_locked || false, chat.is_starred || false,
-        chat.is_incognito || false, chat.markdown_content || '', chat.message_count || 0,
+        chat.is_incognito || false, encryptedMd, chat.message_count || 0,
         chat.duration || '0m', chat.has_files || false, chat.has_voice || false,
         chat.created_at, chat.updated_at
       ]);
@@ -336,7 +410,7 @@ export async function saveChat(chat: any) {
       console.warn('PG error in saveChat:', e);
     }
   }
-  memoryStore.chats.set(chat.id, chat);
+  memoryStore.chats.set(chat.id, { ...chat, markdown_content: encryptedMd });
   return chat;
 }
 
@@ -378,24 +452,34 @@ export async function getMessagesByChatId(chatId: string) {
   if (pool && isPgAvailable) {
     try {
       const res = await pool.query('SELECT * FROM messages WHERE chat_id = $1 ORDER BY created_at ASC', [chatId]);
-      return res.rows;
+      return res.rows.map(r => ({
+        ...r,
+        content: decryptData(r.content),
+      }));
     } catch (e) {
       console.warn('PG error in getMessagesByChatId:', e);
     }
   }
-  return memoryStore.messages.get(chatId) || [];
+  const list = memoryStore.messages.get(chatId) || [];
+  return list.map(m => ({
+    ...m,
+    content: decryptData(m.content),
+  }));
 }
 
 export async function saveMessage(msg: { id: string; chat_id: string; role: string; content: string; actions?: any; attachments?: any; audio_url?: string }) {
   await initDb();
   const now = new Date().toISOString();
+  // AES-256-GCM Encrypt user message content
+  const encryptedContent = encryptData(msg.content);
+
   if (pool && isPgAvailable) {
     try {
       await pool.query(`
         INSERT INTO messages (id, chat_id, role, content, actions, attachments, audio_url, created_at)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       `, [
-        msg.id, msg.chat_id, msg.role, msg.content,
+        msg.id, msg.chat_id, msg.role, encryptedContent,
         msg.actions ? JSON.stringify(msg.actions) : null,
         msg.attachments ? JSON.stringify(msg.attachments) : null,
         msg.audio_url || null, now
@@ -405,22 +489,55 @@ export async function saveMessage(msg: { id: string; chat_id: string; role: stri
     }
   }
   const list = memoryStore.messages.get(msg.chat_id) || [];
-  list.push({ ...msg, created_at: now });
+  list.push({ ...msg, content: encryptedContent, created_at: now });
   memoryStore.messages.set(msg.chat_id, list);
 }
 
-// ----------------- SKILLS & APIS -----------------
-export async function getAllSkills() {
+// ----------------- SKILLS MANAGEMENT (FULL CRUD & BULK MD) -----------------
+export async function getAllSkills(): Promise<SkillDefinition[]> {
   await initDb();
   if (pool && isPgAvailable) {
     try {
-      const res = await pool.query('SELECT * FROM skills ORDER BY department ASC');
+      const res = await pool.query('SELECT * FROM skills ORDER BY department ASC, name ASC');
       if (res.rows.length > 0) return res.rows;
     } catch (e) {
       console.warn('PG error in getAllSkills:', e);
     }
   }
   return Array.from(memoryStore.skills.values());
+}
+
+export async function saveSkill(skill: SkillDefinition) {
+  await initDb();
+  if (pool && isPgAvailable) {
+    try {
+      await pool.query(`
+        INSERT INTO skills (id, name, department, description, enabled, allowed_tiers)
+        VALUES ($1, $2, $3, $4, $5, $6)
+        ON CONFLICT (id) DO UPDATE SET
+          name = EXCLUDED.name,
+          department = EXCLUDED.department,
+          description = EXCLUDED.description,
+          enabled = EXCLUDED.enabled,
+          allowed_tiers = EXCLUDED.allowed_tiers
+      `, [skill.id, skill.name, skill.department, skill.description || '', skill.enabled, skill.allowedTiers || ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'ADMIN']]);
+    } catch (e) {
+      console.warn('PG error in saveSkill:', e);
+    }
+  }
+  memoryStore.skills.set(skill.id, skill);
+}
+
+export async function deleteSkill(skillId: string) {
+  await initDb();
+  if (pool && isPgAvailable) {
+    try {
+      await pool.query('DELETE FROM skills WHERE id = $1', [skillId]);
+    } catch (e) {
+      console.warn('PG error in deleteSkill:', e);
+    }
+  }
+  memoryStore.skills.delete(skillId);
 }
 
 export async function toggleSkill(skillId: string, enabled: boolean) {
@@ -456,23 +573,40 @@ export async function toggleDepartmentSkills(department: string, enabled: boolea
   }
 }
 
+export async function bulkImportSkillsFromMarkdown(markdownContent: string, mode: 'merge' | 'replace' = 'merge') {
+  const parsedSkills = parseSkillsFromMarkdown(markdownContent);
+  if (mode === 'replace') {
+    memoryStore.skills.clear();
+    if (pool && isPgAvailable) {
+      try {
+        await pool.query('DELETE FROM skills');
+      } catch (e) {
+        console.warn('PG error clearing skills:', e);
+      }
+    }
+  }
+
+  for (const s of parsedSkills) {
+    await saveSkill(s);
+  }
+
+  return { importedCount: parsedSkills.length };
+}
+
 // ----------------- API KEY POOL -----------------
 export async function getApiKeyForTier(tier: string, provider = 'gemini'): Promise<string> {
   await initDb();
-  // 1. Check in memory/PG pool
   const keys = Array.from(memoryStore.apiKeys.values()).filter(
     k => k.provider === provider && k.is_active && (k.tier === 'ALL' || k.tier === tier)
   );
 
   if (keys.length > 0) {
-    // Pick the key with the least usage
     keys.sort((a, b) => a.usage_count - b.usage_count);
     const chosen = keys[0];
     chosen.usage_count++;
     return chosen.key_value;
   }
 
-  // Fallback to process.env.GEMINI_API_KEY
   return process.env.GEMINI_API_KEY || '';
 }
 
@@ -491,6 +625,10 @@ export async function addApiKey(provider: string, key: string, tier: string) {
   };
   memoryStore.apiKeys.set(id, record);
   return record;
+}
+
+export async function deleteApiKey(keyId: string) {
+  memoryStore.apiKeys.delete(keyId);
 }
 
 export async function getAllApiKeys() {

@@ -429,19 +429,19 @@ export default function Home() {
   };
 
   return (
-    <div className={`flex flex-col h-screen overflow-hidden ${isIncognito ? 'bg-gray-950 text-gray-100' : 'bg-gray-50 text-gray-900'}`}>
+    <div className={`flex flex-col h-[100dvh] overflow-hidden ${isIncognito ? 'bg-gray-950 text-gray-100' : 'bg-gray-50 text-gray-900'}`}>
       {/* HEADER */}
-      <header className={`h-14 border-b px-4 flex items-center justify-between z-20 transition-colors ${
+      <header className={`h-14 border-b px-3 sm:px-4 flex items-center justify-between z-20 transition-colors ${
         isIncognito ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'
       }`}>
         {/* Left: Brand */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-shrink-0">
           <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-sm shadow-sm">
             G
           </div>
           <span className="font-semibold text-sm tracking-tight hidden sm:inline">Agent Google</span>
           {isIncognito && (
-            <span className="text-[10px] bg-purple-900/60 text-purple-300 font-bold px-2 py-0.5 rounded-full border border-purple-700">
+            <span className="text-[10px] bg-purple-900/60 text-purple-300 font-bold px-1.5 py-0.5 rounded-full border border-purple-700">
               INCOGNITO
             </span>
           )}
@@ -449,7 +449,7 @@ export default function Home() {
 
         {/* Center: Meaningful Outcome Pinned */}
         {meaningfulOutcome && (
-          <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium max-w-sm sm:max-w-md truncate border transition-all ${
+          <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium max-w-[140px] sm:max-w-xs md:max-w-md truncate border transition-all ${
             outcomeStatus === 'PROPOSED'
               ? 'bg-amber-50 border-amber-300 text-amber-900 animate-pulse'
               : outcomeStatus === 'LOCKED'
@@ -521,13 +521,6 @@ export default function Home() {
                     Delete Chat
                   </button>
                   <div className="border-t border-gray-100 my-1"></div>
-                  <Link
-                    href="/admin"
-                    onClick={() => setIsSettingsOpen(false)}
-                    className="block px-3 py-2 hover:bg-gray-100 font-medium text-indigo-600"
-                  >
-                    Admin Panel
-                  </Link>
                   <button
                     onClick={handleLogout}
                     className="w-full text-left px-3 py-2 hover:bg-gray-100 text-gray-500"
@@ -543,13 +536,6 @@ export default function Home() {
                   >
                     Connect Google Account
                   </button>
-                  <Link
-                    href="/admin"
-                    onClick={() => setIsSettingsOpen(false)}
-                    className="block px-3 py-2 hover:bg-gray-100 font-medium text-indigo-600 border-t border-gray-100 mt-1"
-                  >
-                    Admin Panel
-                  </Link>
                 </>
               )}
             </div>

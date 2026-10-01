@@ -10,14 +10,31 @@ export default function AdminPage() {
   const [loginError, setLoginError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  // Admin Data
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'skills' | 'credentials' | 'mcp' | 'logs'>('dashboard');
+  // Tabs: dashboard, users, tiers, skills, bulk-import, credentials, mcp, logs
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'tiers' | 'skills' | 'bulk-import' | 'credentials' | 'mcp' | 'logs'>('dashboard');
   const [adminData, setAdminData] = useState<any>(null);
 
   // Forms
   const [newKeyProvider, setNewKeyProvider] = useState('gemini');
   const [newKeyValue, setNewKeyValue] = useState('');
   const [newKeyTier, setNewKeyTier] = useState('ALL');
+
+  // Tier form
+  const [tierId, setTierId] = useState('');
+  const [tierName, setTierName] = useState('');
+  const [tierDesc, setTierDesc] = useState('');
+  const [tierLimit, setTierLimit] = useState(50000);
+
+  // Skill form
+  const [skillId, setSkillId] = useState('');
+  const [skillName, setSkillName] = useState('');
+  const [skillDept, setSkillDept] = useState('Sales, Business Development & Revenue Architecture');
+  const [skillDesc, setSkillDesc] = useState('');
+
+  // Bulk Markdown form
+  const [bulkMarkdown, setBulkMarkdown] = useState('');
+  const [bulkMode, setBulkMode] = useState<'merge' | 'replace'>('merge');
+  const [bulkStatus, setBulkStatus] = useState('');
 
   useEffect(() => {
     fetchAdminData();
@@ -70,15 +87,79 @@ export default function AdminPage() {
     setAdminData(null);
   }
 
+  // User Actions
   async function handleUserTierChange(email: string, tier: string) {
     await fetch('/api/admin/actions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'UPDATE_USER_TIER', payload: { email, tier } }),
+    });
+    fetchAdminData();
+  }
+
+  async function handleDeleteUser(email: string) {
+    if (!confirm(`Delete user ${email}?`)) return;
+    await fetch('/api/admin/actions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'DELETE_USER', payload: { email } }),
+    });
+    fetchAdminData();
+  }
+
+  // Tier Actions
+  async function handleSaveTier(e: React.FormEvent) {
+    e.preventDefault();
+    if (!tierName.trim() || !tierId.trim()) return;
+
+    await fetch('/api/admin/actions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        action: 'UPDATE_USER_TIER',
-        payload: { email, tier },
+        action: 'SAVE_TIER',
+        payload: { id: tierId.trim().toUpperCase(), name: tierName.trim(), description: tierDesc, dailyTokenLimit: tierLimit },
       }),
     });
+
+    setTierId('');
+    setTierName('');
+    setTierDesc('');
+    fetchAdminData();
+  }
+
+  async function handleDeleteTier(id: string) {
+    if (!confirm(`Delete tier ${id}?`)) return;
+    await fetch('/api/admin/actions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'DELETE_TIER', payload: { tierId: id } }),
+    });
+    fetchAdminData();
+  }
+
+  // Skill Actions
+  async function handleSaveSkill(e: React.FormEvent) {
+    e.preventDefault();
+    if (!skillName.trim() || !skillId.trim()) return;
+
+    await fetch('/api/admin/actions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'SAVE_SKILL',
+        payload: {
+          id: skillId.trim().toLowerCase(),
+          name: skillName.trim(),
+          department: skillDept,
+          description: skillDesc,
+          enabled: true,
+        },
+      }),
+    });
+
+    setSkillId('');
+    setSkillName('');
+    setSkillDesc('');
     fetchAdminData();
   }
 
@@ -86,14 +167,44 @@ export default function AdminPage() {
     await fetch('/api/admin/actions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'TOGGLE_SKILL',
-        payload: { skillId, enabled },
-      }),
+      body: JSON.stringify({ action: 'TOGGLE_SKILL', payload: { skillId, enabled } }),
     });
     fetchAdminData();
   }
 
+  async function handleDeleteSkill(id: string) {
+    if (!confirm(`Delete skill ${id}?`)) return;
+    await fetch('/api/admin/actions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'DELETE_SKILL', payload: { skillId: id } }),
+    });
+    fetchAdminData();
+  }
+
+  // Bulk Markdown Import
+  async function handleBulkImport() {
+    if (!bulkMarkdown.trim()) return;
+    setBulkStatus('Importing skills...');
+    try {
+      const res = await fetch('/api/admin/actions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'BULK_IMPORT_SKILLS',
+          payload: { markdownContent: bulkMarkdown, mode: bulkMode },
+        }),
+      });
+      const data = await res.json();
+      setBulkStatus(`Successfully imported ${data.count} skills!`);
+      setBulkMarkdown('');
+      fetchAdminData();
+    } catch {
+      setBulkStatus('Bulk import failed. Check markdown format.');
+    }
+  }
+
+  // API Key Actions
   async function handleAddKey(e: React.FormEvent) {
     e.preventDefault();
     if (!newKeyValue.trim()) return;
@@ -110,17 +221,27 @@ export default function AdminPage() {
     fetchAdminData();
   }
 
+  async function handleDeleteKey(keyId: string) {
+    if (!confirm('Remove this key from pool?')) return;
+    await fetch('/api/admin/actions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'DELETE_API_KEY', payload: { keyId } }),
+    });
+    fetchAdminData();
+  }
+
   if (!isAdminLoggedIn) {
     return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
-        <div className="bg-gray-800 border border-gray-700 rounded-xl p-8 max-w-md w-full shadow-2xl">
+        <div className="bg-gray-800 border border-gray-700 rounded-2xl p-6 sm:p-8 max-w-md w-full shadow-2xl">
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold text-lg">
+            <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-bold text-lg">
               A
             </div>
             <div>
               <h1 className="text-xl font-bold text-white">Administrator Access</h1>
-              <p className="text-xs text-gray-400">Restricted system management console</p>
+              <p className="text-xs text-gray-400">Direct restricted system management</p>
             </div>
           </div>
 
@@ -157,7 +278,7 @@ export default function AdminPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-medium py-2 rounded-lg text-sm transition-colors"
+              className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-medium py-2.5 rounded-lg text-sm transition-colors"
             >
               {isLoading ? 'Verifying...' : 'Unlock Console'}
             </button>
@@ -176,18 +297,18 @@ export default function AdminPage() {
   return (
     <div className="min-h-screen bg-gray-900 text-gray-100 flex flex-col">
       {/* Admin Header */}
-      <header className="bg-gray-800 border-b border-gray-700 px-6 py-4 flex items-center justify-between">
+      <header className="bg-gray-800 border-b border-gray-700 px-4 sm:px-6 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <span className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center font-bold text-white">
+          <span className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center font-bold text-white text-sm">
             AG
           </span>
           <div>
-            <h1 className="font-bold text-lg text-white">Agent Google Admin Panel</h1>
+            <h1 className="font-bold text-base sm:text-lg text-white">Agent Google Admin Panel</h1>
             <p className="text-xs text-emerald-400">Authenticated: {adminData?.admin?.email} ({adminData?.admin?.role})</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 self-end sm:self-auto">
           <Link href="/" className="text-xs bg-gray-700 hover:bg-gray-600 text-white px-3 py-1.5 rounded-lg transition-colors">
             Go to Chat
           </Link>
@@ -200,12 +321,14 @@ export default function AdminPage() {
         </div>
       </header>
 
-      {/* Tabs */}
-      <nav className="bg-gray-800/50 border-b border-gray-700 px-6 flex gap-4 text-sm font-medium">
+      {/* Responsive Horizontal Scroll Tabs */}
+      <nav className="bg-gray-800/60 border-b border-gray-700 px-4 sm:px-6 flex gap-4 text-xs sm:text-sm font-medium overflow-x-auto whitespace-nowrap">
         {[
           { id: 'dashboard', label: 'Dashboard' },
-          { id: 'users', label: 'Users & Tiers' },
-          { id: 'skills', label: 'Skills & Departments' },
+          { id: 'users', label: 'Users' },
+          { id: 'tiers', label: 'Subscription Tiers' },
+          { id: 'skills', label: `Skills (${adminData?.skills?.length || 53})` },
+          { id: 'bulk-import', label: 'Bulk MD Import' },
           { id: 'credentials', label: 'API Key Pool' },
           { id: 'mcp', label: 'App MCP Server' },
           { id: 'logs', label: 'Audit Logs' },
@@ -213,7 +336,7 @@ export default function AdminPage() {
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id as any)}
-            className={`py-3 px-2 border-b-2 transition-colors ${
+            className={`py-3 px-1 border-b-2 transition-colors ${
               activeTab === tab.id
                 ? 'border-indigo-500 text-indigo-400 font-semibold'
                 : 'border-transparent text-gray-400 hover:text-gray-200'
@@ -224,41 +347,46 @@ export default function AdminPage() {
         ))}
       </nav>
 
-      {/* Content Area */}
-      <main className="flex-1 p-6 max-w-6xl w-full mx-auto">
+      {/* Main Content Area */}
+      <main className="flex-1 p-4 sm:p-6 max-w-6xl w-full mx-auto space-y-6">
         {/* DASHBOARD TAB */}
         {activeTab === 'dashboard' && (
           <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="bg-gray-800 border border-gray-700 rounded-xl p-5">
-                <span className="text-xs text-gray-400 uppercase tracking-wider font-semibold">Total Users</span>
-                <p className="text-3xl font-bold text-white mt-2">{adminData?.stats?.totalUsers || 1}</p>
-                <span className="text-xs text-emerald-400 mt-1 inline-block">Active accounts</span>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div className="bg-gray-800 border border-gray-700 rounded-xl p-4">
+                <span className="text-xs text-gray-400 uppercase font-semibold">Total Users</span>
+                <p className="text-2xl font-bold text-white mt-1">{adminData?.stats?.totalUsers || 1}</p>
               </div>
-              <div className="bg-gray-800 border border-gray-700 rounded-xl p-5">
-                <span className="text-xs text-gray-400 uppercase tracking-wider font-semibold">Active Skills</span>
-                <p className="text-3xl font-bold text-white mt-2">{adminData?.stats?.activeSkills || 6}</p>
-                <span className="text-xs text-indigo-400 mt-1 inline-block">Enabled across tiers</span>
+              <div className="bg-gray-800 border border-gray-700 rounded-xl p-4">
+                <span className="text-xs text-gray-400 uppercase font-semibold">Configured Skills</span>
+                <p className="text-2xl font-bold text-white mt-1">{adminData?.skills?.length || 53}</p>
               </div>
-              <div className="bg-gray-800 border border-gray-700 rounded-xl p-5">
-                <span className="text-xs text-gray-400 uppercase tracking-wider font-semibold">Pooled API Keys</span>
-                <p className="text-3xl font-bold text-white mt-2">{adminData?.stats?.totalKeys || 1}</p>
-                <span className="text-xs text-emerald-400 mt-1 inline-block">Automatic load balancing</span>
+              <div className="bg-gray-800 border border-gray-700 rounded-xl p-4">
+                <span className="text-xs text-gray-400 uppercase font-semibold">Subscription Tiers</span>
+                <p className="text-2xl font-bold text-white mt-1">{adminData?.tiers?.length || 4}</p>
+              </div>
+              <div className="bg-gray-800 border border-gray-700 rounded-xl p-4">
+                <span className="text-xs text-gray-400 uppercase font-semibold">Pooled API Keys</span>
+                <p className="text-2xl font-bold text-white mt-1">{adminData?.stats?.totalKeys || 1}</p>
               </div>
             </div>
 
             <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
-              <h2 className="text-base font-bold text-white mb-4">Subscription Tiers Overview</h2>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'ADMIN'].map(tier => {
-                  const count = adminData?.users?.filter((u: any) => u.subscription_tier === tier).length || 0;
-                  return (
-                    <div key={tier} className="bg-gray-700/40 rounded-lg p-3 border border-gray-700">
-                      <span className="text-xs font-semibold text-gray-300">{tier}</span>
-                      <p className="text-xl font-bold text-white mt-1">{count} Users</p>
-                    </div>
-                  );
-                })}
+              <h2 className="text-base font-bold text-white mb-2">Platform Master Status</h2>
+              <p className="text-xs text-gray-400 mb-4">Top-tier encryption & sovereign data firewall are active.</p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                <div className="p-3 bg-gray-700/30 rounded border border-gray-700">
+                  <span className="text-emerald-400 font-semibold">✓ AES-256-GCM Encryption</span>
+                  <p className="text-gray-400 mt-1">All user messages & drafts encrypted at rest.</p>
+                </div>
+                <div className="p-3 bg-gray-700/30 rounded border border-gray-700">
+                  <span className="text-indigo-400 font-semibold">✓ MCP OAuth 2.0 Server</span>
+                  <p className="text-gray-400 mt-1">RFC 8414 compliant for Gemini & third-party apps.</p>
+                </div>
+                <div className="p-3 bg-gray-700/30 rounded border border-gray-700">
+                  <span className="text-purple-400 font-semibold">✓ Zero PII Leakage</span>
+                  <p className="text-gray-400 mt-1">Data firewall filters identity tokens before export.</p>
+                </div>
               </div>
             </div>
           </div>
@@ -267,44 +395,54 @@ export default function AdminPage() {
         {/* USERS TAB */}
         {activeTab === 'users' && (
           <div className="bg-gray-800 border border-gray-700 rounded-xl overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-700">
-              <h2 className="text-base font-bold text-white">User Accounts & Subscription Tiers</h2>
-              <p className="text-xs text-gray-400">Map users by Gmail ID to their respective feature & token tiers</p>
+            <div className="px-6 py-4 border-b border-gray-700 flex justify-between items-center">
+              <div>
+                <h2 className="text-base font-bold text-white">Users & Subscription Tiers</h2>
+                <p className="text-xs text-gray-400">Modify user subscription tiers and access permissions globally</p>
+              </div>
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm text-gray-300">
+              <table className="w-full text-left text-xs sm:text-sm text-gray-300">
                 <thead className="bg-gray-700/50 text-xs uppercase text-gray-400">
                   <tr>
-                    <th className="px-6 py-3">Gmail Address</th>
-                    <th className="px-6 py-3">Role</th>
-                    <th className="px-6 py-3">Subscription Tier</th>
-                    <th className="px-6 py-3">Actions</th>
+                    <th className="px-4 sm:px-6 py-3">Gmail Address</th>
+                    <th className="px-4 sm:px-6 py-3">Role</th>
+                    <th className="px-4 sm:px-6 py-3">Subscription Tier</th>
+                    <th className="px-4 sm:px-6 py-3">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-700">
                   {adminData?.users?.map((u: any) => (
                     <tr key={u.email} className="hover:bg-gray-700/30">
-                      <td className="px-6 py-4 font-medium text-white">{u.email}</td>
-                      <td className="px-6 py-4">
-                        <span className={`text-xs px-2 py-0.5 rounded font-semibold ${
+                      <td className="px-4 sm:px-6 py-3 font-medium text-white">{u.email}</td>
+                      <td className="px-4 sm:px-6 py-3">
+                        <span className={`text-[10px] px-2 py-0.5 rounded font-semibold ${
                           u.role === 'SUPER_ADMIN' ? 'bg-purple-900/60 text-purple-300' : 'bg-gray-700 text-gray-300'
                         }`}>
                           {u.role}
                         </span>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-4 sm:px-6 py-3">
                         <select
                           value={u.subscription_tier}
                           onChange={(e) => handleUserTierChange(u.email, e.target.value)}
                           className="bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white"
                         >
-                          <option value="BEGINNER">BEGINNER</option>
-                          <option value="INTERMEDIATE">INTERMEDIATE</option>
-                          <option value="ADVANCED">ADVANCED</option>
-                          <option value="ADMIN">ADMIN</option>
+                          {adminData?.tiers?.map((t: any) => (
+                            <option key={t.id} value={t.id}>{t.name} ({t.id})</option>
+                          ))}
                         </select>
                       </td>
-                      <td className="px-6 py-4 text-xs text-emerald-400">Active</td>
+                      <td className="px-4 sm:px-6 py-3">
+                        {u.role !== 'SUPER_ADMIN' && (
+                          <button
+                            onClick={() => handleDeleteUser(u.email)}
+                            className="text-xs text-red-400 hover:text-red-300 hover:underline"
+                          >
+                            Delete
+                          </button>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -313,34 +451,64 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* SKILLS TAB */}
-        {activeTab === 'skills' && (
+        {/* SUBSCRIPTION TIERS TAB */}
+        {activeTab === 'tiers' && (
           <div className="space-y-6">
             <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
-              <h2 className="text-base font-bold text-white mb-2">Autonomous Skills Catalog</h2>
-              <p className="text-xs text-gray-400 mb-6">Enable or disable specific skills across the platform globally</p>
+              <h2 className="text-base font-bold text-white mb-2">Manage Subscription Tiers</h2>
+              <p className="text-xs text-gray-400 mb-6">Create, rename, and set token budgets for subscription tiers</p>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {adminData?.skills?.map((s: any) => (
-                  <div key={s.id} className="bg-gray-700/40 border border-gray-700 rounded-xl p-4 flex items-center justify-between">
+              <form onSubmit={handleSaveTier} className="grid grid-cols-1 sm:grid-cols-4 gap-3 bg-gray-700/30 p-4 rounded-xl border border-gray-700 mb-6">
+                <input
+                  type="text"
+                  placeholder="Tier ID (e.g. PRO)"
+                  value={tierId}
+                  onChange={(e) => setTierId(e.target.value)}
+                  className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white text-xs uppercase"
+                  required
+                />
+                <input
+                  type="text"
+                  placeholder="Tier Display Name"
+                  value={tierName}
+                  onChange={(e) => setTierName(e.target.value)}
+                  className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white text-xs"
+                  required
+                />
+                <input
+                  type="number"
+                  placeholder="Daily Token Limit"
+                  value={tierLimit}
+                  onChange={(e) => setTierLimit(Number(e.target.value))}
+                  className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white text-xs"
+                />
+                <button
+                  type="submit"
+                  className="bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold py-2"
+                >
+                  Save / Add Tier
+                </button>
+              </form>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                {adminData?.tiers?.map((t: any) => (
+                  <div key={t.id} className="bg-gray-700/40 border border-gray-700 rounded-xl p-4 flex flex-col justify-between">
                     <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-white text-sm">{s.name}</span>
-                        <span className="text-[10px] uppercase font-bold bg-indigo-900/60 text-indigo-300 px-1.5 py-0.5 rounded">
-                          {s.department}
-                        </span>
+                      <div className="flex justify-between items-start">
+                        <span className="font-bold text-sm text-white">{t.name}</span>
+                        <span className="text-[10px] bg-indigo-900/60 text-indigo-300 px-1.5 py-0.5 rounded font-mono">{t.id}</span>
                       </div>
-                      <p className="text-xs text-gray-400 mt-1">{s.description}</p>
+                      <p className="text-xs text-gray-400 mt-1">{t.description || 'Standard subscription tier'}</p>
+                      <p className="text-xs text-emerald-400 font-semibold mt-2">Daily limit: {t.daily_token_limit?.toLocaleString() || t.dailyTokenLimit?.toLocaleString()} tokens</p>
                     </div>
-
-                    <button
-                      onClick={() => handleToggleSkill(s.id, !s.enabled)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
-                        s.enabled ? 'bg-emerald-600 hover:bg-emerald-500 text-white' : 'bg-gray-600 hover:bg-gray-500 text-gray-300'
-                      }`}
-                    >
-                      {s.enabled ? 'Enabled' : 'Disabled'}
-                    </button>
+                    {t.id !== 'ADMIN' && t.id !== 'BEGINNER' && (
+                      <button
+                        onClick={() => handleDeleteTier(t.id)}
+                        className="text-xs text-red-400 hover:text-red-300 mt-4 text-left"
+                      >
+                        Delete Tier
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>
@@ -348,13 +516,156 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* CREDENTIALS & POOL TAB */}
+        {/* SKILLS TAB */}
+        {activeTab === 'skills' && (
+          <div className="space-y-6">
+            <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
+                <div>
+                  <h2 className="text-base font-bold text-white">Skills Catalog ({adminData?.skills?.length || 53} Skills)</h2>
+                  <p className="text-xs text-gray-400">All 53 modular skills organized across 9 departments</p>
+                </div>
+                <button
+                  onClick={() => setActiveTab('bulk-import')}
+                  className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg text-xs font-semibold"
+                >
+                  Bulk Import from MD ↗
+                </button>
+              </div>
+
+              {/* Add Skill Form */}
+              <form onSubmit={handleSaveSkill} className="bg-gray-700/30 p-4 rounded-xl border border-gray-700 grid grid-cols-1 sm:grid-cols-4 gap-3 mb-6">
+                <input
+                  type="text"
+                  placeholder="Skill ID (e.g. pitch-deck)"
+                  value={skillId}
+                  onChange={(e) => setSkillId(e.target.value)}
+                  className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white text-xs"
+                  required
+                />
+                <input
+                  type="text"
+                  placeholder="Skill Name"
+                  value={skillName}
+                  onChange={(e) => setSkillName(e.target.value)}
+                  className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white text-xs"
+                  required
+                />
+                <input
+                  type="text"
+                  placeholder="Department"
+                  value={skillDept}
+                  onChange={(e) => setSkillDept(e.target.value)}
+                  className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white text-xs"
+                  required
+                />
+                <button
+                  type="submit"
+                  className="bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold py-2"
+                >
+                  + Add Single Skill
+                </button>
+              </form>
+
+              {/* Skills List */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {adminData?.skills?.map((s: any) => (
+                  <div key={s.id} className="bg-gray-700/40 border border-gray-700 rounded-xl p-4 flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-semibold text-white text-sm">{s.name}</span>
+                        <button
+                          onClick={() => handleToggleSkill(s.id, !s.enabled)}
+                          className={`px-2.5 py-1 rounded text-[11px] font-semibold transition-colors ${
+                            s.enabled ? 'bg-emerald-600 text-white' : 'bg-gray-600 text-gray-300'
+                          }`}
+                        >
+                          {s.enabled ? 'Active' : 'Disabled'}
+                        </button>
+                      </div>
+                      <span className="text-[10px] uppercase font-bold text-indigo-400 mt-1 inline-block">
+                        {s.department}
+                      </span>
+                      <p className="text-xs text-gray-400 mt-2">{s.description}</p>
+                    </div>
+
+                    <div className="flex justify-between items-center mt-4 pt-3 border-t border-gray-700/50">
+                      <span className="text-[10px] text-gray-500 font-mono">{s.id}</span>
+                      <button
+                        onClick={() => handleDeleteSkill(s.id)}
+                        className="text-xs text-red-400 hover:text-red-300"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* BULK IMPORT FROM MARKDOWN TAB */}
+        {activeTab === 'bulk-import' && (
+          <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
+            <h2 className="text-base font-bold text-white mb-2">Bulk Markdown Skills Importer</h2>
+            <p className="text-xs text-gray-400 mb-4">
+              Paste or upload any Master Skills Markdown file. The system will automatically parse names, departments, descriptions, questions, and parameters.
+            </p>
+
+            <div className="flex items-center gap-4 mb-4 text-xs">
+              <label className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  name="importMode"
+                  value="merge"
+                  checked={bulkMode === 'merge'}
+                  onChange={() => setBulkMode('merge')}
+                />
+                <span>Merge / Update with Existing Skills</span>
+              </label>
+              <label className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  name="importMode"
+                  value="replace"
+                  checked={bulkMode === 'replace'}
+                  onChange={() => setBulkMode('replace')}
+                />
+                <span className="text-red-400">Replace All Skills</span>
+              </label>
+            </div>
+
+            <textarea
+              rows={12}
+              value={bulkMarkdown}
+              onChange={(e) => setBulkMarkdown(e.target.value)}
+              placeholder="Paste Master Skills Markdown content here..."
+              className="w-full bg-gray-900 border border-gray-700 rounded-xl p-4 font-mono text-xs text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-4"
+            />
+
+            {bulkStatus && (
+              <div className="p-3 bg-indigo-900/30 border border-indigo-700 rounded-lg text-xs text-indigo-300 mb-4">
+                {bulkStatus}
+              </div>
+            )}
+
+            <button
+              onClick={handleBulkImport}
+              className="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2.5 rounded-lg text-xs font-bold"
+            >
+              Parse & Ingest Skills
+            </button>
+          </div>
+        )}
+
+        {/* API KEY POOL TAB */}
         {activeTab === 'credentials' && (
           <div className="space-y-6">
             <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
               <h2 className="text-base font-bold text-white mb-2">API Key Pool Management</h2>
               <p className="text-xs text-gray-400 mb-6">
-                Pool multiple Gemini, OpenAI, or Anthropic API keys. The system automatically round-robins across keys and handles rate-limit failovers.
+                Pool multiple Gemini, OpenAI, or Anthropic API keys. Maps keys by tier with automatic load balancing and rate-limit recovery.
               </p>
 
               <form onSubmit={handleAddKey} className="flex flex-col sm:flex-row gap-3 mb-6 bg-gray-700/30 p-4 rounded-xl border border-gray-700">
@@ -382,16 +693,16 @@ export default function AdminPage() {
                   className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white text-xs"
                 >
                   <option value="ALL">All Tiers</option>
-                  <option value="BEGINNER">Beginner Only</option>
-                  <option value="INTERMEDIATE">Intermediate Only</option>
-                  <option value="ADVANCED">Advanced Only</option>
+                  {adminData?.tiers?.map((t: any) => (
+                    <option key={t.id} value={t.id}>{t.name}</option>
+                  ))}
                 </select>
 
                 <button
                   type="submit"
                   className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-xs font-semibold whitespace-nowrap"
                 >
-                  + Add Key to Pool
+                  + Add Key
                 </button>
               </form>
 
@@ -403,8 +714,14 @@ export default function AdminPage() {
                       <span className="font-mono text-gray-300">{k.key_masked}</span>
                       <span className="bg-gray-700 text-gray-300 px-2 py-0.5 rounded text-[10px]">Tier: {k.tier}</span>
                     </div>
-                    <div className="text-gray-400">
-                      Requests: <span className="text-white font-semibold">{k.usage_count}</span>
+                    <div className="flex items-center gap-4">
+                      <span className="text-gray-400">Requests: {k.usage_count}</span>
+                      <button
+                        onClick={() => handleDeleteKey(k.id)}
+                        className="text-red-400 hover:text-red-300"
+                      >
+                        Delete
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -418,13 +735,13 @@ export default function AdminPage() {
           <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
             <h2 className="text-base font-bold text-white mb-2">Model Context Protocol (MCP) Server Endpoint</h2>
             <p className="text-xs text-gray-400 mb-6">
-              Connect external AI agents (like Claude Desktop, Antigravity, Cursor, etc.) directly to your Agent Google tools via MCP.
+              Connect external AI tools (Gemini Third-Party Apps, Claude Desktop, Antigravity) with standard OAuth 2.0 and Zero-Knowledge Data Firewall.
             </p>
 
             <div className="bg-gray-900 border border-gray-700 rounded-xl p-4 mb-4">
-              <label className="block text-xs font-semibold text-gray-400 uppercase mb-2">Endpoint URL</label>
+              <label className="block text-xs font-semibold text-gray-400 uppercase mb-2">Public MCP Endpoint</label>
               <div className="flex items-center justify-between bg-gray-800 px-3 py-2 rounded border border-gray-700 font-mono text-xs text-emerald-400">
-                <span>{adminData?.mcpEndpoint}</span>
+                <span className="truncate">{adminData?.mcpEndpoint}</span>
                 <button
                   onClick={() => navigator.clipboard.writeText(adminData?.mcpEndpoint)}
                   className="text-xs text-gray-300 hover:text-white ml-2 bg-gray-700 px-2 py-1 rounded"
@@ -435,9 +752,10 @@ export default function AdminPage() {
             </div>
 
             <div className="text-xs text-gray-400 space-y-2">
-              <p>• Protocol: <span className="text-white font-semibold">JSON-RPC 2.0 (mcp-2024-11-05)</span></p>
-              <p>• Supported Methods: <span className="text-white font-semibold">tools/list, tools/call</span></p>
-              <p>• Tools Excluded: <span className="text-white font-semibold">Only enabled skills are exposed</span></p>
+              <p>• Auth Type: <span className="text-white font-semibold">Standard OAuth 2.0 (RFC 8414 Discovery Enabled)</span></p>
+              <p>• Authorize URL: <span className="text-white font-semibold">{adminData?.mcpEndpoint}/oauth/authorize</span></p>
+              <p>• Token URL: <span className="text-white font-semibold">{adminData?.mcpEndpoint}/oauth/token</span></p>
+              <p>• Data Firewall: <span className="text-emerald-400 font-semibold">Active (Zero personal details or tokens shared)</span></p>
             </div>
           </div>
         )}

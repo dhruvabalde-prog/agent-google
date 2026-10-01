@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminSession } from '@/lib/admin-auth';
-import { getAllUsers, getAllSkills, getAllApiKeys, getAuditLogs } from '@/lib/db';
+import { getAllUsers, getAllSkills, getAllSubscriptionTiers, getAllApiKeys, getAuditLogs } from '@/lib/db';
 
 export async function GET(request: NextRequest) {
   const session = await getAdminSession();
@@ -8,9 +8,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const [users, skills, apiKeys, auditLogs] = await Promise.all([
+  const [users, skills, tiers, apiKeys, auditLogs] = await Promise.all([
     getAllUsers(),
     getAllSkills(),
+    getAllSubscriptionTiers(),
     getAllApiKeys(),
     getAuditLogs(),
   ]);
@@ -22,12 +23,14 @@ export async function GET(request: NextRequest) {
     admin: session,
     users,
     skills,
+    tiers,
     apiKeys,
     auditLogs,
     mcpEndpoint,
     stats: {
       totalUsers: users.length,
       activeSkills: skills.filter(s => s.enabled).length,
+      totalTiers: tiers.length,
       totalKeys: apiKeys.length,
     }
   });
