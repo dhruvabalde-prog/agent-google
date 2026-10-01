@@ -3,19 +3,94 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import Link from 'next/link';
 import { ChatMessage, ActionResult, DraftInfo } from '@/lib/types';
+
+interface ArchiveChat {
+  id: string;
+  title: string;
+  meaningful_outcome?: string;
+  outcome_status?: string;
+  is_locked?: boolean;
+  is_starred?: boolean;
+  message_count?: number;
+  duration?: string;
+  has_files?: boolean;
+  has_voice?: boolean;
+  updated_at: string;
+  markdown_content?: string;
+}
+
+const PROGRESS_PHRASES = [
+  'Understanding what you need',
+  'Gathering the relevant information',
+  'Checking the available sources',
+  'Organizing the findings',
+  'Building the first draft',
+  'Finishing things up',
+];
+
+const AGENT_SUGGESTIONS_POOL = [
+  'Tip: You can attach up to 10 documents or past chats for deeper context.',
+  'Tip: Asking for a 5-slide presentation will auto-format title and bullets directly.',
+  'Tip: You can star important chats in the Archive to keep them pinned at the top.',
+  'Tip: Confirm the meaningful outcome at the top when you are happy with the draft.',
+];
 
 export default function Home() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [progressIndex, setProgressIndex] = useState(0);
   const [user, setUser] = useState<{ email: string; name: string; picture: string } | null>(null);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [draftStatuses, setDraftStatuses] = useState<Map<string, 'approved' | 'rejected'>>(new Map());
-  
+
+  // Chat Lifecycle & Meaningful Outcome
+  const [currentChatId, setCurrentChatId] = useState<string>('');
+  const [meaningfulOutcome, setMeaningfulOutcome] = useState<string>('');
+  const [outcomeStatus, setOutcomeStatus] = useState<string>('NONE'); // NONE | PROPOSED | CONFIRMED | LOCKED
+  const [isChatLocked, setIsChatLocked] = useState<boolean>(false);
+
+  // Settings & Navigation
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isIncognito, setIsIncognito] = useState(false);
+
+  // Archive Modal & Attach From Archive
+  const [isArchiveOpen, setIsArchiveOpen] = useState(false);
+  const [archiveChats, setArchiveChats] = useState<ArchiveChat[]>([]);
+  const [archiveFilter, setArchiveFilter] = useState<'all' | 'active' | 'completed' | 'starred'>('all');
+  const [archiveSearch, setArchiveSearch] = useState('');
+  const [isAttachFromArchiveOpen, setIsAttachFromArchiveOpen] = useState(false);
+  const [selectedArchiveAttachments, setSelectedArchiveAttachments] = useState<string[]>([]);
+
+  // Attachments (up to 10 files)
+  const [attachedFiles, setAttachedFiles] = useState<Array<{ name: string; size: string; content?: string }>>([]);
+
+  // Voice Recording
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const [recordedAudioUrl, setRecordedAudioUrl] = useState<string | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Agent Suggests Popup
+  const [activeSuggestion, setActiveSuggestion] = useState<string | null>(null);
+  const [suggestionCount, setSuggestionCount] = useState(0);
+
+  // Requirement clarification options
+  const [activeClarification, setActiveClarification] = useState<{
+    question: string;
+    options: string[];
+  } | null>(null);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
 
+  // Check auth on load
   useEffect(() => {
     async function checkAuth() {
       try {
@@ -33,376 +108,859 @@ export default function Home() {
       }
     }
     checkAuth();
+    setCurrentChatId(crypto.randomUUID());
   }, []);
 
+  // Incognito auto-exit on tab change or window blur
+  useEffect(() => {
+    function handleVisibilityChange() {
+      if (document.hidden && isIncognito) {
+        setIsIncognito(false);
+        setMessages([]);
+        alert('Incognito session closed for security.');
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [isIncognito]);
+
+  // Dynamic progress cycling
+  useEffect(() => {
+    if (!isLoading) return;
+    const interval = setInterval(() => {
+      setProgressIndex((prev) => (prev + 1) % PROGRESS_PHRASES.length);
+    }, 2500);
+    return () => clearInterval(interval);
+  }, [isLoading]);
+
+  // Auto-scroll
   useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [messages, isLoading]);
+  }, [messages, isLoading, outcomeStatus]);
 
-  const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setInput(e.target.value);
-    e.target.style.height = 'auto';
-    e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
+  // Fetch Archive chats
+  async function fetchArchiveChats() {
+    try {
+      const res = await fetch('/api/chats');
+      if (res.ok) {
+        const data = await res.json();
+        setArchiveChats(data.chats || []);
+      }
+    } catch (e) {
+      console.error('Failed to load archive chats:', e);
     }
-  };
+  }
 
-  async function sendMessage() {
-    if (!input.trim() || isLoading) return;
+  // Open Archive Modal
+  function openArchive() {
+    fetchArchiveChats();
+    setIsSettingsOpen(false);
+    setIsArchiveOpen(true);
+  }
+
+  // Toggle Star on a Chat
+  async function handleToggleStar(chatId: string, e: React.MouseEvent) {
+    e.stopPropagation();
+    try {
+      const res = await fetch(`/api/chats/${chatId}/star`, { method: 'POST' });
+      if (res.ok) {
+        const data = await res.json();
+        setArchiveChats(prev => prev.map(c => c.id === chatId ? { ...c, is_starred: data.is_starred } : c));
+      }
+    } catch (e) {
+      console.error('Failed to toggle star:', e);
+    }
+  }
+
+  // Open past chat from Archive
+  async function handleOpenPastChat(chat: ArchiveChat) {
+    try {
+      const res = await fetch(`/api/chats/${chat.id}`);
+      if (res.ok) {
+        const data = await res.json();
+        setCurrentChatId(data.chat.id);
+        setMeaningfulOutcome(data.chat.meaningful_outcome || '');
+        setOutcomeStatus(data.chat.outcome_status || 'NONE');
+        setIsChatLocked(data.chat.is_locked || false);
+        setMessages((data.messages || []).map((m: any) => ({
+          id: m.id,
+          role: m.role,
+          content: m.content,
+          actions: typeof m.actions === 'string' ? JSON.parse(m.actions) : m.actions,
+        })));
+        setIsArchiveOpen(false);
+      }
+    } catch (e) {
+      console.error('Failed to open chat:', e);
+    }
+  }
+
+  // Use context in new chat
+  function handleUseContextInNewChat(chat: ArchiveChat) {
+    setIsArchiveOpen(false);
+    const newId = crypto.randomUUID();
+    setCurrentChatId(newId);
+    setMeaningfulOutcome('');
+    setOutcomeStatus('NONE');
+    setIsChatLocked(false);
     
+    // Inject previous chat context
+    const contextSnippet = `[Context from Previous Chat: "${chat.title}"]\n${chat.markdown_content || ''}\n---\n`;
+    setMessages([
+      {
+        id: crypto.randomUUID(),
+        role: 'assistant',
+        content: `I've attached the context from **"${chat.title}"**. How would you like to build on this in our new conversation?`,
+      }
+    ]);
+  }
+
+  // Lock chat upon user confirming outcome
+  async function handleConfirmOutcome() {
+    if (!currentChatId) return;
+    try {
+      // Build markdown representation
+      let md = `# ${meaningfulOutcome || 'Conversation Summary'}\n\n## Dialogue\n`;
+      messages.forEach(m => {
+        md += `\n### ${m.role === 'user' ? 'User' : 'Agent Google'}\n${m.content}\n`;
+      });
+
+      await fetch(`/api/chats/${currentChatId}/lock`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ markdownContent: md }),
+      });
+
+      setIsChatLocked(true);
+      setOutcomeStatus('LOCKED');
+    } catch (e) {
+      console.error('Failed to lock chat:', e);
+    }
+  }
+
+  // Dismiss outcome blinking alert and continue
+  function handleContinueChat() {
+    setOutcomeStatus('ACTIVE');
+  }
+
+  // Delete current chat
+  async function handleDeleteCurrentChat() {
+    if (!currentChatId) return;
+    if (confirm('Are you sure you want to delete this chat permanently?')) {
+      await fetch(`/api/chats/${currentChatId}`, { method: 'DELETE' });
+      setMessages([]);
+      setCurrentChatId(crypto.randomUUID());
+      setMeaningfulOutcome('');
+      setOutcomeStatus('NONE');
+      setIsChatLocked(false);
+      setIsSettingsOpen(false);
+    }
+  }
+
+  // Trigger Agent Suggests (max 2/hour)
+  function handleTriggerSuggest() {
+    if (suggestionCount >= 2) {
+      setActiveSuggestion('You have reached the maximum of 2 suggestions for this hour.');
+      setTimeout(() => setActiveSuggestion(null), 3500);
+      return;
+    }
+    const tip = AGENT_SUGGESTIONS_POOL[suggestionCount % AGENT_SUGGESTIONS_POOL.length];
+    setActiveSuggestion(tip);
+    setSuggestionCount(prev => prev + 1);
+  }
+
+  // File Attachments (Up to 10)
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    if (!e.target.files) return;
+    const files = Array.from(e.target.files);
+    if (attachedFiles.length + files.length > 10) {
+      alert('You can attach a maximum of 10 files at a time.');
+      return;
+    }
+
+    files.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setAttachedFiles(prev => [
+          ...prev,
+          {
+            name: file.name,
+            size: `${(file.size / 1024).toFixed(1)} KB`,
+            content: event.target?.result as string,
+          }
+        ]);
+      };
+      if (file.type.startsWith('text/') || file.name.endsWith('.md')) {
+        reader.readAsText(file);
+      } else {
+        reader.readAsDataURL(file);
+      }
+    });
+  }
+
+  // Audio Recording (First tap start, second tap stop)
+  async function toggleAudioRecording() {
+    if (isRecording) {
+      // Stop recording
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+        mediaRecorderRef.current.stop();
+      }
+      setIsRecording(false);
+      if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+    } else {
+      // Start recording
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const mediaRecorder = new MediaRecorder(stream);
+        mediaRecorderRef.current = mediaRecorder;
+        audioChunksRef.current = [];
+
+        mediaRecorder.ondataavailable = (event) => {
+          if (event.data.size > 0) {
+            audioChunksRef.current.push(event.data);
+          }
+        };
+
+        mediaRecorder.onstop = () => {
+          const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+          const url = URL.createObjectURL(audioBlob);
+          setRecordedAudioUrl(url);
+          stream.getTracks().forEach(track => track.stop());
+        };
+
+        mediaRecorder.start();
+        setIsRecording(true);
+        setRecordingSeconds(0);
+        recordingTimerRef.current = setInterval(() => {
+          setRecordingSeconds(prev => prev + 1);
+        }, 1000);
+      } catch (err) {
+        alert('Microphone access denied or not supported.');
+      }
+    }
+  }
+
+  // Send message
+  async function sendMessage(textToSend?: string) {
+    const promptText = (textToSend || input).trim();
+    if ((!promptText && attachedFiles.length === 0 && !recordedAudioUrl) || isLoading || isChatLocked) return;
+
+    let fullPrompt = promptText;
+
+    // Attach text from files
+    if (attachedFiles.length > 0) {
+      fullPrompt += '\n\n' + attachedFiles.map(f => `--- Attached File: ${f.name} ---\n${f.content || ''}`).join('\n');
+    }
+
+    // Attach voice note note
+    if (recordedAudioUrl) {
+      fullPrompt += '\n\n[Audio Note attached to message]';
+    }
+
     const userMessage: ChatMessage = {
       id: crypto.randomUUID(),
       role: 'user',
-      content: input.trim(),
+      content: promptText || 'Attached voice note',
     };
-    
+
     setMessages(prev => [...prev, userMessage]);
     setInput('');
+    setAttachedFiles([]);
+    setRecordedAudioUrl(null);
     setIsLoading(true);
-    
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
-    }
-    
+    setProgressIndex(0);
+
+    if (textareaRef.current) textareaRef.current.style.height = 'auto';
+
     try {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          messages: [...messages, userMessage].map(m => ({ role: m.role, content: m.content }))
+          chatId: currentChatId,
+          isIncognito,
+          meaningfulOutcome,
+          messages: [...messages, userMessage].map(m => ({ role: m.role, content: m.content })),
         }),
       });
-      
+
+      if (!res.ok) throw new Error('API failure');
       const data = await res.json();
-      
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to send message');
-      }
-      
+
       const assistantMessage: ChatMessage = {
         id: crypto.randomUUID(),
         role: 'assistant',
-        content: data.content,
+        content: data.content || 'Not able to respond right now.',
         actions: data.actions,
         pendingDraft: data.pendingDraft,
       };
-      
+
       setMessages(prev => [...prev, assistantMessage]);
-    } catch (err: any) {
-      const errorMessage: ChatMessage = {
-        id: crypto.randomUUID(),
-        role: 'assistant',
-        content: err?.message || 'Sorry, something went wrong. Please try again.',
-      };
-      setMessages(prev => [...prev, errorMessage]);
+
+      if (data.meaningfulOutcome && !meaningfulOutcome) {
+        setMeaningfulOutcome(data.meaningfulOutcome);
+      }
+      if (data.outcomeStatus) {
+        setOutcomeStatus(data.outcomeStatus);
+      }
+    } catch (err) {
+      setMessages(prev => [
+        ...prev,
+        {
+          id: crypto.randomUUID(),
+          role: 'assistant',
+          content: 'Not able to respond right now.',
+        }
+      ]);
     } finally {
       setIsLoading(false);
     }
   }
 
-  const handleDraftAction = async (draftId: string, action: 'approve' | 'reject') => {
-    try {
-      const res = await fetch(`/api/drafts/${draftId}/${action}`, {
-        method: 'POST',
-      });
-      
-      if (res.ok) {
-        setDraftStatuses(prev => {
-          const newMap = new Map(prev);
-          newMap.set(draftId, action === 'approve' ? 'approved' : 'rejected');
-          return newMap;
-        });
-      } else {
-        console.error(`Failed to ${action} draft`);
-      }
-    } catch (error) {
-      console.error(`Error performing draft action ${action}:`, error);
-    }
-  };
-
+  // Auth Handlers
+  const handleLogin = () => { window.location.href = '/api/auth/login'; };
   const handleLogout = async () => {
-    try {
-      const res = await fetch('/api/auth/logout', { method: 'POST' });
-      if (res.ok) {
-        setUser(null);
-        setMessages([]);
-      }
-    } catch (error) {
-      console.error('Error logging out:', error);
-    }
-  };
-
-  const handleLogin = () => {
-    window.location.href = '/api/auth/login';
-  };
-
-  const setSuggestion = (text: string) => {
-    setInput(text);
-    if (textareaRef.current) {
-      textareaRef.current.focus();
-    }
+    await fetch('/api/auth/logout', { method: 'POST' });
+    setUser(null);
+    setMessages([]);
+    setIsSettingsOpen(false);
   };
 
   return (
-    <div className="flex flex-col h-screen bg-white">
+    <div className={`flex flex-col h-screen overflow-hidden ${isIncognito ? 'bg-gray-950 text-gray-100' : 'bg-gray-50 text-gray-900'}`}>
       {/* HEADER */}
-      <header className="fixed top-0 w-full h-14 bg-white border-b border-gray-200 z-10 flex items-center justify-between px-4">
+      <header className={`h-14 border-b px-4 flex items-center justify-between z-20 transition-colors ${
+        isIncognito ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'
+      }`}>
+        {/* Left: Brand */}
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold">
-            A
+          <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-sm shadow-sm">
+            G
           </div>
-          <span className="font-semibold text-lg text-gray-800">Agent Google</span>
+          <span className="font-semibold text-sm tracking-tight hidden sm:inline">Agent Google</span>
+          {isIncognito && (
+            <span className="text-[10px] bg-purple-900/60 text-purple-300 font-bold px-2 py-0.5 rounded-full border border-purple-700">
+              INCOGNITO
+            </span>
+          )}
         </div>
-        
-        <div className="flex items-center">
-          {isCheckingAuth ? (
-            <div className="w-24 h-8 bg-gray-100 rounded animate-pulse"></div>
-          ) : user ? (
-            <div className="flex items-center gap-3">
-              <span className="text-sm font-medium text-gray-700 hidden sm:block">{user.name}</span>
-              <img src={user.picture} alt={user.name} className="w-8 h-8 rounded-full border border-gray-200" />
-              <button 
-                onClick={handleLogout}
-                className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors"
-                title="Sign out"
-              >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
-                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-                  <polyline points="16 17 21 12 16 7"/>
-                  <line x1="21" y1="12" x2="9" y2="12"/>
-                </svg>
-              </button>
+
+        {/* Center: Meaningful Outcome Pinned */}
+        {meaningfulOutcome && (
+          <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium max-w-sm sm:max-w-md truncate border transition-all ${
+            outcomeStatus === 'PROPOSED'
+              ? 'bg-amber-50 border-amber-300 text-amber-900 animate-pulse'
+              : outcomeStatus === 'LOCKED'
+              ? 'bg-gray-100 border-gray-300 text-gray-600'
+              : 'bg-blue-50 border-blue-200 text-blue-800'
+          }`}>
+            <span className="truncate">🎯 {meaningfulOutcome}</span>
+            {!isChatLocked && outcomeStatus === 'PROPOSED' && (
+              <div className="flex items-center gap-1 ml-1 flex-shrink-0">
+                <button
+                  onClick={handleConfirmOutcome}
+                  title="Confirm outcome achieved & lock chat"
+                  className="p-1 hover:bg-amber-200 rounded text-green-700"
+                >
+                  ✓
+                </button>
+                <button
+                  onClick={handleContinueChat}
+                  title="Continue conversation"
+                  className="p-1 hover:bg-amber-200 rounded text-gray-600"
+                >
+                  →
+                </button>
+              </div>
+            )}
+            {isChatLocked && <span className="text-[10px] bg-gray-200 px-1.5 py-0.5 rounded ml-1">Locked</span>}
+          </div>
+        )}
+
+        {/* Right: Settings Dropdown */}
+        <div className="relative">
+          <button
+            onClick={() => setIsSettingsOpen(!isSettingsOpen)}
+            className="flex items-center gap-1.5 p-1.5 rounded-lg border border-gray-200 hover:bg-gray-100 text-xs font-medium transition-colors"
+          >
+            {user ? (
+              <img src={user.picture} alt={user.name} className="w-6 h-6 rounded-full" />
+            ) : (
+              <span className="text-gray-600">Settings ▾</span>
+            )}
+          </button>
+
+          {/* Dropdown Menu */}
+          {isSettingsOpen && (
+            <div className="absolute right-0 mt-2 w-52 bg-white border border-gray-200 rounded-xl shadow-xl py-2 z-50 text-xs text-gray-700">
+              {user ? (
+                <>
+                  <div className="px-3 py-2 border-b border-gray-100 font-semibold text-gray-900 truncate">
+                    {user.name}
+                  </div>
+                  <button
+                    onClick={openArchive}
+                    className="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center justify-between"
+                  >
+                    <span>Chats Archive</span>
+                    <span className="text-[10px] text-gray-400">Ctrl+A</span>
+                  </button>
+                  <button
+                    onClick={() => { setIsIncognito(!isIncognito); setIsSettingsOpen(false); }}
+                    className="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center justify-between text-purple-700 font-medium"
+                  >
+                    <span>{isIncognito ? 'Exit Incognito' : 'Incognito Mode'}</span>
+                    <span className="text-[10px]">🔒</span>
+                  </button>
+                  <button
+                    onClick={handleDeleteCurrentChat}
+                    className="w-full text-left px-3 py-2 hover:bg-red-50 text-red-600"
+                  >
+                    Delete Chat
+                  </button>
+                  <div className="border-t border-gray-100 my-1"></div>
+                  <Link
+                    href="/admin"
+                    onClick={() => setIsSettingsOpen(false)}
+                    className="block px-3 py-2 hover:bg-gray-100 font-medium text-indigo-600"
+                  >
+                    Admin Panel
+                  </Link>
+                  <button
+                    onClick={handleLogout}
+                    className="w-full text-left px-3 py-2 hover:bg-gray-100 text-gray-500"
+                  >
+                    Disconnect Google / Sign Out
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={handleLogin}
+                    className="w-full text-left px-3 py-2 hover:bg-gray-100 font-semibold text-blue-600"
+                  >
+                    Connect Google Account
+                  </button>
+                  <Link
+                    href="/admin"
+                    onClick={() => setIsSettingsOpen(false)}
+                    className="block px-3 py-2 hover:bg-gray-100 font-medium text-indigo-600 border-t border-gray-100 mt-1"
+                  >
+                    Admin Panel
+                  </Link>
+                </>
+              )}
             </div>
-          ) : (
-            <button 
-              onClick={handleLogin}
-              className="flex items-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-3 py-1.5 rounded text-sm font-medium transition-colors"
-            >
-              <svg viewBox="0 0 24 24" width="18" height="18">
-                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
-                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-              </svg>
-              Sign in with Google
-            </button>
           )}
         </div>
       </header>
 
-      {/* MESSAGES AREA */}
-      <main className="flex-1 overflow-y-auto pt-14 pb-20">
-        <div className="max-w-3xl mx-auto px-4 py-6">
-          {!isCheckingAuth && messages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full min-h-[50vh] text-center">
-              {user ? (
-                <>
-                  <h2 className="text-2xl font-semibold text-gray-400 mb-8">What can I help you with?</h2>
-                  <div className="flex flex-wrap justify-center gap-2 max-w-lg">
-                    {[
-                      'Search the web for...',
-                      'Check my recent emails',
-                      'Create a new document',
-                      "What's on my calendar today?",
-                      'Add a task to my list'
-                    ].map((suggestion, i) => (
-                      <button
-                        key={i}
-                        onClick={() => setSuggestion(suggestion)}
-                        className="px-4 py-2 rounded-full border border-gray-200 bg-gray-50 hover:bg-gray-100 text-sm text-gray-600 transition-colors"
-                      >
-                        {suggestion}
-                      </button>
-                    ))}
-                  </div>
-                </>
-              ) : (
-                <div className="text-gray-500">
-                  <p className="mb-4">Please sign in to chat with Agent Google.</p>
-                  <button 
-                    onClick={handleLogin}
-                    className="inline-flex items-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-md font-medium transition-colors"
+      {/* MESSAGES SCROLL AREA */}
+      <main className="flex-1 overflow-y-auto px-4 py-6">
+        <div className="max-w-3xl mx-auto space-y-6">
+          {messages.length === 0 && (
+            <div className="flex flex-col items-center justify-center min-h-[50vh] text-center">
+              <h2 className="text-xl font-semibold text-gray-400 mb-6">What can I organize or create for you?</h2>
+              <div className="flex flex-wrap justify-center gap-2 max-w-md">
+                {[
+                  'Make a 5-slide presentation on AI trends',
+                  'Research quantum computing and draft a doc',
+                  'Create an expense sheet with formulas',
+                  'Check my urgent emails today',
+                ].map((s, i) => (
+                  <button
+                    key={i}
+                    onClick={() => sendMessage(s)}
+                    className="px-3 py-1.5 rounded-full border border-gray-200 bg-white hover:bg-gray-50 text-xs text-gray-600 shadow-sm transition-colors"
                   >
-                    <svg viewBox="0 0 24 24" width="18" height="18">
-                      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
-                      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-                      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-                    </svg>
-                    Sign in with Google
+                    {s}
                   </button>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="space-y-6">
-              {messages.map((msg) => (
-                <div key={msg.id} className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
-                  <div 
-                    className={`max-w-[85%] px-4 py-3 ${
-                      msg.role === 'user' 
-                        ? 'bg-blue-600 text-white rounded-2xl rounded-br-md ml-auto' 
-                        : 'bg-gray-100 text-gray-900 rounded-2xl rounded-bl-md mr-auto'
-                    }`}
-                  >
-                    {msg.role === 'user' ? (
-                      <div className="whitespace-pre-wrap">{msg.content}</div>
-                    ) : (
-                      <div className="markdown-body text-sm prose prose-sm max-w-none">
-                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                          {msg.content}
-                        </ReactMarkdown>
-                      </div>
-                    )}
-                  </div>
-                  
-                  {/* Actions Display */}
-                  {msg.role === 'assistant' && msg.actions && msg.actions.length > 0 && (
-                    <div className="flex flex-col gap-1 mt-2 mr-auto w-full max-w-[85%] pl-2">
-                      {msg.actions.map((action, idx) => (
-                        <div 
-                          key={idx} 
-                          className={`flex items-start sm:items-center gap-2 py-1.5 px-2.5 rounded border text-xs w-fit max-w-full ${
-                            action.success 
-                              ? 'bg-gray-50 border-gray-200 text-gray-700' 
-                              : 'bg-red-50 border-red-200 text-red-700 font-medium'
-                          }`}
-                        >
-                          <div className={`w-2 h-2 rounded-full flex-shrink-0 mt-1 sm:mt-0 ${action.success ? 'bg-green-500' : 'bg-red-500'}`} />
-                          <span className="font-semibold flex-shrink-0">{action.tool}:</span>
-                          <span className="break-words">{action.summary}</span>
-                          {action.link && (
-                            <a href={action.link} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline ml-1 flex-shrink-0 font-medium inline-flex items-center gap-0.5">
-                              Open ↗
-                            </a>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Draft Card */}
-                  {msg.role === 'assistant' && msg.pendingDraft && (
-                    <div className="mt-3 mr-auto w-full max-w-[85%]">
-                      {(() => {
-                        const status = draftStatuses.get(msg.pendingDraft.draftId);
-                        
-                        if (status === 'approved') {
-                          return (
-                            <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-sm flex items-center gap-2 text-green-700">
-                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
-                                <polyline points="20 6 9 17 4 12"></polyline>
-                              </svg>
-                              Sent successfully
-                            </div>
-                          );
-                        }
-                        
-                        if (status === 'rejected') {
-                          return (
-                            <div className="bg-gray-100 border border-gray-200 rounded-lg p-3 text-sm flex items-center gap-2 text-gray-500">
-                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
-                                <line x1="18" y1="6" x2="6" y2="18"></line>
-                                <line x1="6" y1="6" x2="18" y2="18"></line>
-                              </svg>
-                              Draft discarded
-                            </div>
-                          );
-                        }
-
-                        // Pending Draft State
-                        return (
-                          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex flex-col gap-3">
-                            <div className="flex items-center gap-2 text-amber-800 font-medium text-sm">
-                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
-                                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
-                                <polyline points="22,6 12,13 2,6"></polyline>
-                              </svg>
-                              Draft Reply
-                            </div>
-                            
-                            <div className="bg-white rounded border border-amber-100 p-3 text-sm">
-                              <div className="text-gray-500 mb-1"><span className="font-medium text-gray-700">To:</span> {msg.pendingDraft.to}</div>
-                              <div className="text-gray-500 mb-2 pb-2 border-b border-gray-100"><span className="font-medium text-gray-700">Subject:</span> {msg.pendingDraft.subject}</div>
-                              <div className="text-gray-700 whitespace-pre-wrap">
-                                {msg.pendingDraft.body.length > 200 
-                                  ? msg.pendingDraft.body.substring(0, 200) + '...' 
-                                  : msg.pendingDraft.body}
-                              </div>
-                            </div>
-                            
-                            <div className="flex items-center gap-2 mt-1">
-                              <button 
-                                onClick={() => handleDraftAction(msg.pendingDraft!.draftId, 'approve')}
-                                className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded text-sm font-medium transition-colors"
-                              >
-                                Approve & Send
-                              </button>
-                              <button 
-                                onClick={() => handleDraftAction(msg.pendingDraft!.draftId, 'reject')}
-                                className="px-3 py-1.5 border border-red-500 text-red-600 hover:bg-red-50 rounded text-sm font-medium transition-colors"
-                              >
-                                Discard
-                              </button>
-                            </div>
-                          </div>
-                        );
-                      })()}
-                    </div>
-                  )}
-                </div>
-              ))}
-              
-              {isLoading && (
-                <div className="flex flex-col items-start">
-                  <div className="flex items-center gap-1 px-4 py-3 bg-gray-100 rounded-2xl rounded-bl-md w-fit">
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                  </div>
-                </div>
-              )}
-              
-              <div ref={messagesEndRef} />
+                ))}
+              </div>
             </div>
           )}
+
+          {messages.map((msg) => (
+            <div
+              key={msg.id}
+              className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}
+            >
+              <div
+                className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
+                  msg.role === 'user'
+                    ? 'bg-blue-600 text-white rounded-br-sm'
+                    : isIncognito
+                    ? 'bg-gray-900 border border-gray-800 text-gray-200 rounded-bl-sm'
+                    : 'bg-white border border-gray-200 text-gray-800 rounded-bl-sm shadow-sm'
+                }`}
+              >
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
+              </div>
+
+              {/* Actions Badges */}
+              {msg.actions && msg.actions.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1.5 max-w-[85%]">
+                  {msg.actions.map((action, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-center gap-1.5 py-1 px-2.5 rounded-full border bg-gray-50 border-gray-200 text-[11px] text-gray-600"
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                      <span className="font-semibold">{action.tool}:</span>
+                      <span>{action.summary}</span>
+                      {action.link && (
+                        <a
+                          href={action.link}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-blue-600 hover:underline font-semibold ml-1 inline-flex items-center gap-0.5"
+                        >
+                          Open ↗
+                        </a>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+
+          {/* Long Running Progress Indicator */}
+          {isLoading && (
+            <div className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-100 rounded-xl text-xs text-blue-800 max-w-sm animate-pulse">
+              <div className="w-2 h-2 rounded-full bg-blue-600 animate-ping"></div>
+              <span>{PROGRESS_PHRASES[progressIndex]}...</span>
+            </div>
+          )}
+
+          <div ref={messagesEndRef} />
         </div>
       </main>
 
       {/* INPUT BAR */}
-      <footer className="fixed bottom-0 w-full bg-white border-t border-gray-200 z-10">
-        <div className="max-w-3xl mx-auto px-4 py-3">
-          <div className="flex flex-row gap-3 items-end">
+      <footer className={`border-t p-3 relative z-10 ${isIncognito ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'}`}>
+        <div className="max-w-3xl mx-auto flex flex-col gap-2">
+          {/* Agent Suggests Popup */}
+          {activeSuggestion && (
+            <div className="flex items-center justify-between p-2 rounded-lg bg-indigo-50 border border-indigo-200 text-xs text-indigo-900">
+              <span>💡 {activeSuggestion}</span>
+              <button onClick={() => setActiveSuggestion(null)} className="text-indigo-500 hover:text-indigo-800 text-sm font-bold">
+                ✕
+              </button>
+            </div>
+          )}
+
+          {/* Attached Files Badges */}
+          {attachedFiles.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {attachedFiles.map((file, i) => (
+                <div key={i} className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-gray-100 text-xs text-gray-700 border">
+                  <span>📎 {file.name}</span>
+                  <button
+                    onClick={() => setAttachedFiles(prev => prev.filter((_, idx) => idx !== i))}
+                    className="text-gray-400 hover:text-red-500"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Recorded Audio Preview */}
+          {recordedAudioUrl && (
+            <div className="flex items-center gap-3 p-2 bg-emerald-50 border border-emerald-200 rounded-lg text-xs">
+              <span>🎙️ Recorded Voice Note</span>
+              <audio src={recordedAudioUrl} controls className="h-7 w-48" />
+              <button onClick={() => setRecordedAudioUrl(null)} className="text-red-600 hover:underline">
+                Discard
+              </button>
+            </div>
+          )}
+
+          {/* Input Controls Row */}
+          <div className="flex items-end gap-2">
+            {/* Extreme Left: Agent Suggests */}
+            <button
+              onClick={handleTriggerSuggest}
+              title="Agent Suggests (Tips)"
+              className="p-2.5 text-gray-400 hover:text-indigo-600 hover:bg-gray-100 rounded-xl transition-colors"
+            >
+              💡
+            </button>
+
+            {/* Center: Textarea */}
             <textarea
               ref={textareaRef}
-              value={input}
-              onChange={handleTextareaChange}
-              onKeyDown={handleKeyDown}
-              disabled={isLoading || (!user && !isCheckingAuth)}
-              placeholder={user ? "Message Agent Google..." : "Sign in to send a message..."}
-              className="flex-1 resize-none rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent px-4 py-2.5 outline-none max-h-[120px] min-h-[44px] text-gray-800 disabled:bg-gray-50 disabled:text-gray-500"
               rows={1}
+              disabled={isChatLocked || isLoading}
+              value={input}
+              onChange={(e) => {
+                setInput(e.target.value);
+                e.target.style.height = 'auto';
+                e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  sendMessage();
+                }
+              }}
+              placeholder={
+                isChatLocked
+                  ? 'This chat reached its outcome and is locked. Use context in a new chat.'
+                  : 'Message Agent Google...'
+              }
+              className={`flex-1 resize-none px-3.5 py-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                isIncognito ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300 text-gray-800'
+              }`}
             />
-            <button
-              onClick={sendMessage}
-              disabled={!input.trim() || isLoading || (!user && !isCheckingAuth)}
-              className="rounded-xl bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50 disabled:hover:bg-blue-600 h-11 w-11 flex-shrink-0 flex items-center justify-center transition-colors mb-[1px]"
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
-                <line x1="12" y1="19" x2="12" y2="5"/>
-                <polyline points="5 12 12 5 19 12"/>
-              </svg>
-            </button>
+
+            {/* Right Controls: Camera, Attach, Mic/Send */}
+            <div className="flex items-center gap-1">
+              {/* Camera Button */}
+              <button
+                onClick={() => cameraInputRef.current?.click()}
+                title="Capture / Attach Photo"
+                className="p-2.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-colors"
+              >
+                📷
+              </button>
+              <input
+                ref={cameraInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                onChange={handleFileChange}
+                className="hidden"
+              />
+
+              {/* Attach Button with Archive Link option */}
+              <div className="relative group">
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  title="Attach Files (up to 10)"
+                  className="p-2.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-colors"
+                >
+                  📎
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  onChange={handleFileChange}
+                  className="hidden"
+                />
+              </div>
+
+              {/* Attach From Archive Button */}
+              <button
+                onClick={() => { fetchArchiveChats(); setIsAttachFromArchiveOpen(true); }}
+                title="Attach context from Chats Archive folder"
+                className="p-2 text-xs text-gray-400 hover:text-blue-600 hover:bg-gray-100 rounded-xl font-bold"
+              >
+                📁
+              </button>
+
+              {/* Microphone / Send Button */}
+              {input.trim() || attachedFiles.length > 0 || recordedAudioUrl ? (
+                <button
+                  onClick={() => sendMessage()}
+                  disabled={isLoading || isChatLocked}
+                  className="p-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow transition-colors disabled:opacity-50"
+                >
+                  ↑
+                </button>
+              ) : (
+                <button
+                  onClick={toggleAudioRecording}
+                  title={isRecording ? 'Stop recording' : 'Record voice note'}
+                  className={`p-2.5 rounded-xl transition-colors ${
+                    isRecording ? 'bg-red-600 text-white animate-pulse' : 'text-gray-400 hover:text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  {isRecording ? `⏹ ${recordingSeconds}s` : '🎙️'}
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </footer>
+
+      {/* WHATSAPP-STYLE CHATS ARCHIVE MODAL */}
+      {isArchiveOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-2xl w-full h-[80vh] flex flex-col shadow-2xl overflow-hidden">
+            {/* Archive Header */}
+            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+              <div>
+                <h2 className="text-base font-bold text-gray-900">Chats Archive</h2>
+                <p className="text-xs text-gray-500">Persistent conversation records & portable contexts</p>
+              </div>
+              <button onClick={() => setIsArchiveOpen(false)} className="text-gray-400 hover:text-gray-700 text-lg font-bold">
+                ✕
+              </button>
+            </div>
+
+            {/* Search & Filters */}
+            <div className="px-6 py-3 border-b border-gray-100 flex flex-col sm:flex-row gap-2">
+              <input
+                type="text"
+                placeholder="Search archive conversations..."
+                value={archiveSearch}
+                onChange={(e) => setArchiveSearch(e.target.value)}
+                className="flex-1 bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+              <div className="flex gap-1">
+                {(['all', 'starred', 'completed', 'active'] as const).map(tab => (
+                  <button
+                    key={tab}
+                    onClick={() => setArchiveFilter(tab)}
+                    className={`px-3 py-1 rounded-full text-xs font-semibold capitalize ${
+                      archiveFilter === tab ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    {tab}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Conversation Tiles List */}
+            <div className="flex-1 overflow-y-auto divide-y divide-gray-100">
+              {archiveChats
+                .filter(c => {
+                  if (archiveFilter === 'starred' && !c.is_starred) return false;
+                  if (archiveFilter === 'completed' && !c.is_locked) return false;
+                  if (archiveFilter === 'active' && c.is_locked) return false;
+                  if (archiveSearch) {
+                    const q = archiveSearch.toLowerCase();
+                    return c.title.toLowerCase().includes(q) || (c.meaningful_outcome && c.meaningful_outcome.toLowerCase().includes(q));
+                  }
+                  return true;
+                })
+                .map(chat => (
+                  <div
+                    key={chat.id}
+                    onClick={() => handleOpenPastChat(chat)}
+                    className="p-4 hover:bg-gray-50 cursor-pointer flex items-center justify-between group transition-colors"
+                  >
+                    <div className="flex-1 min-w-0 pr-4">
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={(e) => handleToggleStar(chat.id, e)}
+                          title="Star mark chat (pin to top)"
+                          className={`text-base ${chat.is_starred ? 'text-amber-500' : 'text-gray-300 hover:text-amber-500'}`}
+                        >
+                          ★
+                        </button>
+                        <h3 className="font-semibold text-sm text-gray-900 truncate">{chat.title}</h3>
+                        {chat.is_locked && (
+                          <span className="text-[10px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded border">
+                            Locked
+                          </span>
+                        )}
+                      </div>
+                      {chat.meaningful_outcome && (
+                        <p className="text-xs text-blue-700 truncate mt-1">🎯 {chat.meaningful_outcome}</p>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleUseContextInNewChat(chat);
+                        }}
+                        className="px-2.5 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded text-xs font-semibold"
+                      >
+                        Use in New Chat
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const blob = new Blob([chat.markdown_content || `# ${chat.title}`], { type: 'text/markdown' });
+                          const url = URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = `${chat.title.replace(/\s+/g, '_')}.md`;
+                          a.click();
+                        }}
+                        className="p-1 text-gray-400 hover:text-gray-700 text-xs"
+                        title="Download Markdown"
+                      >
+                        ⬇ .md
+                      </button>
+                    </div>
+                  </div>
+                ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ATTACH FROM ARCHIVE MODAL */}
+      {isAttachFromArchiveOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-lg w-full max-h-[70vh] flex flex-col shadow-2xl p-6">
+            <h2 className="text-base font-bold text-gray-900 mb-1">Attach Chats from Archive</h2>
+            <p className="text-xs text-gray-500 mb-4">Select one or multiple chats to attach their Markdown transcripts as context</p>
+
+            <div className="flex-1 overflow-y-auto divide-y divide-gray-100 border rounded-xl mb-4 max-h-60">
+              {archiveChats.map(c => (
+                <label key={c.id} className="p-3 flex items-center gap-3 hover:bg-gray-50 cursor-pointer text-xs">
+                  <input
+                    type="checkbox"
+                    checked={selectedArchiveAttachments.includes(c.id)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedArchiveAttachments(prev => [...prev, c.id]);
+                      } else {
+                        setSelectedArchiveAttachments(prev => prev.filter(id => id !== c.id));
+                      }
+                    }}
+                  />
+                  <div className="flex-1 truncate">
+                    <span className="font-semibold text-gray-800">{c.title}</span>
+                    {c.meaningful_outcome && <p className="text-gray-400 truncate">{c.meaningful_outcome}</p>}
+                  </div>
+                </label>
+              ))}
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => { setSelectedArchiveAttachments([]); setIsAttachFromArchiveOpen(false); }}
+                className="px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-100 rounded-lg"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  const toAttach = archiveChats.filter(c => selectedArchiveAttachments.includes(c.id));
+                  toAttach.forEach(c => {
+                    setAttachedFiles(prev => [
+                      ...prev,
+                      {
+                        name: `${c.title}.md`,
+                        size: 'Chat MD',
+                        content: c.markdown_content || `# ${c.title}\n\nOutcome: ${c.meaningful_outcome}`,
+                      }
+                    ]);
+                  });
+                  setSelectedArchiveAttachments([]);
+                  setIsAttachFromArchiveOpen(false);
+                }}
+                className="px-4 py-1.5 text-xs font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                Attach Selected ({selectedArchiveAttachments.length})
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
