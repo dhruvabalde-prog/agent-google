@@ -5,6 +5,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import Link from 'next/link';
 import { ChatMessage, ActionResult, DraftInfo } from '@/lib/types';
+import ActionCardsDeck, { ActionCardItem } from '@/components/ActionCardsDeck';
 
 interface ArchiveChat {
   id: string;
@@ -126,6 +127,30 @@ export default function Home() {
   const [speakingMessageId, setSpeakingMessageId] = useState<string | null>(null);
   const [selectedImageAspectRatio, setSelectedImageAspectRatio] = useState<string>('1:1');
   const [isGeneratingImage, setIsGeneratingImage] = useState<boolean>(false);
+
+  // Actions Page / Deck State (1 card per viewport, no scroll, auto swipe-up)
+  const [isActionsDeckOpen, setIsActionsDeckOpen] = useState<boolean>(false);
+  const [actionCards, setActionCards] = useState<ActionCardItem[]>([]);
+  const [unreadActionsCount, setUnreadActionsCount] = useState<number>(0);
+
+  async function fetchActionCards() {
+    try {
+      const res = await fetch('/api/actions');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.actions) {
+          setActionCards(data.actions);
+          setUnreadActionsCount(data.unreadCount || data.actions.filter((a: any) => a.status === 'NEEDS_APPROVAL').length);
+        }
+      }
+    } catch (e) {
+      console.error('Failed to fetch action cards:', e);
+    }
+  }
+
+  useEffect(() => {
+    fetchActionCards();
+  }, []);
 
   useEffect(() => {
     try {
@@ -792,8 +817,29 @@ export default function Home() {
           </div>
         )}
 
-        {/* Right: Settings Dropdown (Install Button placed inside) */}
+        {/* Right: Actions Bell Button & Settings Dropdown */}
         <div className="flex items-center gap-2">
+          {/* Bell Button (Shows Actions Page / Deck) */}
+          <button
+            type="button"
+            onClick={() => { fetchActionCards(); setIsActionsDeckOpen(true); }}
+            title="Suchi Actions & Background Work"
+            className={`relative p-2 rounded-lg border text-xs font-medium transition-colors flex items-center justify-center ${
+              isDarkMode
+                ? 'border-gray-700 bg-gray-800 hover:bg-gray-700 text-gray-200'
+                : 'border-gray-200 hover:bg-gray-100 text-gray-700 bg-white'
+            }`}
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+            </svg>
+            {unreadActionsCount > 0 && (
+              <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[9px] font-bold text-white shadow-xs animate-pulse">
+                {unreadActionsCount}
+              </span>
+            )}
+          </button>
+
           <div className="relative">
             <button
               onClick={() => setIsSettingsOpen(!isSettingsOpen)}
@@ -820,6 +866,24 @@ export default function Home() {
                     <div className="px-3 py-2 border-b border-gray-100 dark:border-gray-800 font-semibold text-gray-900 dark:text-gray-100 truncate">
                       {user.name}
                     </div>
+
+                    {/* Actions Feed Option */}
+                    <button
+                      onClick={() => { fetchActionCards(); setIsActionsDeckOpen(true); setIsSettingsOpen(false); }}
+                      className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center justify-between font-medium text-indigo-600 dark:text-indigo-400"
+                    >
+                      <span className="flex items-center gap-2">
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                        </svg>
+                        <span>Actions & Work Feed</span>
+                      </span>
+                      {unreadActionsCount > 0 && (
+                        <span className="text-[10px] bg-rose-100 dark:bg-rose-950 px-1.5 py-0.5 rounded text-rose-700 dark:text-rose-300 font-bold">
+                          {unreadActionsCount}
+                        </span>
+                      )}
+                    </button>
 
                     {/* Install App Option */}
                     <button
@@ -1725,6 +1789,24 @@ export default function Home() {
           </div>
         </div>
       )}
+
+      {/* FULLSCREEN ACTIONS DECK (1 card per viewport, no scroll, auto swipe-up) */}
+      <ActionCardsDeck
+        isOpen={isActionsDeckOpen}
+        onClose={() => setIsActionsDeckOpen(false)}
+        cards={actionCards}
+        onApproveDraft={handleApproveDraft}
+        onRejectDraft={handleRejectDraft}
+        onMarkReviewed={(cardId) => {
+          setActionCards(prev => prev.map(c => c.id === cardId ? { ...c, status: 'COMPLETED' } : c));
+          fetch('/api/actions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'resolve', cardId }),
+          }).catch(() => {});
+        }}
+        isDarkMode={isDarkMode}
+      />
     </div>
   );
 }
