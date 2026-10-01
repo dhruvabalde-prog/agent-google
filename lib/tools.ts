@@ -440,13 +440,14 @@ export async function executeFunction(
         action.summary = `Failed to execute ${name}`;
     }
   } catch (error: any) {
-    resultData = { error: error.message };
+    resultData = { error: error?.message || String(error) };
     action.success = false;
-    action.summary = `Error executing ${name}`;
+    action.summary = `${name} error: ${error?.message || String(error)}`;
   }
 
   if (resultData && resultData.error) {
     action.success = false;
+    action.summary = `${name} failed: ${resultData.error}`;
   }
 
   return { action, draft, data: resultData };

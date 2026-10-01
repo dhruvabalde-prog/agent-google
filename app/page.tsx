@@ -267,17 +267,20 @@ export default function Home() {
                   {msg.role === 'assistant' && msg.actions && msg.actions.length > 0 && (
                     <div className="flex flex-col gap-1 mt-2 mr-auto w-full max-w-[85%] pl-2">
                       {msg.actions.map((action, idx) => (
-                        <div key={idx} className="flex items-center gap-2 py-1 px-2 rounded bg-gray-50 border border-gray-100 w-fit max-w-full">
-                          <div className={`w-2 h-2 rounded-full flex-shrink-0 ${action.success ? 'bg-green-500' : 'bg-red-500'}`} />
-                          <span className="text-xs text-gray-500 font-medium truncate">{action.tool}</span>
-                          <span className="text-xs text-gray-600 truncate">{action.summary}</span>
+                        <div 
+                          key={idx} 
+                          className={`flex items-start sm:items-center gap-2 py-1.5 px-2.5 rounded border text-xs w-fit max-w-full ${
+                            action.success 
+                              ? 'bg-gray-50 border-gray-200 text-gray-700' 
+                              : 'bg-red-50 border-red-200 text-red-700 font-medium'
+                          }`}
+                        >
+                          <div className={`w-2 h-2 rounded-full flex-shrink-0 mt-1 sm:mt-0 ${action.success ? 'bg-green-500' : 'bg-red-500'}`} />
+                          <span className="font-semibold flex-shrink-0">{action.tool}:</span>
+                          <span className="break-words">{action.summary}</span>
                           {action.link && (
-                            <a href={action.link} target="_blank" rel="noreferrer" className="text-blue-500 hover:text-blue-700 ml-1 flex-shrink-0">
-                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3 h-3">
-                                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
-                                <polyline points="15 3 21 3 21 9"></polyline>
-                                <line x1="10" y1="14" x2="21" y2="3"></line>
-                              </svg>
+                            <a href={action.link} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline ml-1 flex-shrink-0 font-medium inline-flex items-center gap-0.5">
+                              Open ↗
                             </a>
                           )}
                         </div>

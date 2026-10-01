@@ -240,20 +240,107 @@ export async function addSlide(accessToken: string, presentationId: string, titl
     const auth = getAuth(accessToken);
     const slides = google.slides({ version: 'v1', auth });
     
-    const slideId = 'slide_' + Date.now();
+    const uniqueSuffix = Math.random().toString(36).substring(2, 8);
+    const slideId = `slide_${Date.now()}_${uniqueSuffix}`;
+    const titleId = `title_${Date.now()}_${uniqueSuffix}`;
+    const bodyId = `body_${Date.now()}_${uniqueSuffix}`;
+
+    const requests: any[] = [
+      {
+        createSlide: {
+          objectId: slideId,
+          slideLayoutReference: { predefinedLayout: 'BLANK' },
+        },
+      },
+    ];
+
+    if (title && title.trim()) {
+      requests.push(
+        {
+          createShape: {
+            objectId: titleId,
+            shapeType: 'TEXT_BOX',
+            elementProperties: {
+              pageObjectId: slideId,
+              size: {
+                width: { magnitude: 620, unit: 'PT' },
+                height: { magnitude: 50, unit: 'PT' },
+              },
+              transform: {
+                scaleX: 1,
+                scaleY: 1,
+                translateX: 50,
+                translateY: 40,
+                unit: 'PT',
+              },
+            },
+          },
+        },
+        {
+          insertText: {
+            objectId: titleId,
+            insertionIndex: 0,
+            text: title.trim(),
+          },
+        },
+        {
+          updateTextStyle: {
+            objectId: titleId,
+            style: {
+              bold: true,
+              fontSize: { magnitude: 22, unit: 'PT' },
+            },
+            fields: 'bold,fontSize',
+          },
+        }
+      );
+    }
+
+    if (body && body.trim()) {
+      requests.push(
+        {
+          createShape: {
+            objectId: bodyId,
+            shapeType: 'TEXT_BOX',
+            elementProperties: {
+              pageObjectId: slideId,
+              size: {
+                width: { magnitude: 620, unit: 'PT' },
+                height: { magnitude: 280, unit: 'PT' },
+              },
+              transform: {
+                scaleX: 1,
+                scaleY: 1,
+                translateX: 50,
+                translateY: 105,
+                unit: 'PT',
+              },
+            },
+          },
+        },
+        {
+          insertText: {
+            objectId: bodyId,
+            insertionIndex: 0,
+            text: body.trim(),
+          },
+        },
+        {
+          updateTextStyle: {
+            objectId: bodyId,
+            style: {
+              fontSize: { magnitude: 14, unit: 'PT' },
+            },
+            fields: 'fontSize',
+          },
+        }
+      );
+    }
     
     await slides.presentations.batchUpdate({
       presentationId,
       requestBody: {
-        requests: [
-          {
-            createSlide: {
-              objectId: slideId,
-              insertionIndex: 1,
-              slideLayoutReference: { predefinedLayout: 'TITLE_AND_BODY' },
-            },
-          },
-        ],
+        requests,
       },
     });
     
