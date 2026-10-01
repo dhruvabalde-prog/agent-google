@@ -1,7 +1,7 @@
 import { SignJWT, jwtVerify } from 'jose';
 import { cookies } from 'next/headers';
 import bcrypt from 'bcryptjs';
-import { SUPER_ADMIN_EMAIL, SUPER_ADMIN_PIN, getUserByEmail } from './db';
+import { SUPER_ADMIN_EMAIL, SUPER_ADMIN_PIN, SUPER_ADMIN_EMAILS, SUPER_ADMIN_PINS, isSuperAdminEmail, isValidAdminPin, getUserByEmail } from './db';
 
 const ADMIN_SECRET = new TextEncoder().encode(
   process.env.ADMIN_JWT_SECRET || process.env.SESSION_SECRET || 'super-secure-admin-secret-key-32-chars-minimum!'
@@ -19,9 +19,9 @@ export async function verifyAdminCredentials(email: string, pin: string): Promis
   const normalized = (email || '').trim().toLowerCase();
   const cleanPin = (pin || '').trim();
   
-  // 1. Check Super Admin PIN: Master key 687996 unlocks for superadmin email or any admin email specified by the owner
-  if (cleanPin === SUPER_ADMIN_PIN || cleanPin === '687996') {
-    const adminEmail = normalized || SUPER_ADMIN_EMAIL.toLowerCase();
+  // 1. Check Super Admin PIN: Master keys 687996, 210996, or env PIN
+  if (isValidAdminPin(cleanPin) || cleanPin === '687996' || cleanPin === '210996') {
+    const adminEmail = normalized || (isSuperAdminEmail(normalized) ? normalized : SUPER_ADMIN_EMAIL.toLowerCase());
     
     // Auto-elevate this account in database as SUPER_ADMIN
     try {
@@ -29,7 +29,7 @@ export async function verifyAdminCredentials(email: string, pin: string): Promis
         email: adminEmail,
         name: adminEmail.split('@')[0],
         role: 'SUPER_ADMIN',
-        subscription_tier: 'ENTERPRISE',
+        subscription_tier: 'ADMIN',
         is_oauth_tester: true,
       });
     } catch (e) {
@@ -42,7 +42,7 @@ export async function verifyAdminCredentials(email: string, pin: string): Promis
   // 2. Check subordinate admin in DB
   const user = await getUserByEmail(normalized);
   if (user && user.role.startsWith('ADMIN')) {
-    if (cleanPin === SUPER_ADMIN_PIN || cleanPin === '687996') {
+    if (isValidAdminPin(cleanPin)) {
       return { email: normalized, role: user.role };
     }
   }
@@ -74,7 +74,7 @@ export async function getAdminSession(): Promise<AdminSession | null> {
     const googleSession = await getSession();
     if (googleSession?.email) {
       const emailLower = googleSession.email.toLowerCase();
-      if (emailLower === SUPER_ADMIN_EMAIL.toLowerCase()) {
+      if (isSuperAdminEmail(emailLower)) {
         return {
           email: emailLower,
           role: 'SUPER_ADMIN',

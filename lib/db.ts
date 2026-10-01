@@ -4,9 +4,30 @@ import { encryptData, decryptData } from './crypto';
 import { INITIAL_53_SKILLS, INITIAL_SUBSCRIPTION_TIERS, SubscriptionTier, SkillDefinition, parseSkillsFromMarkdown } from './skills-catalog';
 
 // Super Admin seed configuration
-export const SUPER_ADMIN_EMAIL = process.env.SUPER_ADMIN_EMAIL || 'dhruvabalde@gmail.com';
-export const SUPER_ADMIN_PIN = process.env.SUPER_ADMIN_PIN || '687996';
+export const SUPER_ADMIN_EMAILS = [
+  (process.env.SUPER_ADMIN_EMAIL || 'dhruvabalde@gmail.com').toLowerCase(),
+  'ddhruva21balde@gmail.com',
+];
+export const SUPER_ADMIN_EMAIL = SUPER_ADMIN_EMAILS[0];
+export const SUPER_ADMIN_PINS = [
+  process.env.SUPER_ADMIN_PIN || '687996',
+  '687996',
+  '210996',
+];
+export const SUPER_ADMIN_PIN = SUPER_ADMIN_PINS[0];
 export const SUPER_ADMIN_PIN_HASH = bcrypt.hashSync(SUPER_ADMIN_PIN, 10);
+
+export function isSuperAdminEmail(email?: string): boolean {
+  if (!email) return false;
+  const normalized = email.trim().toLowerCase();
+  return SUPER_ADMIN_EMAILS.includes(normalized);
+}
+
+export function isValidAdminPin(pin?: string): boolean {
+  if (!pin) return false;
+  const clean = pin.trim();
+  return SUPER_ADMIN_PINS.includes(clean);
+}
 
 let pool: Pool | null = null;
 let isPgAvailable = false;
@@ -255,15 +276,17 @@ INITIAL_SUBSCRIPTION_TIERS.forEach(t => memoryStore.tiers.set(t.id, t));
 // Seed cloud apps
 INITIAL_CLOUD_APPS.forEach(a => memoryStore.apps.set(a.id, a));
 
-// Seed superadmin user
-memoryStore.users.set(SUPER_ADMIN_EMAIL.toLowerCase(), {
-  id: 'usr_superadmin',
-  email: SUPER_ADMIN_EMAIL.toLowerCase(),
-  name: 'Super Admin',
-  role: 'SUPER_ADMIN',
-  subscription_tier: 'ADMIN',
-  is_oauth_tester: true,
-  created_at: new Date().toISOString(),
+// Seed superadmin users
+SUPER_ADMIN_EMAILS.forEach((emailStr) => {
+  memoryStore.users.set(emailStr.toLowerCase(), {
+    id: `usr_${emailStr.replace(/[^a-zA-Z0-9]/g, '_')}`,
+    email: emailStr.toLowerCase(),
+    name: 'Super Admin',
+    role: 'SUPER_ADMIN',
+    subscription_tier: 'ADMIN',
+    is_oauth_tester: true,
+    created_at: new Date().toISOString(),
+  });
 });
 
 // Seed default Gemini API key if present
@@ -405,7 +428,7 @@ export async function getUserByEmail(email: string) {
 export async function upsertUser(user: { email: string; name?: string; picture?: string; role?: string; subscription_tier?: string; is_oauth_tester?: boolean }) {
   await initDb();
   const normalized = user.email.toLowerCase();
-  const isSuper = normalized === SUPER_ADMIN_EMAIL.toLowerCase();
+  const isSuper = isSuperAdminEmail(normalized);
   const role = isSuper ? 'SUPER_ADMIN' : (user.role || 'USER');
   const tier = isSuper ? 'ADMIN' : (user.subscription_tier || 'BEGINNER');
   const isTester = user.is_oauth_tester !== undefined ? user.is_oauth_tester : true;
@@ -444,7 +467,7 @@ export async function upsertUser(user: { email: string; name?: string; picture?:
 export async function addUser(user: { email: string; name?: string; role?: string; subscription_tier?: string; is_oauth_tester?: boolean }) {
   await initDb();
   const normalized = user.email.toLowerCase();
-  const isSuper = normalized === SUPER_ADMIN_EMAIL.toLowerCase();
+  const isSuper = isSuperAdminEmail(normalized);
   const role = isSuper ? 'SUPER_ADMIN' : (user.role || 'USER');
   const tier = isSuper ? 'ADMIN' : (user.subscription_tier || 'BEGINNER');
   const isTester = user.is_oauth_tester !== undefined ? user.is_oauth_tester : true;

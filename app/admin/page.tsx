@@ -596,16 +596,21 @@ export default function AdminPage() {
                 required
                 value={loginEmail}
                 onChange={(e) => setLoginEmail(e.target.value)}
-                className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                placeholder="ddhruva21balde@gmail.com"
+                className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-gray-500"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-gray-300 uppercase mb-1">Security PIN</label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-semibold text-gray-300 uppercase">Security PIN</label>
+                <span className="text-[10px] text-gray-400 font-mono">210996 / 687996</span>
+              </div>
               <input
                 type="password"
                 required
                 maxLength={8}
+                placeholder="••••••"
                 value={loginPin}
                 onChange={(e) => setLoginPin(e.target.value)}
                 className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 tracking-widest text-center font-mono"
