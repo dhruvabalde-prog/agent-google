@@ -610,3 +610,27 @@ export async function deleteDraft(accessToken: string, draftId: string) {
     return { error: error.message };
   }
 }
+
+export async function searchInternet(query: string) {
+  try {
+    const res = await fetch(`https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      },
+    });
+    const html = await res.text();
+    const results: { title: string; snippet: string; link: string }[] = [];
+    const linkRegex = /<a class="result__url"[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>[\s\S]*?<a class="result__snippet"[^>]*>([\s\S]*?)<\/a>/g;
+    let match;
+    while ((match = linkRegex.exec(html)) !== null && results.length < 5) {
+      results.push({
+        link: match[1].trim(),
+        title: match[2].replace(/<[^>]+>/g, '').trim(),
+        snippet: match[3].replace(/<[^>]+>/g, '').trim(),
+      });
+    }
+    return results.length > 0 ? results : { message: `No direct search results found for: ${query}` };
+  } catch (error: any) {
+    return { error: error.message };
+  }
+}

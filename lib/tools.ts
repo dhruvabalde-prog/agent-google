@@ -4,6 +4,17 @@ import { ActionResult, DraftInfo } from './types';
 
 export const functionDeclarations: FunctionDeclaration[] = [
   {
+    name: 'search_internet',
+    description: 'Searches the internet for real-time information, news, current events, and web research.',
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        query: { type: Type.STRING, description: 'The search query to look up on the web' },
+      },
+      required: ['query'],
+    },
+  },
+  {
     name: 'list_documents',
     description: 'Lists Google Docs.',
     parameters: {
@@ -289,6 +300,10 @@ export async function executeFunction(
 
   try {
     switch (name) {
+      case 'search_internet':
+        resultData = await googleServices.searchInternet(args.query);
+        action.summary = `Searched the web for: ${args.query}`;
+        break;
       case 'list_documents':
         resultData = await googleServices.listDocuments(accessToken, args.query);
         action.summary = Array.isArray(resultData) ? `Found ${resultData.length} documents` : 'Failed to list documents';

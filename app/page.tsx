@@ -80,9 +80,11 @@ export default function Home() {
         }),
       });
       
-      if (!res.ok) throw new Error('Failed to send message');
-      
       const data = await res.json();
+      
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to send message');
+      }
       
       const assistantMessage: ChatMessage = {
         id: crypto.randomUUID(),
@@ -93,11 +95,11 @@ export default function Home() {
       };
       
       setMessages(prev => [...prev, assistantMessage]);
-    } catch (err) {
+    } catch (err: any) {
       const errorMessage: ChatMessage = {
         id: crypto.randomUUID(),
         role: 'assistant',
-        content: 'Sorry, something went wrong. Please try again.',
+        content: err?.message || 'Sorry, something went wrong. Please try again.',
       };
       setMessages(prev => [...prev, errorMessage]);
     } finally {
