@@ -1,0 +1,3790 @@
+[
+  {
+    "num": 1,
+    "id": "capital-efficiency-and-grants-scout",
+    "name": "Capital Efficiency and Grants Scout",
+    "department": "Sales, Business Development & Revenue Architecture",
+    "description": "Identifies, navigates, and secures non-dilutive startup funding, government grants, state subsidies, and cloud credits across any region or industry.",
+    "enabled": true,
+    "allowedTiers": [
+      "BEGINNER",
+      "INTERMEDIATE",
+      "ADVANCED",
+      "ADMIN"
+    ],
+    "quickQuestions": [
+      {
+        "title": "Operating Country",
+        "prompt": "(1-2 words only): Country of operations (1-2 words): *(e.g., \"India / United States / Singapore\")*"
+      },
+      {
+        "title": "State / Province",
+        "prompt": "(1-2 words only): State, province, or region (1-2 words): *(e.g., \"Haryana / California / Ontario\")*"
+      },
+      {
+        "title": "Venture Stage",
+        "prompt": "\\[MCQ\\]: What is your venture's current stage?",
+        "options": [
+          "[A] Idea / Pre-Seed",
+          "[B] Prototype / MVP Building",
+          "[C] Early Revenue / Bootstrapped",
+          "[D] Growth / Scaling"
+        ]
+      },
+      {
+        "title": "Target Cloud Credits",
+        "prompt": "\\[MCQ\\]: Which cloud credit programs are you seeking?",
+        "options": [
+          "[A] Google Cloud for Startups",
+          "[B] AWS Activate",
+          "[C] Microsoft Founders Hub",
+          "[D] All Major Cloud Providers"
+        ]
+      }
+    ],
+    "parameters": [
+      {
+        "name": "{{OPERATING_COUNTRY}}",
+        "description": "Country of legal incorporation or primary operations",
+        "validChoices": "India / United States / United Kingdom",
+        "defaultFallback": "User-provided country"
+      },
+      {
+        "name": "{{OPERATING_REGION_OR_STATE}}",
+        "description": "State, province, or economic zone of operations",
+        "validChoices": "Haryana / California / Ontario",
+        "defaultFallback": "User-provided state/province"
+      },
+      {
+        "name": "{{VENTURE_SECTOR}}",
+        "description": "Primary industry vertical and technology category",
+        "validChoices": "B2B SaaS / DeepTech / Clean Energy",
+        "defaultFallback": "Technology Startup"
+      },
+      {
+        "name": "{{TARGET_CREDIT_PROVIDERS}}",
+        "description": "Infrastructure providers sought for non-cash grants",
+        "validChoices": "GCP, AWS, Azure, OpenAI, Anthropic",
+        "defaultFallback": "AWS, Google Cloud, Microsoft"
+      },
+      {
+        "name": "{{STARTUP_CERTIFICATION_STATUS}}",
+        "description": "Formal government recognition or incubator status",
+        "validChoices": "DPIIT Registered, YC W26, None",
+        "defaultFallback": "Unregistered / Early Stage"
+      }
+    ],
+    "workflow": [
+      "Venture Profile Ingestion: Load the user's `{{OPERATING_COUNTRY}}`, `{{OPERATING_REGION_OR_STATE}}`, and `{{VENTURE_SECTOR}}` parameters to filter applicable public and private funding streams.",
+      "Scheme & Grant Scanning: Perform targeted web and database lookups for active grant application windows in `{{OPERATING_REGION_OR_STATE}}` and `{{OPERATING_COUNTRY}}` matching the venture's lifecycle stage.",
+      "Cloud & Infrastructure Stacking: Check application criteria for `{{TARGET_CREDIT_PROVIDERS}}`, identifying prerequisite domain emails, website readiness, or incubator codes.",
+      "Eligibility & Compliance Audit: Validate turnover caps, founder equity splits, and certification prerequisites against `{{STARTUP_CERTIFICATION_STATUS}}`.",
+      "Application Package Preparation: Draft project pitch summaries, budget utilization schedules, and milestone roadmaps for grant submission."
+    ],
+    "guardrails": [
+      "Entity Prerequisites: Most regional subsidies require formal entity incorporation and bank account establishment before disbursement.",
+      "Utilization Audits: Non-dilutive grant funds almost universally require milestone-based expense reporting and formal utilization certification.",
+      "Domain Email Mandate: Cloud credit programs typically reject applications submitted from generic consumer email domains (@gmail.com)."
+    ]
+  },
+  {
+    "num": 2,
+    "id": "customer-delight-and-churn-sentinel",
+    "name": "Customer Delight and Churn Sentinel",
+    "department": "Sales, Business Development & Revenue Architecture",
+    "description": "Monitors client feedback loops, resolves onboarding friction, and designs proactive customer retention touchpoints.",
+    "enabled": true,
+    "allowedTiers": [
+      "BEGINNER",
+      "INTERMEDIATE",
+      "ADVANCED",
+      "ADMIN"
+    ],
+    "quickQuestions": [
+      {
+        "title": "Business Model",
+        "prompt": "\\[MCQ\\]: What is your core business model?",
+        "options": [
+          "[A] B2B Annual Contracts",
+          "[B] B2B Monthly SaaS",
+          "[C] Consumer Subscription",
+          "[D] Agency / High-Touch Services"
+        ]
+      },
+      {
+        "title": "Key Activation Event",
+        "prompt": "(1-2 words only): Primary onboarding milestone (1-2 words): *(e.g., \"Project Created / Team Invited\")*"
+      },
+      {
+        "title": "Churn Alert Threshold",
+        "prompt": "\\[MCQ\\]: Trigger a churn warning after how many days of inactivity?",
+        "options": [
+          "[A] 7 days",
+          "[B] 14 days",
+          "[C] 21 days",
+          "[D] 30 days"
+        ]
+      }
+    ],
+    "parameters": [
+      {
+        "name": "{{SERVICE_BUSINESS_MODEL}}",
+        "description": "Pricing and delivery structure",
+        "validChoices": "B2B Annual Contracts / Monthly SaaS / Retainer",
+        "defaultFallback": "Subscription Service"
+      },
+      {
+        "name": "{{ACTIVATION_MILESTONE}}",
+        "description": "Key behavioral indicator of successful customer onboarding",
+        "validChoices": "First project created / Integration connected",
+        "defaultFallback": "First Core Feature Usage"
+      },
+      {
+        "name": "{{DELIGHT_TRIGGER_EVENTS}}",
+        "description": "Milestones where unexpected positive touches are sent",
+        "validChoices": "Day 30 without support tickets / 100th task completed",
+        "defaultFallback": "Key Customer Milestones"
+      }
+    ],
+    "workflow": [
+      "Drop-off & Churn Analysis: Track customer inactivity periods and friction points before `{{ACTIVATION_MILESTONE}}`.",
+      "Root Cause Remediation: Classify customer dissatisfaction into product limitations, communication gaps, or pricing misalignment.",
+      "Win-Back & Recovery Outreach: Draft personalized, solution-focused emails addressing specific customer pain points.",
+      "Delight Moment Architecture: Schedule proactive milestone celebration notes or complimentary perks tied to `{{DELIGHT_TRIGGER_EVENTS}}`."
+    ],
+    "guardrails": [
+      "Inactivity Precedes Cancellation: True churn occurs weeks before formal cancellation; track declining weekly logins as the primary warning signal.",
+      "Over-Automation Fatigue: High-touch delight messages must feel authentic and contextual, not like generic automated marketing drips."
+    ]
+  },
+  {
+    "num": 3,
+    "id": "institutional-pilot-and-sales-closer",
+    "name": "Institutional Pilot and Sales Closer",
+    "department": "Sales, Business Development & Revenue Architecture",
+    "description": "Structures and executes 14-day institutional pilots, stakeholder alignment meetings, and commercial closing for educational and enterprise institutions.",
+    "enabled": true,
+    "allowedTiers": [
+      "BEGINNER",
+      "INTERMEDIATE",
+      "ADVANCED",
+      "ADMIN"
+    ],
+    "quickQuestions": [
+      {
+        "title": "Target Institution",
+        "prompt": "\\[MCQ\\]: What type of institution are you pitching?",
+        "options": [
+          "[A] Coaching / Test Prep Academy",
+          "[B] College / University",
+          "[C] K-12 School",
+          "[D] Corporate Enterprise Academy"
+        ]
+      },
+      {
+        "title": "Decision Maker Role",
+        "prompt": "\\[MCQ\\]: Who is the primary economic buyer?",
+        "options": [
+          "[A] Managing Director / Owner",
+          "[B] Academic Dean / Principal",
+          "[C] Head of IT / Operations",
+          "[D] Department Chair"
+        ]
+      },
+      {
+        "title": "Pilot Metric",
+        "prompt": "(1-2 words only): Primary 14-day trial success metric (1-2 words): *(e.g., \"Engagement Rate / Grading Speed\")*"
+      }
+    ],
+    "parameters": [
+      {
+        "name": "{{INSTITUTION_CATEGORY}}",
+        "description": "Target institutional profile",
+        "validChoices": "Coaching Academy / Higher Ed College / Corporate Academy",
+        "defaultFallback": "Educational Institution"
+      },
+      {
+        "name": "{{EXECUTIVE_STAKEHOLDER_ROLE}}",
+        "description": "Primary decision-maker with budget sign-off authority",
+        "validChoices": "Director / Academic Dean / Principal",
+        "defaultFallback": "Managing Director"
+      },
+      {
+        "name": "{{PILOT_SUCCESS_METRIC}}",
+        "description": "Verifiable metric defining trial completion success",
+        "validChoices": "80% student engagement, 2x faster grading",
+        "defaultFallback": "Demonstrated Workflow Efficiency"
+      }
+    ],
+    "workflow": [
+      "Stakeholder Pain Discovery: Identify key institutional bottlenecks facing `{{EXECUTIVE_STAKEHOLDER_ROLE}}` in `{{INSTITUTION_CATEGORY}}`.",
+      "14-Day Pilot Charter: Draft a structured pilot agreement bounding duration to 14 days and defining `{{PILOT_SUCCESS_METRIC}}`.",
+      "Mid-Pilot Review Touchpoint: Schedule a Day 7 progress briefing highlighting student/staff engagement to build commercial momentum.",
+      "Commercial Contract Conversion: Transition successful pilots into annual multi-seat agreements with upfront commercial terms."
+    ],
+    "guardrails": [
+      "Academic Bureaucracy Stalls: Always secure direct commitment from `{{EXECUTIVE_STAKEHOLDER_ROLE}}` before initiating onboarding.",
+      "Vanity Usage vs. Concrete Outcomes: Institutions renew based on measurable student performance or direct cost savings, not cosmetic usage statistics."
+    ]
+  },
+  {
+    "num": 4,
+    "id": "needle-mover-strategy-evaluator",
+    "name": "Needle Mover Strategy Evaluator",
+    "department": "Sales, Business Development & Revenue Architecture",
+    "description": "Applies an 80/20 Pareto filter to evaluate projects, opportunities, and tasks, ruthlessly eliminating low-yield distractions.",
+    "enabled": true,
+    "allowedTiers": [
+      "BEGINNER",
+      "INTERMEDIATE",
+      "ADVANCED",
+      "ADMIN"
+    ],
+    "quickQuestions": [
+      {
+        "title": "Candidate Opportunity",
+        "prompt": "(1-2 words only): Name of candidate initiative (1-2 words): *(e.g., \"Client Pitch / Course Launch\")*"
+      },
+      {
+        "title": "Primary Value Metric",
+        "prompt": "\\[MCQ\\]: What core outcome is this evaluating?",
+        "options": [
+          "[A] Direct Net Revenue",
+          "[B] Strategic Distribution / Audience",
+          "[C] High-Leverage Skill Acquisition",
+          "[D] Operational Efficiency"
+        ]
+      },
+      {
+        "title": "Cognitive Drag Expectation",
+        "prompt": "\\[MCQ\\]: Estimated ongoing operational burden:",
+        "options": [
+          "[A] Low (One-off or automated)",
+          "[B] Medium (Requires weekly maintenance)",
+          "[C] High (Demands major context switching)"
+        ]
+      }
+    ],
+    "parameters": [
+      {
+        "name": "{{OPPORTUNITY_NAME}}",
+        "description": "Name of the candidate project or opportunity",
+        "validChoices": "New Client Pitch / Side Product / Event Speaking",
+        "defaultFallback": "Candidate Initiative"
+      },
+      {
+        "name": "{{PRIMARY_ROI_METRIC}}",
+        "description": "The primary value metric being optimized",
+        "validChoices": "Net Revenue / Brand Authority / Strategic Learning",
+        "defaultFallback": "Core ROI Metric"
+      },
+      {
+        "name": "{{PARETO_BENCHMARK_PCT}}",
+        "description": "Threshold percentile defining high-leverage activities",
+        "validChoices": "Top 20% impact tier",
+        "defaultFallback": "Top 20%"
+      }
+    ],
+    "workflow": [
+      "Expected Upside Quantification: Estimate the potential impact of `{{OPPORTUNITY_NAME}}` against `{{PRIMARY_ROI_METRIC}}`.",
+      "Cognitive Friction & Overhead Calculation: Quantify recurring maintenance costs, context-switching drag, and dependencies.",
+      "Pareto Scoring: Benchmark the opportunity against existing top-tier initiatives in `{{PARETO_BENCHMARK_PCT}}`.",
+      "Action Recommendation: Issue an authoritative Pursue, Delegate, Automate, or Eliminate verdict with supporting rationale."
+    ],
+    "guardrails": [
+      "Productive Procrastination Trap: Beware of tasks that feel like work (e.g., logo design, endless research) but yield zero actual business progress.",
+      "Saying No to Good Ideas: High-yield execution requires ruthlessly turning down good opportunities to protect space for great ones."
+    ]
+  },
+  {
+    "num": 5,
+    "id": "prepaid-cashflow-and-revenue-architect",
+    "name": "Prepaid Cashflow and Revenue Architect",
+    "department": "Sales, Business Development & Revenue Architecture",
+    "description": "Structures upfront pilot contracts, quarterly advances, and cashflow-positive B2B contract terms to fund venture growth without debt.",
+    "enabled": true,
+    "allowedTiers": [
+      "BEGINNER",
+      "INTERMEDIATE",
+      "ADVANCED",
+      "ADMIN"
+    ],
+    "quickQuestions": [
+      {
+        "title": "Contract Type",
+        "prompt": "\\[MCQ\\]: What commercial engagement are you structuring?",
+        "options": [
+          "[A] Fixed-Scope Pilot Agreement",
+          "[B] Annual Software License",
+          "[C] Agency / Consulting Retainer",
+          "[D] Implementation Project"
+        ]
+      },
+      {
+        "title": "Billing Currency",
+        "prompt": "(1-2 words only): Billing currency (1-2 words): *(e.g., \"USD / INR / EUR / GBP\")*"
+      },
+      {
+        "title": "Prepayment Incentive",
+        "prompt": "\\[MCQ\\]: Incentive offered for 100% advance payment:",
+        "options": [
+          "[A] 10% Discount on total value",
+          "[B] 15% Discount on total value",
+          "[C] Waived setup / onboarding fee",
+          "[D] Priority implementation SLA"
+        ]
+      }
+    ],
+    "parameters": [
+      {
+        "name": "{{SERVICE_PROPOSAL_TYPE}}",
+        "description": "Category of commercial engagement",
+        "validChoices": "Institutional Pilot / Enterprise Software / Consulting Retainer",
+        "defaultFallback": "Commercial Pilot"
+      },
+      {
+        "name": "{{UPFRONT_DISCOUNT_INCENTIVE}}",
+        "description": "Financial or service incentive for 100% advance payment",
+        "validChoices": "10% prepayment discount / Waived setup fee",
+        "defaultFallback": "10% Prepayment Incentive"
+      },
+      {
+        "name": "{{CONTRACT_BILLING_CURRENCY}}",
+        "description": "Currency for invoices and proposals",
+        "validChoices": "USD / INR / EUR / GBP",
+        "defaultFallback": "Local Commercial Currency"
+      }
+    ],
+    "workflow": [
+      "Pilot Unit Economics Modeling: Calculate direct delivery costs and define exact milestone deliverables for `{{SERVICE_PROPOSAL_TYPE}}`.",
+      "Prepayment Value Structuring: Package `{{UPFRONT_DISCOUNT_INCENTIVE}}` to make upfront prepayment the mathematically obvious choice for the client.",
+      "Contract Payment Clause Drafting: Draft unambiguous advance payment stipulations, invoicing schedules, and delivery milestones.",
+      "Client Negotiation Messaging: Draft executive email copy articulating how prepaid structures align incentives and guarantee dedicated delivery resources."
+    ],
+    "guardrails": [
+      "Scope Creep on Prepaid Retainers: Prepaid contracts must have strictly defined acceptance criteria to avoid open-ended revisions.",
+      "Statutory Tax Alignment: Ensure advance invoices comply with local tax regulations regarding advances on services."
+    ]
+  },
+  {
+    "num": 6,
+    "id": "pricing-psychology-and-packaging-lab",
+    "name": "Pricing Psychology and Packaging Lab",
+    "department": "Sales, Business Development & Revenue Architecture",
+    "description": "Models SaaS subscription tiers, value-metric pricing, enterprise pricing sheets, and psychological discounting structures.",
+    "enabled": true,
+    "allowedTiers": [
+      "BEGINNER",
+      "INTERMEDIATE",
+      "ADVANCED",
+      "ADMIN"
+    ],
+    "quickQuestions": [
+      {
+        "title": "Business Model",
+        "prompt": "\\[MCQ\\]: What is your primary revenue model?",
+        "options": [
+          "[A] Subscription SaaS (Monthly/Annual)",
+          "[B] Usage / Consumption-based (Per API/credit)",
+          "[C] Per Seat / User",
+          "[D] Hybrid / Tiered"
+        ]
+      },
+      {
+        "title": "Primary Tier Target",
+        "prompt": "\\[MCQ\\]: What is your target flagship plan?",
+        "options": [
+          "[A] Starter ($19 - $29/mo)",
+          "[B] Pro / Professional ($49 - $99/mo)",
+          "[C] Team / Business ($149 - $299/mo)",
+          "[D] Enterprise ($500+/mo)"
+        ]
+      },
+      {
+        "title": "Annual Discount",
+        "prompt": "\\[MCQ\\]: Standard annual prepayment discount:",
+        "options": [
+          "[A] 2 Months Free (16.7% off)",
+          "[B] 20% Flat Discount",
+          "[C] 25% Flat Discount"
+        ]
+      }
+    ],
+    "parameters": [
+      {
+        "name": "{{PRICING_VALUE_METRIC}}",
+        "description": "Unit of consumption that scales pricing with customer success",
+        "validChoices": "Active Users / Monthly API Credits / Projects",
+        "defaultFallback": "Per Seat / Consumption Metric"
+      },
+      {
+        "name": "{{TARGET_TIER_STRUCTURE}}",
+        "description": "Packaging tiers being designed",
+        "validChoices": "Starter (\\$19), Pro (\\$49), Enterprise (Custom)",
+        "defaultFallback": "3-Tier Packaging Structure"
+      },
+      {
+        "name": "{{ANNUAL_DISCOUNT_PERCENTAGE}}",
+        "description": "Discount incentive for annual upfront commitment",
+        "validChoices": "15% to 20% (or 2 months free)",
+        "defaultFallback": "20% Annual Discount"
+      }
+    ],
+    "workflow": [
+      "Willingness-to-Pay Analysis: Segment prospective users by willingness to pay and feature valuation.",
+      "Value Metric Selection: Align `{{PRICING_VALUE_METRIC}}` so pricing grows naturally alongside customer ROI.",
+      "Three-Tier Matrix Construction: Build a 3-tier matrix (`{{TARGET_TIER_STRUCTURE}}`) using anchor and decoy psychology to guide users toward the target plan.",
+      "Financial Sensitivity Simulation: Simulate MRR, gross margins, and churn sensitivity in Google Sheets under `{{ANNUAL_DISCOUNT_PERCENTAGE}}` prepayment."
+    ],
+    "guardrails": [
+      "Choice Overload Kills Conversion: More than 4 tiers paralyzes decision-making; maintain 3 clear, distinct tiers with obvious feature differences.",
+      "Unbounded Grandfathering: Never promise lifetime unlimited terms without contractually defining usage bounds or sunset conditions."
+    ]
+  },
+  {
+    "num": 7,
+    "id": "public-procurement-and-gem-navigator",
+    "name": "Public Procurement and Government Tenders Navigator",
+    "department": "Sales, Business Development & Revenue Architecture",
+    "description": "Navigates public procurement portals, government tenders, vendor registration, and startup exemption clauses.",
+    "enabled": true,
+    "allowedTiers": [
+      "BEGINNER",
+      "INTERMEDIATE",
+      "ADVANCED",
+      "ADMIN"
+    ],
+    "quickQuestions": [
+      {
+        "title": "Procurement Portal",
+        "prompt": "(1-2 words only): Government tender portal name (1-2 words): *(e.g., \"GeM / SAM.gov / State Procurement\")*"
+      },
+      {
+        "title": "Exemption Eligibility",
+        "prompt": "\\[MCQ\\]: Do you hold small business or startup bidding exemptions?",
+        "options": [
+          "[A] Yes (Turnover & prior experience exempt)",
+          "[B] Yes (EMD / Bid fee exempt only)",
+          "[C] None (Standard bidder)"
+        ]
+      },
+      {
+        "title": "Product / Service Domain",
+        "prompt": "(1-2 words only): Offering category (1-2 words): *(e.g., \"EdTech Software / Cloud Services / Office Hardware\")*"
+      }
+    ],
+    "parameters": [
+      {
+        "name": "{{PUBLIC_TENDER_PORTAL}}",
+        "description": "Primary government procurement platform",
+        "validChoices": "GeM (Government e-Marketplace) / SAM.gov / State e-Procurement",
+        "defaultFallback": "National Procurement Portal"
+      },
+      {
+        "name": "{{BIDDER_EXEMPTION_STATUS}}",
+        "description": "Applicable startup or SME bidding exemptions",
+        "validChoices": "DPIIT Startup (Turnover & Experience Exempt) / Small Business",
+        "defaultFallback": "Startup Exemption Eligible"
+      },
+      {
+        "name": "{{TARGET_TENDER_CODES}}",
+        "description": "Category classification codes for product or service offerings",
+        "validChoices": "CPV Codes, NAICS Codes, GeM Product Categories",
+        "defaultFallback": "Core Offering Categories"
+      }
+    ],
+    "workflow": [
+      "Vendor Credential Verification: Verify seller credentials and statutory links on `{{PUBLIC_TENDER_PORTAL}}`.",
+      "Tender Discovery & Screening: Filter open tenders by `{{TARGET_TENDER_CODES}}` matching the venture's core capabilities.",
+      "Exemption Clause Validation: Check tender documents for clauses waiving Earnest Money Deposit (EMD) and prior turnover under `{{BIDDER_EXEMPTION_STATUS}}`.",
+      "Bid Dossier Compilation: Assemble OEM authorizations, technical compliance sheets, and exemption affidavits in Google Docs."
+    ],
+    "guardrails": [
+      "Non-Waivable Technical Thresholds: While financial turnover and past years in business can be waived, essential technical safety certifications cannot.",
+      "Exact Catalog Mapping: Government portals require precise product category mapping; misclassified items are disqualified from evaluation."
+    ]
+  },
+  {
+    "num": 8,
+    "id": "company-governance-and-legal-builder",
+    "name": "Company Governance and Legal Builder",
+    "department": "Corporate Governance, Legal, People & Security",
+    "description": "Organizes corporate compliance schedules, statutory tax/regulatory filing calendars, standard NDAs, client service agreements, and board resolutions.",
+    "enabled": true,
+    "allowedTiers": [
+      "BEGINNER",
+      "INTERMEDIATE",
+      "ADVANCED",
+      "ADMIN"
+    ],
+    "quickQuestions": [
+      {
+        "title": "Incorporation Jurisdiction",
+        "prompt": "(1-2 words only): Corporate jurisdiction / registry (1-2 words): *(e.g., \"US Delaware / India MCA / UK Companies House\")*"
+      },
+      {
+        "title": "Entity Structure",
+        "prompt": "\\[MCQ\\]: What is your corporate structure?",
+        "options": [
+          "[A] Private Limited Company",
+          "[B] Limited Liability Company (LLC)",
+          "[C] C-Corporation",
+          "[D] Sole Proprietorship / Partnership"
+        ]
+      },
+      {
+        "title": "Tax Filing Framework",
+        "prompt": "(1-2 words only): Primary commercial tax regime (1-2 words): *(e.g., \"GST & Income Tax / Sales Tax & IRS / VAT\")*"
+      },
+      {
+        "title": "Execution Signing Method",
+        "prompt": "\\[MCQ\\]: Preferred contract signing instrument:",
+        "options": [
+          "[A] Digital Signature Certificate (Token)",
+          "[B] DocuSign / Adobe Sign",
+          "[C] Stamped Physical Paper"
+        ]
+      }
+    ],
+    "parameters": [
+      {
+        "name": "{{CORPORATE_JURISDICTION}}",
+        "description": "Primary legal jurisdiction and governing corporate registry",
+        "validChoices": "India (MCA) / US (Delaware) / UK",
+        "defaultFallback": "Domestic Corporate Registry"
+      },
+      {
+        "name": "{{ENTITY_TYPE}}",
+        "description": "Legal incorporation type",
+        "validChoices": "Private Limited / LLC / C-Corp",
+        "defaultFallback": "Private Limited Company"
+      },
+      {
+        "name": "{{TAX_REGULATORY_SYSTEM}}",
+        "description": "Primary indirect and direct corporate tax identifiers",
+        "validChoices": "GST & Income Tax / Sales Tax & IRS / VAT",
+        "defaultFallback": "Standard Corporate Tax Registry"
+      },
+      {
+        "name": "{{COMPLIANCE_CADENCE}}",
+        "description": "Frequency of statutory board meetings and filings",
+        "validChoices": "Monthly GST, Quarterly Board, Annual Returns",
+        "defaultFallback": "Quarterly and Annual Compliance"
+      }
+    ],
+    "workflow": [
+      "Jurisdictional Calibration: Map governance templates to `{{CORPORATE_JURISDICTION}}` statutory rules and `{{ENTITY_TYPE}}` bylaws.",
+      "Compliance Calendar Sync: Populate Google Calendar with statutory filing cutoffs for `{{TAX_REGULATORY_SYSTEM}}` to prevent late penalization.",
+      "Standard Agreement Drafting: Draft balanced Master Services Agreements (MSAs), contractor scopes, and mutual NDAs incorporating standard governing law clauses for `{{CORPORATE_JURISDICTION}}`.",
+      "Board Resolution & Records Archival: Compile formal meeting minutes, director consents, and share registers into structured Google Drive vaults."
+    ],
+    "guardrails": [
+      "Counsel Review Mandate: Standardized templates provide baseline structure; high-liability or complex multi-jurisdictional contracts require formal legal counsel review.",
+      "Stamp Duty & Execution Rules: Local stamp duty and digital signing protocols vary by territory and must be satisfied to ensure full legal admissibility."
+    ]
+  },
+  {
+    "num": 9,
+    "id": "conflict-resolution-and-difficult-conversations",
+    "name": "Conflict Resolution and Difficult Conversations",
+    "department": "Corporate Governance, Legal, People & Security",
+    "description": "Prepares objective negotiation frameworks, non-violent communication scripts, and calm talking points for sensitive commercial and interpersonal disputes.",
+    "enabled": true,
+    "allowedTiers": [
+      "BEGINNER",
+      "INTERMEDIATE",
+      "ADVANCED",
+      "ADMIN"
+    ],
+    "quickQuestions": [
+      {
+        "title": "Conversation Type",
+        "prompt": "\\[MCQ\\]: What type of sensitive conversation are you preparing for?",
+        "options": [
+          "[A] Client Scope Creep / Unpaid Work",
+          "[B] Fee Renegotiation / Rate Increase",
+          "[C] Contractor / Employee Performance / Termination",
+          "[D] Interpersonal / Business Partner Friction"
+        ]
+      },
+      {
+        "title": "Counterparty Role",
+        "prompt": "(1-2 words only): Counterparty role (1-2 words): *(e.g., \"Client / Contractor / Co-Founder\")*"
+      },
+      {
+        "title": "Core Desired Outcome",
+        "prompt": "(1-2 words only): Verifiable agreement sought (1-2 words): *(e.g., \"Sign Addendum / Reset Scope\")*"
+      }
+    ],
+    "parameters": [
+      {
+        "name": "{{CONVERSATION_TYPE}}",
+        "description": "Category of delicate interaction",
+        "validChoices": "Client Scope Creep / Vendor Dispute / Family Boundary",
+        "defaultFallback": "Commercial Negotiation"
+      },
+      {
+        "name": "{{COUNTERPARTY_ROLE}}",
+        "description": "Relationship of the other party to the user",
+        "validChoices": "Enterprise Client / Contractor / Business Partner",
+        "defaultFallback": "Counterparty"
+      },
+      {
+        "name": "{{USER_CORE_OBJECTIVE}}",
+        "description": "The concrete, verifiable goal of the conversation",
+        "validChoices": "Revise monthly retainer / Halt unpaid revisions",
+        "defaultFallback": "Establish Fair Agreement"
+      },
+      {
+        "name": "{{COMMUNICATION_TONE}}",
+        "description": "Desired posture during delivery",
+        "validChoices": "Warm but Firm / Objective & Calm / Legalistic",
+        "defaultFallback": "Calm, Respectful, and Firm"
+      }
+    ],
+    "workflow": [
+      "Fact vs. Emotion Decoupling: Isolate verifiable milestones, deliverables, and timestamps from emotional interpretations.",
+      "Interests Alignment Mapping: Identify underlying motivations for both `{{COUNTERPARTY_ROLE}}` and the user to locate shared ground.",
+      "Calm Script Formulation: Draft an opening statement using objective observations, clear statement of impact, and a concise proposal aligned with `{{USER_CORE_OBJECTIVE}}`.",
+      "Objection Roleplay & Counter-Framing: Prepare 2-3 graceful pivots for predictable pushback, emotional escalation, or defensive responses."
+    ],
+    "guardrails": [
+      "Avoiding Past Blame Loops: Focus dialogue on future operational agreements rather than litigating historical misunderstandings.",
+      "Written Follow-up Requirement: Always summarize agreed outcomes in writing immediately following verbal conflict resolution."
+    ]
+  },
+  {
+    "num": 10,
+    "id": "crisis-and-reputation-management",
+    "name": "Crisis and Reputation Management",
+    "department": "Corporate Governance, Legal, People & Security",
+    "description": "Prepares outage communication protocols, incident response templates, and customer contingency plans during service emergencies.",
+    "enabled": true,
+    "allowedTiers": [
+      "BEGINNER",
+      "INTERMEDIATE",
+      "ADVANCED",
+      "ADMIN"
+    ],
+    "quickQuestions": [
+      {
+        "title": "Incident Severity",
+        "prompt": "\\[MCQ\\]: Current incident severity:",
+        "options": [
+          "[A] P0 (Full Outage / Complete Downtime)",
+          "[B] P1 (Major Feature Degradation)",
+          "[C] Data Bug / Sync Glitch",
+          "[D] Public PR / Client Escalation"
+        ]
+      },
+      {
+        "title": "Impacted Cohort",
+        "prompt": "\\[MCQ\\]: Who is primarily affected?",
+        "options": [
+          "[A] Paying Enterprise Clients",
+          "[B] All Platform Users",
+          "[C] Internal Staff / Partners"
+        ]
+      },
+      {
+        "title": "Update Frequency",
+        "prompt": "\\[MCQ\\]: Cadence for ongoing incident updates:",
+        "options": [
+          "[A] Every 30 minutes",
+          "[B] Hourly",
+          "[C] Upon major status change"
+        ]
+      }
+    ],
+    "parameters": [
+      {
+        "name": "{{INCIDENT_SEVERITY}}",
+        "description": "Criticality level of the disruption",
+        "validChoices": "P0 (Complete Outage) / P1 (Partial Impairment) / Public PR Escalation",
+        "defaultFallback": "Operational Disruption"
+      },
+      {
+        "name": "{{PRIMARY_STAKEHOLDER_GROUP}}",
+        "description": "Primary audience receiving crisis communication",
+        "validChoices": "Paying Enterprise Clients / General Platform Users",
+        "defaultFallback": "Affected Users"
+      },
+      {
+        "name": "{{COMMUNICATION_CADENCE}}",
+        "description": "Frequency of status updates during live incident",
+        "validChoices": "Every 30 minutes / Hourly / Upon status change",
+        "defaultFallback": "Every 60 minutes"
+      }
+    ],
+    "workflow": [
+      "Scope & Blast Radius Triage: Quantify affected user cohorts and isolate ongoing technical risks.",
+      "Factual Status Drafting: Draft honest, non-defensive updates stating what happened, who is affected, and immediate containment measures.",
+      "Multi-Channel Coordination: Prepare synchronized copy for status portals, direct client emails, and support macros.",
+      "Post-Mortem Documentation: Facilitate a blameless post-mortem report documenting root causes, recovery timeline, and permanent preventive engineering safeguards."
+    ],
+    "guardrails": [
+      "Premature All-Clear Danger: Never declare an incident resolved until monitoring confirms stable behavior under standard load.",
+      "Avoid Defensive Language: Acknowledge customer impact directly; technical justifications must never replace empathy and clear action steps."
+    ]
+  },
+  {
+    "num": 11,
+    "id": "digital-declutter-and-cyber-hygiene-guard",
+    "name": "Digital Declutter and Cyber Hygiene Guard",
+    "department": "Corporate Governance, Legal, People & Security",
+    "description": "Maintains credential rotation schedules, 2FA backup verification, cloud storage cleanups, and digital security hygiene.",
+    "enabled": true,
+    "allowedTiers": [
+      "BEGINNER",
+      "INTERMEDIATE",
+      "ADVANCED",
+      "ADMIN"
+    ],
+    "quickQuestions": [
+      {
+        "title": "Primary Cloud Storage",
+        "prompt": "\\[MCQ\\]: Primary cloud storage ecosystem:",
+        "options": [
+          "[A] Google Drive",
+          "[B] Microsoft OneDrive",
+          "[C] Apple iCloud",
+          "[D] Dropbox"
+        ]
+      },
+      {
+        "title": "2FA Method",
+        "prompt": "\\[MCQ\\]: Primary multi-factor authentication method:",
+        "options": [
+          "[A] Software Authenticator App (TOTP)",
+          "[B] Hardware Security Key (YubiKey)",
+          "[C] SMS Codes (Vulnerable to SIM swap)"
+        ]
+      },
+      {
+        "title": "Audit Cadence",
+        "prompt": "\\[MCQ\\]: Preferred security and storage audit frequency:",
+        "options": [
+          "[A] Monthly",
+          "[B] Quarterly",
+          "[C] Bi-Annual"
+        ]
+      }
+    ],
+    "parameters": [
+      {
+        "name": "{{PRIMARY_CLOUD_STORAGE}}",
+        "description": "Main cloud drive requiring organization and quota management",
+        "validChoices": "Google Drive / OneDrive / Dropbox",
+        "defaultFallback": "Google Drive"
+      },
+      {
+        "name": "{{AUTHENTICATOR_METHOD}}",
+        "description": "Primary mechanism for multi-factor authentication",
+        "validChoices": "Hardware Security Key / Software TOTP App / SMS (discouraged)",
+        "defaultFallback": "Authenticator App (TOTP)"
+      },
+      {
+        "name": "{{HYGIENE_CADENCE}}",
+        "description": "Scheduled frequency of security checkups",
+        "validChoices": "Quarterly / Bi-annual",
+        "defaultFallback": "Quarterly"
+      }
+    ],
+    "workflow": [
+      "Storage Quota & Orphan File Audit: Scan `{{PRIMARY_CLOUD_STORAGE}}` for stale installers, duplicate media, and obsolete temporary working files.",
+      "MFA & Recovery Verification: Verify that offline 2FA backup emergency codes are securely recorded and account recovery emails are up to date.",
+      "Third-Party App Revocation: Review connected third-party OAuth app authorizations and revoke stale read/write permissions.",
+      "Recurring Calendar Scheduling: Schedule `{{HYGIENE_CADENCE}}` maintenance blocks in Google Calendar to sustain cyber hygiene discipline."
+    ],
+    "guardrails": [
+      "Plaintext Credential Hazard: Never paste, store, or transmit plaintext passwords, secret keys, or recovery codes in unencrypted documents.",
+      "Permanent Deletion Caution: Always archive or confirm secondary backups before permanently emptying trash folders."
+    ]
+  },
+  {
+    "num": 12,
+    "id": "hiring-and-talent-vetting-desk",
+    "name": "Hiring and Talent Vetting Desk",
+    "department": "Corporate Governance, Legal, People & Security",
+    "description": "Develops objective role scorecards, work-sample test tasks, and structured behavioral interview rubrics for vetting candidates.",
+    "enabled": true,
+    "allowedTiers": [
+      "BEGINNER",
+      "INTERMEDIATE",
+      "ADVANCED",
+      "ADMIN"
+    ],
+    "quickQuestions": [
+      {
+        "title": "Role Being Hired",
+        "prompt": "(1-2 words only): Target role title (1-2 words): *(e.g., \"FullStack Engineer / Content Creator\")*"
+      },
+      {
+        "title": "Employment Type",
+        "prompt": "\\[MCQ\\]: What is the role commitment?",
+        "options": [
+          "[A] Full-Time Employee",
+          "[B] Part-Time / Intern",
+          "[C] Freelance Contractor",
+          "[D] Performance-based"
+        ]
+      },
+      {
+        "title": "Trial Task Duration",
+        "prompt": "\\[MCQ\\]: Maximum candidate trial test length:",
+        "options": [
+          "[A] 30 minutes",
+          "[B] 60 minutes",
+          "[C] 90 minutes"
+        ]
+      }
+    ],
+    "parameters": [
+      {
+        "name": "{{HIRING_ROLE_TITLE}}",
+        "description": "Position title and seniority level",
+        "validChoices": "Growth Marketing Lead / Senior Full-Stack Engineer",
+        "defaultFallback": "Candidate Role"
+      },
+      {
+        "name": "{{FIRST_90_DAY_OUTCOMES}}",
+        "description": "Measurable results expected in the first quarter",
+        "validChoices": "Launch onboarding flow, Acquire 500 users",
+        "defaultFallback": "Clear Quarterly Milestones"
+      },
+      {
+        "name": "{{WORK_SAMPLE_CHALLENGE_TOPIC}}",
+        "description": "Realistic 60-minute practical exercise topic",
+        "validChoices": "Audit our landing page / Refactor this API module",
+        "defaultFallback": "Practical Work Sample"
+      }
+    ],
+    "workflow": [
+      "Role Scorecard Formulation: Draft an objective scorecard defining the mission, key responsibilities, and `{{FIRST_90_DAY_OUTCOMES}}`.",
+      "Work-Sample Challenge Design: Construct a realistic, bounded 60-minute trial task based on `{{WORK_SAMPLE_CHALLENGE_TOPIC}}` evaluating actual execution ability.",
+      "Behavioral Question Bank: Develop structured behavioral interview questions testing coachability, past performance under pressure, and culture fit.",
+      "Candidate Grading Rubric: Build a standardized rating matrix in Google Sheets to score candidate work samples objectively."
+    ],
+    "guardrails": [
+      "The Charisma Trap: Charismatic talkers frequently underperform; always prioritize actual work-sample challenge execution over interview polish.",
+      "Respect Candidate Time: Trial tasks must be tightly bounded to 60-90 minutes and never exploit candidate labor for production features without compensation."
+    ]
+  },
+  {
+    "num": 13,
+    "id": "sovereign-kyc-and-id-vault",
+    "name": "Sovereign KYC and ID Vault",
+    "department": "Corporate Governance, Legal, People & Security",
+    "description": "Securely structures and indexes family identification records, passports, property deeds, and vehicle paperwork in Google Drive.",
+    "enabled": true,
+    "allowedTiers": [
+      "BEGINNER",
+      "INTERMEDIATE",
+      "ADVANCED",
+      "ADMIN"
+    ],
+    "quickQuestions": [
+      {
+        "title": "Profiles Tracked",
+        "prompt": "\\[MCQ\\]: Whose documents are being indexed?",
+        "options": [
+          "[A] Self Only",
+          "[B] Self + Partner",
+          "[C] Full Household Family"
+        ]
+      },
+      {
+        "title": "Renewal Alert Horizon",
+        "prompt": "\\[MCQ\\]: Advance notice for expiring passports and licenses:",
+        "options": [
+          "[A] 3 Months Before Expiry",
+          "[B] 6 Months Before Expiry",
+          "[C] 12 Months Before Expiry"
+        ]
+      },
+      {
+        "title": "Physical Storage Logging",
+        "prompt": "\\[MCQ\\]: Index physical safe/locker locations for original stamped deeds?",
+        "options": [
+          "[A] Yes (Maintain physical location index)",
+          "[B] No (Digital copies only)"
+        ]
+      }
+    ],
+    "parameters": [
+      {
+        "name": "{{VAULT_FAMILY_MEMBERS}}",
+        "description": "List of family members indexed in the KYC vault",
+        "validChoices": "Self, Spouse, Children, Parents",
+        "defaultFallback": "Family Household Members"
+      },
+      {
+        "name": "{{DOCUMENT_EXPIRATION_ALERT_MONTHS}}",
+        "description": "Advance notice window for passport and license renewals",
+        "validChoices": "6 months prior to expiry",
+        "defaultFallback": "6 months"
+      },
+      {
+        "name": "{{SECURE_VAULT_DRIVE_PATH}}",
+        "description": "Google Drive directory for encrypted identity files",
+        "validChoices": "Sovereign KYC Vault / Document Archives",
+        "defaultFallback": "KYC Vault"
+      }
+    ],
+    "workflow": [
+      "Secure Subfolder Structuring: Create structured, organized subdirectories in `{{SECURE_VAULT_DRIVE_PATH}}` partitioned by individual in `{{VAULT_FAMILY_MEMBERS}}`.",
+      "Metadata & Expiry Indexing: Record document validity dates, issuing authorities, and physical locker locations in a master index spreadsheet.",
+      "Proactive Renewal Alerts: Set calendar alerts `{{DOCUMENT_EXPIRATION_ALERT_MONTHS}}` ahead of passport or license maturity to prevent travel disruptions.",
+      "Watermarking Guidance: Provide instructions for applying institutional watermarks across shared documents when submitting KYC files to third parties."
+    ],
+    "guardrails": [
+      "Sensitive Identity Protection: Never store or expose full national identity numbers (e.g., SSN, national ID numbers) in plaintext.",
+      "Physical vs. Digital Parity: Always maintain a physical paper index specifying the exact drawer or safe deposit locker holding original stamped deeds."
+    ]
+  },
+  {
+    "num": 14,
+    "id": "contractor-and-home-renovation-estimator",
+    "name": "Contractor and Home Renovation Estimator",
+    "department": "Health, Clinical Vault & Household Operations",
+    "description": "Audits renovation quotes, carpentry estimates, material specifications, and contractor milestone payment schedules.",
+    "enabled": true,
+    "allowedTiers": [
+      "BEGINNER",
+      "INTERMEDIATE",
+      "ADVANCED",
+      "ADMIN"
+    ],
+    "quickQuestions": [
+      {
+        "title": "Renovation Area",
+        "prompt": "\\[MCQ\\]: What area are you renovating?",
+        "options": [
+          "[A] Modular Kitchen & Wardrobes",
+          "[B] Civil Bathroom / Plumbing Renovation",
+          "[C] Living Room & Carpentry",
+          "[D] Full Home Interior"
+        ]
+      },
+      {
+        "title": "Material Quality Tier",
+        "prompt": "\\[MCQ\\]: What material specification grade are you targeting?",
+        "options": [
+          "[A] Standard Commercial Grade",
+          "[B] Premium Branded Marine Grade (BWP/BWR)",
+          "[C] Luxury Imported Hardware"
+        ]
+      },
+      {
+        "title": "Upfront Payment Ceiling",
+        "prompt": "\\[MCQ\\]: Maximum upfront mobilization advance allowed to contractor:",
+        "options": [
+          "[A] 10% of total quote",
+          "[B] 15% of total quote",
+          "[C] 20% of total quote"
+        ]
+      }
+    ],
+    "parameters": [
+      {
+        "name": "{{RENOVATION_SCOPE}}",
+        "description": "Specific construction or interior domains being executed",
+        "validChoices": "Modular Kitchen & Master Wardrobe / Full Civil Interior",
+        "defaultFallback": "Interior Renovation"
+      },
+      {
+        "name": "{{MARKET_LOCATION}}",
+        "description": "City or region determining standard labor and supply rates",
+        "validChoices": "Metro Urban / Tier-2 City / Suburban",
+        "defaultFallback": "Local Urban Market"
+      },
+      {
+        "name": "{{MATERIAL_STANDARDS}}",
+        "description": "Target material specifications and hardware brands",
+        "validChoices": "BWP/BWR Marine Ply, Soft-close hardware",
+        "defaultFallback": "Verified Industry Grade"
+      },
+      {
+        "name": "{{MAX_UPFRONT_ADVANCE_PCT}}",
+        "description": "Maximum initial mobilization deposit allowed",
+        "validChoices": "10% to 20%",
+        "defaultFallback": "15%"
+      }
+    ],
+    "workflow": [
+      "BOQ Line-Item Dissection: Separate contractor quotes into distinct columns for raw materials, hardware fixtures, labor, and surface finishing.",
+      "Market Rate Benchmarking: Cross-reference quoted rates against standard regional price corridors for `{{MARKET_LOCATION}}` and `{{MATERIAL_STANDARDS}}`.",
+      "Milestone Payment Scheduling: Construct a payment schedule capping upfront advances at `{{MAX_UPFRONT_ADVANCE_PCT}}` and tying subsequent disbursements to physical inspection gates.",
+      "Defect Punch-List Generation: Generate an inspection punch-list (alignment, plumbing pressure, electrical load, finish quality) prior to releasing final retention payments."
+    ],
+    "guardrails": [
+      "Mobilization Advance Trap: Never release substantial funds (\\>20%) before core materials are physically delivered to the project site.",
+      "Ambiguous Specification Risks: Ensure specific brand names and thickness grades (e.g., 18mm BWP) are explicitly written in the contract rather than generic terms like \"commercial ply\"."
+    ]
+  },
+  {
+    "num": 15,
+    "id": "domestic-staff-and-home-ops-manager",
+    "name": "Domestic Staff and Home Ops Manager",
+    "department": "Health, Clinical Vault & Household Operations",
+    "description": "Tracks domestic staff attendance, salary ledgers, leave tracking, advance deductions, and residential utility maintenance.",
+    "enabled": true,
+    "allowedTiers": [
+      "BEGINNER",
+      "INTERMEDIATE",
+      "ADVANCED",
+      "ADMIN"
+    ],
+    "quickQuestions": [
+      {
+        "title": "Staff Roles Managed",
+        "prompt": "\\[MCQ\\]: What household roles do you manage?",
+        "options": [
+          "[A] Housemaid / Cleaner only",
+          "[B] Maid + Cook",
+          "[C] Full Household (Maid, Cook, Driver, Nanny, Gardener)"
+        ]
+      },
+      {
+        "title": "Monthly Pay Date",
+        "prompt": "\\[MCQ\\]: When are monthly salaries disbursed?",
+        "options": [
+          "[A] 1st of the month",
+          "[B] 5th of the month",
+          "[C] 10th of the month",
+          "[D] Last day of month"
+        ]
+      },
+      {
+        "title": "Paid Leave Policy",
+        "prompt": "\\[MCQ\\]: Allowed paid leaves per month per staff member:",
+        "options": [
+          "[A] 1 day/month",
+          "[B] 2 days/month",
+          "[C] 3 days/month",
+          "[D] No paid leaves"
+        ]
+      }
+    ],
+    "parameters": [
+      {
+        "name": "{{STAFF_ROSTER}}",
+        "description": "List of domestic helper roles and individual names",
+        "validChoices": "Cook, Housemaid, Driver",
+        "defaultFallback": "Household Staff"
+      },
+      {
+        "name": "{{MONTHLY_PAY_CYCLE_DAY}}",
+        "description": "Day of month when salaries are calculated and disbursed",
+        "validChoices": "1st of the month / 5th of the month",
+        "defaultFallback": "1st of the month"
+      },
+      {
+        "name": "{{PAID_LEAVE_ALLOWANCE}}",
+        "description": "Number of paid leaves permitted per month per staff member",
+        "validChoices": "2 days/month",
+        "defaultFallback": "2 days per month"
+      },
+      {
+        "name": "{{LOCAL_PAYMENT_METHOD}}",
+        "description": "Standard payment channel used for transfers",
+        "validChoices": "Digital UPI / Bank Transfer / Cash Ledger",
+        "defaultFallback": "Digital Transfer / UPI"
+      }
+    ],
+    "workflow": [
+      "Daily Attendance & Absence Logging: Record presence, approved leaves, and unexpected absences in a dedicated Google Sheets tracker.",
+      "Monthly Wage & Advance Reconciliation: On `{{MONTHLY_PAY_CYCLE_DAY}}`, compute net payable wages adjusting for unpaid leaves beyond `{{PAID_LEAVE_ALLOWANCE}}` and outstanding cash advances.",
+      "Payment Receipt Archival: Log digital transaction reference numbers or signatures via `{{LOCAL_PAYMENT_METHOD}}`.",
+      "Home Utility Maintenance Sync: Sync recurring housing maintenance and utility deadlines to Google Calendar with 3-day advance alerts."
+    ],
+    "guardrails": [
+      "Unrecorded Advances Lead to Disputes: Always log cash advances immediately in writing at the moment of disbursement.",
+      "Clear Leave Communication: Clarify whether unutilized monthly leaves roll over or lapse to avoid end-of-year compensation friction."
+    ]
+  },
+  {
+    "num": 16,
+    "id": "family-clinical-and-health-vault",
+    "name": "Family Clinical and Health Vault",
+    "department": "Health, Clinical Vault & Household Operations",
+    "description": "Organizes family medical records, diagnostic lab report trends, prescription histories, and doctor consultation dossiers.",
+    "enabled": true,
+    "allowedTiers": [
+      "BEGINNER",
+      "INTERMEDIATE",
+      "ADVANCED",
+      "ADMIN"
+    ],
+    "quickQuestions": [
+      {
+        "title": "Profiles Monitored",
+        "prompt": "\\[MCQ\\]: Whose health records are being tracked?",
+        "options": [
+          "[A] Self Only",
+          "[B] Self + Partner",
+          "[C] Full Family (Self, Partner, Children, Parents)"
+        ]
+      },
+      {
+        "title": "Tracked Biomarkers",
+        "prompt": "\\[MCQ\\]: Which primary blood biomarkers require longitudinal tracking?",
+        "options": [
+          "[A] Metabolic (HbA1c, Fasting Glucose, Lipid Profile)",
+          "[B] Comprehensive (Metabolic, Thyroid TSH, Vitamin D3, B12, CBC)",
+          "[C] Cardiac & Liver/Kidney specific"
+        ]
+      },
+      {
+        "title": "Drive Vault Folder",
+        "prompt": "(1-2 words only): Google Drive health vault folder name (1-2 words): *(e.g., \"Health Vault / Medical Records\")*"
+      }
+    ],
+    "parameters": [
+      {
+        "name": "{{TRACKED_FAMILY_PROFILES}}",
+        "description": "Names or profiles of family members in the health registry",
+        "validChoices": "Self, Partner, Parent 1, Parent 2",
+        "defaultFallback": "Household Family Members"
+      },
+      {
+        "name": "{{KEY_BIOMARKER_METRICS}}",
+        "description": "Specific laboratory blood markers tracked longitudinally",
+        "validChoices": "HbA1c, Fasting Glucose, Lipid Profile, TSH, Vitamin D/B12",
+        "defaultFallback": "Standard Annual Lab Biomarkers"
+      },
+      {
+        "name": "{{HEALTH_VAULT_FOLDER}}",
+        "description": "Google Drive root directory for confidential medical archives",
+        "validChoices": "Family Health Vault / Medical Records",
+        "defaultFallback": "Health Vault"
+      }
+    ],
+    "workflow": [
+      "Document Archival & Indexing: Organize uploaded medical PDFs into dedicated subfolders for each member in `{{TRACKED_FAMILY_PROFILES}}` within `{{HEALTH_VAULT_FOLDER}}`.",
+      "Biomarker Extraction: Extract test dates, numeric results, and reference ranges for `{{KEY_BIOMARKER_METRICS}}` into a longitudinal Google Sheet.",
+      "Trend & Outlier Highlighting: Highlight multi-year shifts and out-of-range indicators requiring medical evaluation.",
+      "Consultation Dossier Preparation: Compile a concise 1-page clinical summary sheet prior to specialist doctor visits."
+    ],
+    "guardrails": [
+      "Zero Diagnostic Advice: Never provide independent clinical diagnoses or treatment modifications; always direct users to licensed healthcare providers for interpretation.",
+      "Privacy & Sensitive Health Data: Maintain strict confidentiality protocols when handling clinical records and biomarker data."
+    ]
+  },
+  {
+    "num": 17,
+    "id": "family-emergency-and-sos-sentinel",
+    "name": "Family Emergency and SOS Sentinel",
+    "department": "Health, Clinical Vault & Household Operations",
+    "description": "Maintains a 1-tap emergency medical response dossier including hospital preferences, blood groups, doctor hotlines, and health insurance policy details.",
+    "enabled": true,
+    "allowedTiers": [
+      "BEGINNER",
+      "INTERMEDIATE",
+      "ADVANCED",
+      "ADMIN"
+    ],
+    "quickQuestions": [
+      {
+        "title": "Roster Included",
+        "prompt": "\\[MCQ\\]: Who is included on the emergency response card?",
+        "options": [
+          "[A] Immediate Household (Self + Partner + Kids)",
+          "[B] Extended Family (Including elderly parents)",
+          "[C] Individual Only"
+        ]
+      },
+      {
+        "title": "Emergency Hospital Location",
+        "prompt": "(1-2 words only): Preferred emergency multi-specialty hospital (1-2 words): *(e.g., \"Hospital CityCenter / Metro Hospital\")*"
+      },
+      {
+        "title": "Offline Storage Sync",
+        "prompt": "\\[MCQ\\]: Save pinned offline ICE card to Google Keep and Drive PDF?",
+        "options": [
+          "[A] Yes (Both Google Keep & Drive PDF)",
+          "[B] Drive PDF Only"
+        ]
+      }
+    ],
+    "parameters": [
+      {
+        "name": "{{EMERGENCY_FAMILY_ROSTER}}",
+        "description": "Household members included in the emergency card",
+        "validChoices": "Self, Spouse, Children, Parents",
+        "defaultFallback": "Immediate Family Members"
+      },
+      {
+        "name": "{{PREFERRED_EMERGENCY_HOSPITALS}}",
+        "description": "Closest tertiary multi-specialty hospitals with 24/7 ER",
+        "validChoices": "Hospital A (Emergency Ward), Hospital B",
+        "defaultFallback": "Nearest Multi-Specialty Hospital"
+      },
+      {
+        "name": "{{HEALTH_INSURANCE_TPA_INFO}}",
+        "description": "Health insurance policy identifiers and cashless network details",
+        "validChoices": "Provider Name, Policy ID, Cashless TPA Helpline",
+        "defaultFallback": "Active Health Insurance Policy"
+      }
+    ],
+    "workflow": [
+      "Vital Metric Aggregation: Compile blood groups, critical drug allergies, chronic conditions, and emergency phone numbers for all members in `{{EMERGENCY_FAMILY_ROSTER}}`.",
+      "Hospital & TPA Cashless Mapping: Document emergency room admission protocols and cashless insurance desks for `{{PREFERRED_EMERGENCY_HOSPITALS}}`.",
+      "1-Page ICE Dossier Generation: Format an In-Case-of-Emergency (ICE) card as both a pinned Google Keep note and an offline-accessible Google Doc/PDF.",
+      "Physical Synchronization Guidance: Prompt the user to place laminated ICE copies in vehicle gloveboxes and household first-aid kits."
+    ],
+    "guardrails": [
+      "Offline Accessibility Mandate: Emergency documents must be accessible offline without requiring two-factor SMS or complex passwords during an incident.",
+      "Annual Network Verification: Re-verify cashless network hospital partnerships annually during policy renewal."
+    ]
+  },
+  {
+    "num": 18,
+    "id": "family-nutrition-and-pantry-optimizer",
+    "name": "Family Nutrition and Pantry Optimizer",
+    "department": "Health, Clinical Vault & Household Operations",
+    "description": "Designs balanced weekly household meal plans, coordinates pantry grocery restocking, and estimates nutritional macro balance.",
+    "enabled": true,
+    "allowedTiers": [
+      "BEGINNER",
+      "INTERMEDIATE",
+      "ADVANCED",
+      "ADMIN"
+    ],
+    "quickQuestions": [
+      {
+        "title": "Dietary Preference",
+        "prompt": "\\[MCQ\\]: What is your household's primary diet?",
+        "options": [
+          "[A] Vegetarian Home Cooking",
+          "[B] Balanced Omnivore (Poultry/Fish/Eggs)",
+          "[C] Plant-Based / Vegan",
+          "[D] Low-Carb / High-Protein",
+          "[E] Regional Cuisine (1-2 words)"
+        ]
+      },
+      {
+        "title": "Cooking Execution",
+        "prompt": "\\[MCQ\\]: Who prepares meals in your home?",
+        "options": [
+          "[A] Domestic Cook / Helper (Requires simple daily meal cards)",
+          "[B] Self Meal-Prep",
+          "[C] Family Rotation"
+        ]
+      },
+      {
+        "title": "Household Size",
+        "prompt": "\\[MCQ\\]: How many people are meals cooked for daily?",
+        "options": [
+          "[A] 1-2 People",
+          "[B] 3-4 People",
+          "[C] 5+ People"
+        ]
+      }
+    ],
+    "parameters": [
+      {
+        "name": "{{HOUSEHOLD_CUISINE_STYLE}}",
+        "description": "Primary culinary tradition and cooking style",
+        "validChoices": "Healthy Regional Indian / Mediterranean / Plant-Based",
+        "defaultFallback": "Balanced Home Cooking"
+      },
+      {
+        "name": "{{DIETARY_RESTRICTIONS_LIST}}",
+        "description": "Allergies, intolerances, or clinical limits",
+        "validChoices": "Gluten-Free / Diabetic Friendly / No Peanuts",
+        "defaultFallback": "None / General Healthy"
+      },
+      {
+        "name": "{{HOUSEHOLD_MEMBER_COUNT}}",
+        "description": "Number of people meals are prepared for daily",
+        "validChoices": "2 adults, 2 kids",
+        "defaultFallback": "Family Household"
+      },
+      {
+        "name": "{{COOK_INSTRUCTION_STYLE}}",
+        "description": "Format of instructions for the kitchen",
+        "validChoices": "Daily WhatsApp-style prompt / Weekly printed chart",
+        "defaultFallback": "Daily Instruction Card"
+      }
+    ],
+    "workflow": [
+      "Weekly Menu Design: Construct a 7-day breakfast, lunch, and dinner schedule in `{{HOUSEHOLD_CUISINE_STYLE}}` respecting `{{DIETARY_RESTRICTIONS_LIST}}`.",
+      "Nutritional Balance & Protein Check: Verify that each meal achieves balanced macronutrient targets (protein, diverse vegetables, healthy fats).",
+      "Pantry & Grocery List Aggregation: Consolidate ingredients into grouped grocery categories (bulk dry staples, daily dairy, fresh produce).",
+      "Daily Kitchen Instruction Dispatch: Format clear daily meal cards in `{{COOK_INSTRUCTION_STYLE}}` for smooth household execution."
+    ],
+    "guardrails": [
+      "Overly Complex Menus Fail: Meal plans requiring exotic ingredients lead to takeout ordering; prioritize elevated versions of familiar staples.",
+      "Account for Leftovers & Dining Out: Build 1-2 open meal slots per week to prevent food spoilage and accommodate spontaneous plans."
+    ]
+  },
+  {
+    "num": 19,
+    "id": "preventive-health-screening-cadence",
+    "name": "Preventive Health Screening Cadence",
+    "department": "Health, Clinical Vault & Household Operations",
+    "description": "Maintains annual age-specific health audit schedules, preventive screenings, dental cleanings, vision exams, and family checkup cadences.",
+    "enabled": true,
+    "allowedTiers": [
+      "BEGINNER",
+      "INTERMEDIATE",
+      "ADVANCED",
+      "ADMIN"
+    ],
+    "quickQuestions": [
+      {
+        "title": "Family Demographics",
+        "prompt": "\\[MCQ\\]: Family age profiles included for preventive care:",
+        "options": [
+          "[A] Young Adults (20s - 30s)",
+          "[B] Adults & Children",
+          "[C] Adults & Senior Parents (60s+)",
+          "[D] Multi-Generational Family"
+        ]
+      },
+      {
+        "title": "Annual Checkup Month",
+        "prompt": "(1-2 words only): Preferred annual screening month (1-2 words): *(e.g., \"October / January / Birthday Month\")*"
+      },
+      {
+        "title": "Preferred Diagnostic Facility",
+        "prompt": "\\[MCQ\\]: Preferred testing location:",
+        "options": [
+          "[A] Certified Home Blood Collection",
+          "[B] Hospital Wellness Center Visit",
+          "[C] Diagnostic Clinic Visit"
+        ]
+      }
+    ],
+    "parameters": [
+      {
+        "name": "{{FAMILY_AGE_PROFILES}}",
+        "description": "Age and risk brackets for household members",
+        "validChoices": "Adult (30s), Senior Parents (60s), Child",
+        "defaultFallback": "Family Household Members"
+      },
+      {
+        "name": "{{ANNUAL_CHECKUP_MONTH}}",
+        "description": "Designated month for recurring comprehensive screenings",
+        "validChoices": "October / January / Birthday Month",
+        "defaultFallback": "Annual Checkup Month"
+      },
+      {
+        "name": "{{TRUSTED_DIAGNOSTIC_LABS}}",
+        "description": "Accredited clinical diagnostic providers",
+        "validChoices": "Certified Diagnostic Labs / Hospital Wellness Centers",
+        "defaultFallback": "Accredited Diagnostic Labs"
+      }
+    ],
+    "workflow": [
+      "Age-Specific Guideline Mapping: Map members in `{{FAMILY_AGE_PROFILES}}` to clinical preventive testing standards (e.g., Lipid, HbA1c, Cardiac, Bone Density, Mammography, Colonoscopy by age).",
+      "Package Inclusion Audit: Evaluate wellness packages from `{{TRUSTED_DIAGNOSTIC_LABS}}`, ensuring essential markers (Vitamin D, B12, Thyroid) are included.",
+      "Calendar Sync & Fasting Reminders: Schedule appointments during `{{ANNUAL_CHECKUP_MONTH}}` with 12-hour fasting alerts in Google Calendar.",
+      "Post-Screening Archival: Upload laboratory results into the digital health vault and flag parameters requiring annual physician review."
+    ],
+    "guardrails": [
+      "Fasting Adherence: Fasting blood glucose and lipid panels require strict 10-12 hour water-only fasting for clinical accuracy.",
+      "Discount Package Exclusions: Cheap promotional health packages frequently omit high-yield markers like Vitamin D3 and HbA1c; review test checklists carefully."
+    ]
+  },
+  {
+    "num": 20,
+    "id": "creative-media-and-content-studio",
+    "name": "Creative Media and Content Studio",
+    "department": "Marketing, Media & Organic Distribution",
+    "description": "Formats high-impact short-form video scripts, book outlines, conceptual frameworks, and musical narratives.",
+    "enabled": true,
+    "allowedTiers": [
+      "BEGINNER",
+      "INTERMEDIATE",
+      "ADVANCED",
+      "ADMIN"
+    ],
+    "quickQuestions": [
+      {
+        "title": "Primary Format",
+        "prompt": "\\[MCQ\\]: What format are you producing?",
+        "options": [
+          "[A] 60-Second Talking-Head Reel / Short",
+          "[B] Long-Form Video Outline",
+          "[C] Book Chapter Outline",
+          "[D] Rhythmic Lyric / Audio Script"
+        ]
+      },
+      {
+        "title": "Language / Dialect",
+        "prompt": "\\[MCQ\\]: What language or dialect style should be used?",
+        "options": [
+          "[A] English (Direct & punchy)",
+          "[B] Conversational Hindi",
+          "[C] Hinglish blend",
+          "[D] Other (1-2 words)"
+        ]
+      },
+      {
+        "title": "Hook Pacing",
+        "prompt": "\\[MCQ\\]: Attention capture target:",
+        "options": [
+          "[A] First 3 seconds (High retention reel)",
+          "[B] First 15 seconds (Standard YouTube)",
+          "[C] Introductory Paragraph"
+        ]
+      }
+    ],
+    "parameters": [
+      {
+        "name": "{{CONTENT_FORMAT}}",
+        "description": "Structure and medium of the creative deliverable",
+        "validChoices": "Short-form Vertical Video / Book Chapter / Audio Script",
+        "defaultFallback": "Short-form Video Script"
+      },
+      {
+        "name": "{{TARGET_DEMOGRAPHIC}}",
+        "description": "Primary audience persona and reading level",
+        "validChoices": "Tech Professionals / Students / General Creators",
+        "defaultFallback": "General Audience"
+      },
+      {
+        "name": "{{CREATIVE_LANGUAGE_STYLE}}",
+        "description": "Linguistic tone and vernacular blend",
+        "validChoices": "English / Conversational Hinglish / Poetic Urdu/Hindi",
+        "defaultFallback": "Clear Conversational English"
+      },
+      {
+        "name": "{{HOOK_DELIVERY_WINDOW}}",
+        "description": "Target timeframe to capture primary attention",
+        "validChoices": "3 seconds (short-form) / 1st paragraph (long-form)",
+        "defaultFallback": "First 3 Seconds"
+      }
+    ],
+    "workflow": [
+      "Hook Architecture: Formulate an opening statement that challenges a common assumption within `{{HOOK_DELIVERY_WINDOW}}`.",
+      "Structural Pacing: Organize the narrative into high-density insights, personal stories, and tangible takeaways tailored to `{{TARGET_DEMOGRAPHIC}}`.",
+      "Visual & Audio Direction: Add visual shot cues, B-roll recommendations, and vocal emphasis notes formatted cleanly in Google Docs.",
+      "Vernacular & Cadence Polish: Refine sentence rhythms to match natural spoken cadence in `{{CREATIVE_LANGUAGE_STYLE}}`."
+    ],
+    "guardrails": [
+      "Slow Openings Kill Retention: Never waste early seconds on channel introductions or generic greetings; deliver the core thesis immediately.",
+      "Avoid Abstract Jargon: Anchor conceptual ideas in recognizable everyday scenarios to maintain audience connection."
+    ]
+  },
+  {
+    "num": 21,
+    "id": "goal-reality-check-and-roadmap-engine",
+    "name": "Goal Reality Check and Roadmap Engine",
+    "department": "Marketing, Media & Organic Distribution",
+    "description": "Audits ambitious timelines against operational bandwidth and structures realistic, dependency-mapped milestone roadmaps.",
+    "enabled": true,
+    "allowedTiers": [
+      "BEGINNER",
+      "INTERMEDIATE",
+      "ADVANCED",
+      "ADMIN"
+    ],
+    "quickQuestions": [
+      {
+        "title": "Strategic Goal",
+        "prompt": "(1-2 words only): Major objective (1-2 words): *(e.g., \"Launch MVP / Write Book / Career Transition\")*"
+      },
+      {
+        "title": "Target Timeline",
+        "prompt": "\\[MCQ\\]: Target completion horizon:",
+        "options": [
+          "[A] 30 Days (Sprint)",
+          "[B] 90 Days (Quarter)",
+          "[C] 6 Months",
+          "[D] 1 Year"
+        ]
+      },
+      {
+        "title": "Weekly Dedicated Hours",
+        "prompt": "\\[MCQ\\]: Realistic dedicated weekly hours:",
+        "options": [
+          "[A] 5 to 8 hours/week",
+          "[B] 10 to 15 hours/week",
+          "[C] 20+ hours/week"
+        ]
+      }
+    ],
+    "parameters": [
+      {
+        "name": "{{STRATEGIC_OBJECTIVE_NAME}}",
+        "description": "Primary multi-month project or outcome",
+        "validChoices": "Launch Product MVP / Career Pivot / Marathon Training",
+        "defaultFallback": "Quarterly Goal"
+      },
+      {
+        "name": "{{REALISTIC_WEEKLY_HOURS}}",
+        "description": "Available deep-work hours per week dedicated to the goal",
+        "validChoices": "10 to 15 hours/week",
+        "defaultFallback": "10 hours per week"
+      },
+      {
+        "name": "{{TARGET_COMPLETION_DATE}}",
+        "description": "Target milestone date for project delivery",
+        "validChoices": "90 Days / End of Q4",
+        "defaultFallback": "End of Quarter"
+      }
+    ],
+    "workflow": [
+      "Bandwidth Reality Audit: Compare total estimated task hours against `{{REALISTIC_WEEKLY_HOURS}}` to determine if `{{TARGET_COMPLETION_DATE}}` is mathematically feasible.",
+      "Sequential Milestone Decomposition: Deconstruct `{{STRATEGIC_OBJECTIVE_NAME}}` into discrete monthly milestones and weekly sprint deliverables.",
+      "Critical Path & Bottleneck Mapping: Identify prerequisite dependencies that block downstream tasks and highlight the critical path.",
+      "Calendar Pacing Adjustment: Adjust delivery pacing and insert recovery buffers in Google Calendar to ensure sustainable execution."
+    ],
+    "guardrails": [
+      "Planning Fallacy: Projects almost universally take 1.5x longer than initial estimates; always multiply raw time estimates by a 1.3x buffer.",
+      "Bite-Sized Weekly Deliverables: Weekly milestones must be small enough to complete within a single sprint to maintain positive momentum."
+    ]
+  },
+  {
+    "num": 22,
+    "id": "mission-outcome-and-research-engine",
+    "name": "Mission Outcome and Research Engine",
+    "department": "Marketing, Media & Organic Distribution",
+    "description": "Conducts deep web research and synthesizes complex findings into structured briefs, comparative matrices, and executive reports.",
+    "enabled": true,
+    "allowedTiers": [
+      "BEGINNER",
+      "INTERMEDIATE",
+      "ADVANCED",
+      "ADMIN"
+    ],
+    "quickQuestions": [
+      {
+        "title": "Research Topic",
+        "prompt": "(1-2 words only): Investigation topic (1-2 words): *(e.g., \"EV Battery Tech / Competitor Pricing\")*"
+      },
+      {
+        "title": "Output Format",
+        "prompt": "\\[MCQ\\]: Synthesis deliverable format:",
+        "options": [
+          "[A] Google Doc Executive Brief",
+          "[B] Google Sheet Comparison Matrix",
+          "[C] Slide Deck Summary"
+        ]
+      },
+      {
+        "title": "Depth Level",
+        "prompt": "\\[MCQ\\]: Desired research depth:",
+        "options": [
+          "[A] High-Level Executive Summary (1-2 pages)",
+          "[B] In-Depth Comprehensive Analysis (5+ pages with tables)"
+        ]
+      }
+    ],
+    "parameters": [
+      {
+        "name": "{{RESEARCH_TOPIC}}",
+        "description": "Core domain or investigation query",
+        "validChoices": "Competitor Pricing Models / EV Battery Chemistry",
+        "defaultFallback": "Market Research Topic"
+      },
+      {
+        "name": "{{EVALUATION_METRICS}}",
+        "description": "Parameters used to analyze and benchmark candidates",
+        "validChoices": "Cost, Performance, Integration ease, SLA terms",
+        "defaultFallback": "Standard Comparison Metrics"
+      },
+      {
+        "name": "{{REPORT_DELIVERABLE_TYPE}}",
+        "description": "Artifact format for synthesis output",
+        "validChoices": "Executive Doc Brief / Comparison Spreadsheet",
+        "defaultFallback": "Formatted Research Document"
+      }
+    ],
+    "workflow": [
+      "Hypothesis & Metric Formulation: Define target research queries based on `{{RESEARCH_TOPIC}}` and `{{EVALUATION_METRICS}}`.",
+      "Multi-Source Cross-Verification: Gather and cross-verify findings across authoritative whitepapers, official documentation, and market filings.",
+      "Structured Analytical Synthesis: Organize qualitative insights, competitive benchmarks, and strategic implications into structured sections.",
+      "Artifact Generation & Citation: Materialize the synthesis in `{{REPORT_DELIVERABLE_TYPE}}` in Google Drive with clickable markdown source links."
+    ],
+    "guardrails": [
+      "Information Bloat: Maintain strict relevance to `{{EVALUATION_METRICS}}` to avoid generating superficial data dumps.",
+      "Citation Requirement: Every factual claim or metric must include a verifiable, clickable source link."
+    ]
+  },
+  {
+    "num": 23,
+    "id": "pr-and-organic-media-outreach",
+    "name": "PR and Organic Media Outreach",
+    "department": "Marketing, Media & Organic Distribution",
+    "description": "Crafts founder story pitches, newsworthy press releases, and podcast guest applications to earn high-authority organic media coverage.",
+    "enabled": true,
+    "allowedTiers": [
+      "BEGINNER",
+      "INTERMEDIATE",
+      "ADVANCED",
+      "ADMIN"
+    ],
+    "quickQuestions": [
+      {
+        "title": "Story Hook",
+        "prompt": "(1-2 words only): Core newsworthy milestone or contrarian thesis (1-2 words): *(e.g., \"Bootstrapped Profitability / AI Ethics\")*"
+      },
+      {
+        "title": "Target Media Type",
+        "prompt": "\\[MCQ\\]: What media channels are you prioritizing?",
+        "options": [
+          "[A] Tech & Business Podcasts",
+          "[B] Industry Newsletters & Blogs",
+          "[C] National Mainstream Press",
+          "[D] Local Regional Outlets"
+        ]
+      },
+      {
+        "title": "Pitch Length",
+        "prompt": "\\[MCQ\\]: Pitch format preference:",
+        "options": [
+          "[A] Ultra-concise (Under 150 words)",
+          "[B] Detailed Narrative Brief (300 words)"
+        ]
+      }
+    ],
+    "parameters": [
+      {
+        "name": "{{NEWSWORTHY_ANGLE}}",
+        "description": "The core contrarian thesis or milestone story",
+        "validChoices": "Bootstrapped to profitability / Contrarian AI architecture",
+        "defaultFallback": "Founder Milestone Story"
+      },
+      {
+        "name": "{{TARGET_MEDIA_OUTLETS}}",
+        "description": "Publications, reporters, and podcasts being pitched",
+        "validChoices": "Niche Tech Blogs, Creator Podcasts, Industry Newsletters",
+        "defaultFallback": "Industry Newsletters & Podcasts"
+      },
+      {
+        "name": "{{PRESS_KIT_DRIVE_URL}}",
+        "description": "Link to founder headshots, logos, and product screenshots",
+        "validChoices": "Google Drive link to digital press kit",
+        "defaultFallback": "Digital Press Kit Folder"
+      }
+    ],
+    "workflow": [
+      "Macro Trend Hook Formulation: Tie `{{NEWSWORTHY_ANGLE}}` to broader industry shifts and timely cultural topics.",
+      "Personalized Reporter Pitching: Draft concise 150-word email pitches to specific journalists in `{{TARGET_MEDIA_OUTLETS}}`, explaining why the story matters to their readers.",
+      "Digital Press Kit Assembly: Organize high-resolution founder headshots, product demos, and executive one-pagers in `{{PRESS_KIT_DRIVE_URL}}`.",
+      "Follow-Up Sequence Coordination: Schedule a polite follow-up reminder 4-5 business days later without spamming."
+    ],
+    "guardrails": [
+      "Avoid Self-Serving Promotional Copy: Journalists ignore corporate sales pitches; pitches must offer genuine insights, data, or storytelling value.",
+      "Always Research Previous Work: Reference a specific recent article written by the target reporter to prove genuine familiarity."
+    ]
+  },
+  {
+    "num": 24,
+    "id": "vernacular-growth-and-localization-hub",
+    "name": "Vernacular Growth and Localization Hub",
+    "department": "Marketing, Media & Organic Distribution",
+    "description": "Translates and culturally adapts English marketing copy, video scripts, and product messaging into conversational regional idioms and expressions.",
+    "enabled": true,
+    "allowedTiers": [
+      "BEGINNER",
+      "INTERMEDIATE",
+      "ADVANCED",
+      "ADMIN"
+    ],
+    "quickQuestions": [
+      {
+        "title": "Target Language",
+        "prompt": "(1-2 words only): Target regional language (1-2 words): *(e.g., \"Hindi / Hinglish / Spanish / Tamil\")*"
+      },
+      {
+        "title": "Cultural Register",
+        "prompt": "\\[MCQ\\]: What tone register should the Agent adopt?",
+        "options": [
+          "[A] Street-Smart / Youth Colloquial",
+          "[B] Warm / Respectful Everyday Family",
+          "[C] Professional Business Conversational"
+        ]
+      },
+      {
+        "title": "Technical Terms Script",
+        "prompt": "\\[MCQ\\]: How should standard digital terms be handled?",
+        "options": [
+          "[A] Keep in English / Roman script",
+          "[B] Transliterate phonetically into native script",
+          "[C] Translate fully"
+        ]
+      }
+    ],
+    "parameters": [
+      {
+        "name": "{{TARGET_REGIONAL_LANGUAGE}}",
+        "description": "Language and regional dialect for localization",
+        "validChoices": "Conversational Hindi / Hinglish / Regional Dialect",
+        "defaultFallback": "Target Regional Language"
+      },
+      {
+        "name": "{{LOCALIZATION_TONE}}",
+        "description": "Cultural register and tone style",
+        "validChoices": "Warm, conversational, street-smart, respectful",
+        "defaultFallback": "Culturally Authentic & Conversational"
+      },
+      {
+        "name": "{{SCRIPT_OUTPUT_FORMAT}}",
+        "description": "Writing script preference",
+        "validChoices": "Devanagari script / Romanized Hinglish script",
+        "defaultFallback": "Native and Romanized Dual Script"
+      }
+    ],
+    "workflow": [
+      "Core Emotional Claim Extraction: Isolate the core value proposition and psychological hooks from the source English copy.",
+      "Cultural Transcreation: Rewrite the copy using natural idioms, colloquial phrasing, and regional metaphors in `{{TARGET_REGIONAL_LANGUAGE}}`.",
+      "Technical Jargon Calibration: Retain widely recognized digital terms (e.g., \"download\", \"login\", \"link\") in standard recognized phrasing.",
+      "Bilingual Deliverable Review: Format side-by-side English vs. `{{TARGET_REGIONAL_LANGUAGE}}` comparison tables in Google Docs."
+    ],
+    "guardrails": [
+      "Literal Translation Kills Conversion: Word-for-word textbook translations sound robotic; always favor natural spoken idiom.",
+      "Cultural Sensitivity: Verify that regional colloquialisms and humor are respectful across diverse regional sub-cultures."
+    ]
+  },
+  {
+    "num": 25,
+    "id": "viral-artifact-and-plg-engine",
+    "name": "Viral Artifact and Product-Led Growth (PLG) Engine",
+    "department": "Marketing, Media & Organic Distribution",
+    "description": "Designs high-utility public Google Sheets, Docs, and planning frameworks with embedded brand provenance footers as viral acquisition engines.",
+    "enabled": true,
+    "allowedTiers": [
+      "BEGINNER",
+      "INTERMEDIATE",
+      "ADVANCED",
+      "ADMIN"
+    ],
+    "quickQuestions": [
+      {
+        "title": "Utility Topic",
+        "prompt": "(1-2 words only): What calculation or workflow does the tool solve (1-2 words)? *(e.g., \"Runway Calculator / Renovation Tracker\")*"
+      },
+      {
+        "title": "Artifact Software",
+        "prompt": "\\[MCQ\\]: What Google Workspace format should be used?",
+        "options": [
+          "[A] Google Sheets (Interactive calculator)",
+          "[B] Google Docs (Checklist / Framework)",
+          "[C] Google Slides"
+        ]
+      },
+      {
+        "title": "Destination URL",
+        "prompt": "(1-2 words only): Brand CTA web link (1-2 words): *(e.g., \"mybrand.com / myapp.com\")*"
+      }
+    ],
+    "parameters": [
+      {
+        "name": "{{UTILITY_TEMPLATE_TOPIC}}",
+        "description": "The practical tool or calculator being built",
+        "validChoices": "SaaS Unit Economics Model / Home Renovation Tracker",
+        "defaultFallback": "High-Utility Workspace Template"
+      },
+      {
+        "name": "{{BRAND_PROVENANCE_CTA_URL}}",
+        "description": "Destination web link embedded in artifact footers",
+        "validChoices": "[https\\://yourapp.com](https://yourapp.com) / [https\\://the](https://the) Agent.com",
+        "defaultFallback": "Brand Website URL"
+      },
+      {
+        "name": "{{ARTIFACT_SOFTWARE_TYPE}}",
+        "description": "Google Workspace format used for distribution",
+        "validChoices": "Google Sheets (Interactive Formula) / Google Docs",
+        "defaultFallback": "Google Sheets"
+      }
+    ],
+    "workflow": [
+      "High-Friction Utility Selection: Select a workflow in `{{UTILITY_TEMPLATE_TOPIC}}` that users currently struggle to model manually.",
+      "Interactive Workspace Construction: Build a clean, dynamic, formula-driven model in `{{ARTIFACT_SOFTWARE_TYPE}}` with clear user instructions.",
+      "Provenance & CTA Footer Embedding: Add an elegant, unobtrusive banner and footer attributing the template to the brand with a link to `{{BRAND_PROVENANCE_CTA_URL}}`.",
+      "Public \"Make a Copy\" Permissions: Configure Google Drive link sharing with public viewer permissions so users can duplicate the template into their personal accounts."
+    ],
+    "guardrails": [
+      "Aggressive Promotion Destroys Virality: If a template feels like an overt sales pitch, communities will ban it; ensure the standalone free utility is genuinely exceptional.",
+      "Lock Formula Cells: Protect calculation cells and include clear \"Make a Copy\" instructions to prevent user confusion."
+    ]
+  },
+  {
+    "num": 26,
+    "id": "zero-ad-spend-distribution-engine",
+    "name": "Zero Ad Spend Distribution Engine",
+    "department": "Marketing, Media & Organic Distribution",
+    "description": "Builds organic customer acquisition engines through strategic non-cash barter partnerships, niche community alliances, and viral referral loops.",
+    "enabled": true,
+    "allowedTiers": [
+      "BEGINNER",
+      "INTERMEDIATE",
+      "ADVANCED",
+      "ADMIN"
+    ],
+    "quickQuestions": [
+      {
+        "title": "Core Product",
+        "prompt": "(1-2 words only): What product/service are you distributing (1-2 words)? *(e.g., \"AI Productivity / Design Agency\")*"
+      },
+      {
+        "title": "Barter Asset",
+        "prompt": "\\[MCQ\\]: What non-cash value can you offer partner brands?",
+        "options": [
+          "[A] Free product licenses / memberships",
+          "[B] Co-authored research report / guide",
+          "[C] Reciprocal newsletter / community shoutout",
+          "[D] Joint educational webinar"
+        ]
+      },
+      {
+        "title": "Target Community Type",
+        "prompt": "\\[MCQ\\]: Where does your target audience congregate?",
+        "options": [
+          "[A] Slack / Discord Communities",
+          "[B] LinkedIn / Professional Groups",
+          "[C] Reddit / Niche Forums",
+          "[D] Student / University Networks"
+        ]
+      }
+    ],
+    "parameters": [
+      {
+        "name": "{{CORE_PRODUCT_OFFERING}}",
+        "description": "The offering seeking organic distribution",
+        "validChoices": "B2B Software / Executive Coaching / Mobile App",
+        "defaultFallback": "Core Product"
+      },
+      {
+        "name": "{{PARTNER_COLLABORATOR_PROFILES}}",
+        "description": "Non-competing brands serving the identical customer persona",
+        "validChoices": "Complementary SaaS / Creator Communities / Niche Agencies",
+        "defaultFallback": "Complementary Brand Partners"
+      },
+      {
+        "name": "{{BARTER_VALUE_ASSET}}",
+        "description": "Valuable non-cash consideration offered in trade",
+        "validChoices": "Complimentary annual access / Joint research report",
+        "defaultFallback": "Mutual Barter Consideration"
+      }
+    ],
+    "workflow": [
+      "Partner Ecosystem Mapping: Identify non-competing partners in `{{PARTNER_COLLABORATOR_PROFILES}}` with active audiences.",
+      "Win-Win Barter Proposal Design: Formulate co-promotions offering `{{BARTER_VALUE_ASSET}}` in exchange for newsletter or community feature distribution.",
+      "Community Value Seeding: Draft high-value, educational, non-promotional guides sharing valuable tools in relevant online communities.",
+      "Built-In Referral Engine: Embed organic referral and invite triggers directly within the user onboarding flow."
+    ],
+    "guardrails": [
+      "Community Spam Bans: Overt promotional links get banned instantly; lead with 100% free educational value before introducing paid offerings.",
+      "Clear Barter Deadlines: Cross-promotional barter partnerships require explicit schedules and deliverables to ensure fair mutual execution."
+    ]
+  },
+  {
+    "num": 27,
+    "id": "dormant-benefits-and-perks-optimizer",
+    "name": "Dormant Benefits and Perks Optimizer",
+    "department": "Finance, Wealth & Asset Optimization",
+    "description": "Audits credit cards, insurance policies, and banking memberships to uncover unclaimed perks, lounge visits, fee waivers, and complimentary services.",
+    "enabled": true,
+    "allowedTiers": [
+      "BEGINNER",
+      "INTERMEDIATE",
+      "ADVANCED",
+      "ADMIN"
+    ],
+    "quickQuestions": [
+      {
+        "title": "Tracked Card Types",
+        "prompt": "\\[MCQ\\]: What credit card categories do you hold?",
+        "options": [
+          "[A] Premium Travel / Lounge Cards",
+          "[B] Co-Branded Retail Shopping Cards",
+          "[C] Cashback / Fuel Cards",
+          "[D] Diverse Multi-Card Portfolio"
+        ]
+      },
+      {
+        "title": "Top Priority Perks",
+        "prompt": "\\[MCQ\\]: Which perks are most important to monitor?",
+        "options": [
+          "[A] Airport Lounge Access & Travel Vouchers",
+          "[B] Annual Spend-Based Fee Waivers",
+          "[C] Complimentary Subscriptions & Dining Discounts",
+          "[D] All Eligible Perks"
+        ]
+      },
+      {
+        "title": "Perk Reminder Timing",
+        "prompt": "\\[MCQ\\]: When should expiring voucher alerts trigger?",
+        "options": [
+          "[A] 14 days before quarter/year end",
+          "[B] 30 days before quarter/year end"
+        ]
+      }
+    ],
+    "parameters": [
+      {
+        "name": "{{USER_CARD_PORTFOLIO}}",
+        "description": "Active credit card products and banking tiers",
+        "validChoices": "Premium Travel Card, Co-branded Shopping Card, Cashback Card",
+        "defaultFallback": "Active Credit Cards"
+      },
+      {
+        "name": "{{QUARTERLY_BENEFIT_TYPES}}",
+        "description": "Types of recurring perks monitored",
+        "validChoices": "Airport Lounges, Golf Privileges, OTT Subscriptions, Spa Vouchers",
+        "defaultFallback": "Airport Lounge & Travel Perks"
+      },
+      {
+        "name": "{{ANNUAL_FEE_WAIVER_GOALS}}",
+        "description": "Milestone spend targets required to waive card annual fees",
+        "validChoices": "Spend thresholds per card product",
+        "defaultFallback": "Spend-based Fee Waiver Targets"
+      }
+    ],
+    "workflow": [
+      "Financial Benefit Inventory Mapping: Catalog `{{USER_CARD_PORTFOLIO}}` against active cardholder agreement terms and seasonal merchant offers.",
+      "Expiring Perk & Quota Check: Track quarterly lounge quotas, milestone vouchers, and expiring reward points.",
+      "Spend Threshold Optimization: Calculate proximity to `{{ANNUAL_FEE_WAIVER_GOALS}}` and recommend optimal card routing for upcoming large expenses.",
+      "One-Tap Redemption Guidance: Provide concise, step-by-step instructions to claim complimentary memberships or request customer service fee waivers."
+    ],
+    "guardrails": [
+      "Quarterly Quota Resets: Lounge and lifestyle perks typically reset on fixed calendar quarters and do not roll over.",
+      "Fee Waiver Request Timing: Annual fee waiver requests must be lodged before the annual renewal billing date."
+    ]
+  },
+  {
+    "num": 28,
+    "id": "family-legal-estate-and-will-planner",
+    "name": "Family Legal Estate and Will Planner",
+    "department": "Finance, Wealth & Asset Optimization",
+    "description": "Catalogs family asset registries, account nominee verifications, succession records, and testamentary will frameworks.",
+    "enabled": true,
+    "allowedTiers": [
+      "BEGINNER",
+      "INTERMEDIATE",
+      "ADVANCED",
+      "ADMIN"
+    ],
+    "quickQuestions": [
+      {
+        "title": "Succession Legal Code",
+        "prompt": "(1-2 words only): Governing succession jurisdiction (1-2 words): *(e.g., \"Domestic Indian Succession / US State Law / UK Probate\")*"
+      },
+      {
+        "title": "Asset Scope",
+        "prompt": "\\[MCQ\\]: What assets are included in the estate catalog?",
+        "options": [
+          "[A] Real Estate + Bank Accounts",
+          "[B] Real Estate + Financial Equities/Funds",
+          "[C] Comprehensive (Real Estate, Demat, Gold, Business, Digital Assets)"
+        ]
+      },
+      {
+        "title": "Nominee Verification Status",
+        "prompt": "\\[MCQ\\]: Have all bank accounts and investment folios been audited for nominees?",
+        "options": [
+          "[A] Yes (Audit complete)",
+          "[B] Partially (Needs systematic check)",
+          "[C] No (Needs complete audit)"
+        ]
+      }
+    ],
+    "parameters": [
+      {
+        "name": "{{ESTATE_ASSET_CLASSES}}",
+        "description": "Categories of assets in the family estate",
+        "validChoices": "Real Estate, Equities/Funds, Bank Deposits, Gold, Digital Assets",
+        "defaultFallback": "All Family Assets"
+      },
+      {
+        "name": "{{SUCCESSION_JURISDICTION}}",
+        "description": "Governing legal jurisdiction for inheritance and succession laws",
+        "validChoices": "Domestic Indian Law / US State Law / UK Law",
+        "defaultFallback": "Domestic Succession Law"
+      },
+      {
+        "name": "{{DESIGNATED_EXECUTORS}}",
+        "description": "Trusted individuals designated to execute testamentary instructions",
+        "validChoices": "Named Executor / Co-Executor",
+        "defaultFallback": "Named Family Executor"
+      }
+    ],
+    "workflow": [
+      "Master Asset & Liability Registry: Catalog all real estate properties, bank accounts, folio numbers, and loan obligations into a secure Google Sheet.",
+      "Nominee Verification Audit: Cross-verify that active primary and secondary nominee designations match intended succession plans across all banking and investment institutions.",
+      "Will & Testament Outline Drafting: Draft a structured testamentary will framework under `{{SUCCESSION_JURISDICTION}}` naming `{{DESIGNATED_EXECUTORS}}`.",
+      "Physical Locker & Deed Indexing: Document the precise physical whereabouts of original property deeds, will originals, and locker keys."
+    ],
+    "guardrails": [
+      "Nominee vs. Legal Owner: In most jurisdictions, a nominee is merely a legal trustee holding funds; a valid will is required to pass definitive legal ownership to heirs.",
+      "Independent Witness Requirement: Wills must be witnessed and signed by two independent adults who are not beneficiaries under the will."
+    ]
+  },
+  {
+    "num": 29,
+    "id": "family-wealth-budget-and-tax-desk",
+    "name": "Family Wealth Budget and Tax Desk",
+    "department": "Finance, Wealth & Asset Optimization",
+    "description": "Manages monthly household cashflow discipline, expense categorization, statutory tax deductions, and advance tax schedules.",
+    "enabled": true,
+    "allowedTiers": [
+      "BEGINNER",
+      "INTERMEDIATE",
+      "ADVANCED",
+      "ADMIN"
+    ],
+    "quickQuestions": [
+      {
+        "title": "Tax System",
+        "prompt": "(1-2 words only): Filing jurisdiction / regime (1-2 words): *(e.g., \"India Income Tax / US IRS / UK HMRC\")*"
+      },
+      {
+        "title": "Emergency Fund Goal",
+        "prompt": "\\[MCQ\\]: Liquid emergency fund runway target:",
+        "options": [
+          "[A] 3 Months of fixed living expenses",
+          "[B] 6 Months of fixed living expenses",
+          "[C] 12 Months of fixed living expenses"
+        ]
+      },
+      {
+        "title": "Budget Review Day",
+        "prompt": "\\[MCQ\\]: Monthly cashflow reconciliation day:",
+        "options": [
+          "[A] 1st of each month",
+          "[B] 5th of each month",
+          "[C] Last day of each month"
+        ]
+      }
+    ],
+    "parameters": [
+      {
+        "name": "{{TAX_JURISDICTION_REGIME}}",
+        "description": "Governing tax code and regime preference",
+        "validChoices": "India Income Tax / US IRS / UK HMRC",
+        "defaultFallback": "Domestic Tax Code"
+      },
+      {
+        "name": "{{EMERGENCY_RESERVE_MONTHS}}",
+        "description": "Months of mandatory fixed expenses kept in liquid reserves",
+        "validChoices": "6 months / 12 months",
+        "defaultFallback": "6 months"
+      },
+      {
+        "name": "{{STATUTORY_DEDUCTION_CATEGORIES}}",
+        "description": "Allowable deduction categories utilized for tax optimization",
+        "validChoices": "Retirement, Health Insurance, Mortgage Interest",
+        "defaultFallback": "Standard Allowable Deductions"
+      }
+    ],
+    "workflow": [
+      "Monthly Cashflow Reconciliation: Tally monthly inflows against fixed domestic overheads, discretionary spending, and savings transfers in Google Sheets.",
+      "Emergency Runway Guard: Ensure liquid reserves equal to `{{EMERGENCY_RESERVE_MONTHS}}` of fixed overheads remain uncompromised.",
+      "Advance Tax & Liability Calculation: Estimate quarterly tax obligations across all income streams under `{{TAX_JURISDICTION_REGIME}}`.",
+      "Deduction & Proof Archival: Track deadlines for `{{STATUTORY_DEDUCTION_CATEGORIES}}` investments and organize receipts in Google Drive."
+    ],
+    "guardrails": [
+      "Quarterly Advance Tax Penalties: Missing scheduled advance tax installment cutoffs triggers cumulative interest penalties.",
+      "Mathematical Regime Comparison: Evaluate itemized deductions vs. standard simplified tax regimes with actual figures before committing."
+    ]
+  },
+  {
+    "num": 30,
+    "id": "long-term-investment-allocator",
+    "name": "Long Term Investment Allocator",
+    "department": "Finance, Wealth & Asset Optimization",
+    "description": "Models disciplined asset allocation across broad index funds, debt instruments, gold, and automated annual rebalancing rules.",
+    "enabled": true,
+    "allowedTiers": [
+      "BEGINNER",
+      "INTERMEDIATE",
+      "ADVANCED",
+      "ADMIN"
+    ],
+    "quickQuestions": [
+      {
+        "title": "Target Equity Ratio",
+        "prompt": "\\[MCQ\\]: Target portfolio Equity allocation:",
+        "options": [
+          "[A] 80% Equity (Aggressive growth)",
+          "[B] 70% Equity (Balanced growth)",
+          "[C] 60% Equity (Moderate)",
+          "[D] 50% Equity (Conservative)"
+        ]
+      },
+      {
+        "title": "Rebalancing Trigger",
+        "prompt": "\\[MCQ\\]: Asset deviation band that triggers rebalancing:",
+        "options": [
+          "[A] 5% drift from target",
+          "[B] 10% drift from target",
+          "[C] Annual scheduled calendar rebalance only"
+        ]
+      },
+      {
+        "title": "Primary Investment Vehicles",
+        "prompt": "\\[MCQ\\]: Preferred index fund style:",
+        "options": [
+          "[A] Direct low-cost total market index funds",
+          "[B] Global / US + Domestic broad index mix",
+          "[C] Multi-asset (Equity, Debt, Gold)"
+        ]
+      }
+    ],
+    "parameters": [
+      {
+        "name": "{{EQUITY_ALLOCATION_PCT}}",
+        "description": "Target percentage of portfolio invested in equities",
+        "validChoices": "70%",
+        "defaultFallback": "70%"
+      },
+      {
+        "name": "{{DEBT_ALLOCATION_PCT}}",
+        "description": "Target percentage of portfolio in debt/fixed income",
+        "validChoices": "30%",
+        "defaultFallback": "30%"
+      },
+      {
+        "name": "{{REBALANCING_BAND_PCT}}",
+        "description": "Deviation percentage that triggers portfolio rebalancing",
+        "validChoices": "5% to 10%",
+        "defaultFallback": "5%"
+      }
+    ],
+    "workflow": [
+      "Risk Profile & Corridor Calibration: Establish baseline portfolio ratios across `{{EQUITY_ALLOCATION_PCT}}` and `{{DEBT_ALLOCATION_PCT}}`.",
+      "Low-Cost Index Scheme Selection: Select low-expense direct index mutual funds (broad market, global, mid-cap) and secure fixed-income vehicles.",
+      "Interactive Sheet Model Creation: Construct a portfolio tracker in Google Sheets calculating active weights, monthly SIP allocations, and compound growth projections.",
+      "Annual Rebalancing Trigger: Set alert corridors to rebalance when asset weights drift beyond `{{REBALANCING_BAND_PCT}}`."
+    ],
+    "guardrails": [
+      "Thematic Fund Trap: Avoid chasing trendy sectoral or thematic funds; low-cost broad index funds consistently beat active speculation long-term.",
+      "Capital Gains Tax Friction: Account for capital gains tax implications and exit loads before executing rebalancing sell transactions."
+    ]
+  },
+  {
+    "num": 31,
+    "id": "dual-gmail-unified-intelligence-bridge",
+    "name": "Dual Gmail Unified Intelligence Bridge",
+    "department": "Engineering, Systems & AI Infrastructure",
+    "description": "Syncs, categorizes, and indexes communications across multiple distinct email inboxes while preserving strict data segregation.",
+    "enabled": true,
+    "allowedTiers": [
+      "BEGINNER",
+      "INTERMEDIATE",
+      "ADVANCED",
+      "ADMIN"
+    ],
+    "quickQuestions": [
+      {
+        "title": "Account Classification",
+        "prompt": "\\[MCQ\\]: How are your two primary inboxes partitioned?",
+        "options": [
+          "[A] Personal / Family vs. Work / Business",
+          "[B] Primary Business vs. Side Venture",
+          "[C] Executive Internal vs. External Client"
+        ]
+      },
+      {
+        "title": "Triage Times",
+        "prompt": "\\[MCQ\\]: Preferred consolidated triage schedule:",
+        "options": [
+          "[A] Morning (09:00 AM) and Evening (05:00 PM)",
+          "[B] Morning only (08:30 AM)",
+          "[C] Evening only (06:00 PM)"
+        ]
+      },
+      {
+        "title": "Draft Sending Mode",
+        "prompt": "\\[MCQ\\]: Outbound email dispatch rule:",
+        "options": [
+          "[A] Always require manual human review & send",
+          "[B] Auto-send standard low-risk confirmations"
+        ]
+      }
+    ],
+    "parameters": [
+      {
+        "name": "{{PERSONAL_INBOX_LABEL}}",
+        "description": "Identifier for personal and family correspondence",
+        "validChoices": "Personal / Family",
+        "defaultFallback": "Personal"
+      },
+      {
+        "name": "{{WORK_INBOX_LABEL}}",
+        "description": "Identifier for professional and business communications",
+        "validChoices": "Business / Venture / Work",
+        "defaultFallback": "Work"
+      },
+      {
+        "name": "{{HIGH_PRIORITY_DOMAINS}}",
+        "description": "VIP email domains triggering immediate action items",
+        "validChoices": "keyclients.com, partnerfirms.com, banking.com",
+        "defaultFallback": "VIP Senders & Clients"
+      },
+      {
+        "name": "{{DAILY_TRIAGE_TIMES}}",
+        "description": "Preferred schedule for consolidated inbox summaries",
+        "validChoices": "09:00 AM, 05:00 PM",
+        "defaultFallback": "Morning & Evening Triage"
+      }
+    ],
+    "workflow": [
+      "Cross-Inbox Ingestion & Query: Fetch unread threads and calendar invites matching `{{HIGH_PRIORITY_DOMAINS}}` across connected mail accounts.",
+      "Strict Realm Categorization: Tag each incoming message into either `{{PERSONAL_INBOX_LABEL}}` or `{{WORK_INBOX_LABEL}}`, preventing cross-domain contamination.",
+      "Action Extraction: Extract actionable obligations (replies required, invoices due, scheduling requests) into clear action items.",
+      "Draft Reply Generation: Draft contextual, professional replies for the user to review and manually confirm before sending."
+    ],
+    "guardrails": [
+      "Strict Data Segregation: Never mix confidential work information into personal email threads or vice versa.",
+      "No Autonomous Sending: Always require explicit user confirmation before dispatching outbound drafted emails."
+    ]
+  },
+  {
+    "num": 32,
+    "id": "open-source-cost-arbitrageur",
+    "name": "Open Source Cost Arbitrageur",
+    "department": "Engineering, Systems & AI Infrastructure",
+    "description": "Swaps expensive proprietary SaaS subscriptions for secure self-hosted or open-source alternatives to reduce software burn.",
+    "enabled": true,
+    "allowedTiers": [
+      "BEGINNER",
+      "INTERMEDIATE",
+      "ADVANCED",
+      "ADMIN"
+    ],
+    "quickQuestions": [
+      {
+        "title": "Target Proprietary SaaS",
+        "prompt": "(1-2 words only): Paid SaaS tool being audited (1-2 words): *(e.g., \"Zapier / Airtable / Mixpanel\")*"
+      },
+      {
+        "title": "Hosting Preference",
+        "prompt": "\\[MCQ\\]: Preferred open-source hosting model:",
+        "options": [
+          "[A] Managed Cloud Open-Source (Zero maintenance)",
+          "[B] Self-Hosted VPS / Container (Hetzner, DigitalOcean)",
+          "[C] Local Machine / On-Premise"
+        ]
+      },
+      {
+        "title": "Maintenance Budget",
+        "prompt": "\\[MCQ\\]: Maximum acceptable monthly DevOps maintenance hours:",
+        "options": [
+          "[A] Under 1 hour/month",
+          "[B] 2 to 3 hours/month",
+          "[C] 5+ hours/month"
+        ]
+      }
+    ],
+    "parameters": [
+      {
+        "name": "{{CURRENT_SAAS_TOOLS}}",
+        "description": "List of paid software subscriptions being evaluated",
+        "validChoices": "Zapier (\\$60/mo), Airtable (\\$45/mo), Typeform (\\$50/mo)",
+        "defaultFallback": "Current Paid SaaS Stack"
+      },
+      {
+        "name": "{{PREFERRED_HOSTING_MODEL}}",
+        "description": "Target infrastructure for running open-source alternatives",
+        "validChoices": "Self-hosted VPS / Managed Cloud Open Source / Local Docker",
+        "defaultFallback": "Cloud VPS / Container"
+      },
+      {
+        "name": "{{ACCEPTABLE_MAINTENANCE_HOURS}}",
+        "description": "Maximum acceptable monthly hours spent on DevOps maintenance",
+        "validChoices": "1 to 2 hours/month",
+        "defaultFallback": "1 hour/month"
+      }
+    ],
+    "workflow": [
+      "SaaS Spend & Utilization Audit: Catalog `{{CURRENT_SAAS_TOOLS}}` noting monthly cost, active seat count, and core feature utilization.",
+      "Open-Source Alternative Mapping: Map each tool to mature, active open-source projects (e.g., n8n for Zapier, Baserow for Airtable, PostHog for Mixpanel).",
+      "Net TCO Calculation: Calculate net annual savings in Google Sheets, factoring in hosting VPS costs and `{{ACCEPTABLE_MAINTENANCE_HOURS}}`.",
+      "Migration Playbook Generation: Provide step-by-step export/import guides, database backup procedures, and SSL configurations."
+    ],
+    "guardrails": [
+      "Hidden Maintenance Overhead: Self-hosted tools require ongoing security patching, SSL renewals, and automated database backup routines.",
+      "Proprietary Lock-in: Verify that exported data from proprietary tools retains relational integrity before terminating subscriptions."
+    ]
+  },
+  {
+    "num": 33,
+    "id": "tech-sentinel-and-uptime-guard",
+    "name": "Tech Sentinel and Uptime Guard",
+    "department": "Engineering, Systems & AI Infrastructure",
+    "description": "Monitors platform availability, deployment health, API usage thresholds, rate limits, and SSL certificate expiration across web applications.",
+    "enabled": true,
+    "allowedTiers": [
+      "BEGINNER",
+      "INTERMEDIATE",
+      "ADVANCED",
+      "ADMIN"
+    ],
+    "quickQuestions": [
+      {
+        "title": "Primary Hosting Platform",
+        "prompt": "(1-2 words only): Primary web hosting platform (1-2 words): *(e.g., \"Vercel / Supabase / AWS / Cloudflare\")*"
+      },
+      {
+        "title": "Critical External APIs",
+        "prompt": "(1-2 words only): Critical external APIs monitored (1-2 words): *(e.g., \"Gemini / OpenAI / Stripe\")*"
+      },
+      {
+        "title": "Quota Warning Level",
+        "prompt": "\\[MCQ\\]: Trigger quota alerts at what consumption level?",
+        "options": [
+          "[A] 70% of quota limit",
+          "[B] 80% of quota limit",
+          "[C] 90% of quota limit"
+        ]
+      }
+    ],
+    "parameters": [
+      {
+        "name": "{{DEPLOYMENT_HOSTS_LIST}}",
+        "description": "Hosting providers and deployment platforms monitored",
+        "validChoices": "Vercel, Supabase, Firebase, Cloudflare",
+        "defaultFallback": "Primary Cloud Hosting Services"
+      },
+      {
+        "name": "{{CRITICAL_API_SERVICES}}",
+        "description": "External services with rate limits or quota caps",
+        "validChoices": "Gemini API, Payment Gateways, Database Clusters",
+        "defaultFallback": "Core Platform APIs"
+      },
+      {
+        "name": "{{QUOTA_WARNING_THRESHOLD_PCT}}",
+        "description": "Percentage of quota consumption triggering an alert",
+        "validChoices": "80% of free/paid tier limits",
+        "defaultFallback": "80%"
+      }
+    ],
+    "workflow": [
+      "Status & Health Triage: Inspect status dashboards and deployment logs for `{{DEPLOYMENT_HOSTS_LIST}}` upon reported anomalies.",
+      "API Quota & Rate Limit Inspection: Track request-per-minute (RPM) and token consumption against `{{QUOTA_WARNING_THRESHOLD_PCT}}` for `{{CRITICAL_API_SERVICES}}`.",
+      "Incident Post-Mortem Logging: Generate concise incident reports detailing failure timestamps, root causes, and remediation actions in Google Docs.",
+      "Preventive Architecture Guidance: Recommend exponential backoff, response caching, and rate-limit buffering to prevent cascading errors."
+    ],
+    "guardrails": [
+      "Infinite Retry Storms: Never execute immediate tight retry loops during an outage; always enforce exponential backoff with jitter.",
+      "Quota Creep Detection: API quota exhaustion usually stems from unoptimized loops or rogue frontend polling rather than genuine traffic surges."
+    ]
+  },
+  {
+    "num": 34,
+    "id": "token-frugality-and-context-controller",
+    "name": "Token Frugality and Context Controller",
+    "department": "Engineering, Systems & AI Infrastructure",
+    "description": "Optimizes prompt architecture, implements sliding context windows, and routes requests across model tiers to reduce LLM token burn.",
+    "enabled": true,
+    "allowedTiers": [
+      "BEGINNER",
+      "INTERMEDIATE",
+      "ADVANCED",
+      "ADMIN"
+    ],
+    "quickQuestions": [
+      {
+        "title": "Model Tier Routing",
+        "prompt": "\\[MCQ\\]: Enable automatic model tier routing?",
+        "options": [
+          "[A] Yes (Fast Flash models for routine, Pro models for deep reasoning)",
+          "[B] No (Always use flagship reasoning model)"
+        ]
+      },
+      {
+        "title": "Context Compaction Threshold",
+        "prompt": "\\[MCQ\\]: Compact conversation history after how many turns?",
+        "options": [
+          "[A] 5 turns",
+          "[B] 10 turns",
+          "[C] 15 turns"
+        ]
+      },
+      {
+        "title": "System Prompt Caching",
+        "prompt": "\\[MCQ\\]: Structure prompts for API context caching?",
+        "options": [
+          "[A] Yes (Optimize for prefix caching)",
+          "[B] No (Standard prompts)"
+        ]
+      }
+    ],
+    "parameters": [
+      {
+        "name": "{{TARGET_AI_MODELS}}",
+        "description": "AI model families in the application stack",
+        "validChoices": "Gemini Flash (fast/cheap) & Gemini Pro (deep reasoning)",
+        "defaultFallback": "Tiered Model Portfolio"
+      },
+      {
+        "name": "{{CONTEXT_WINDOW_LIMIT_TOKENS}}",
+        "description": "Maximum conversational context preserved before summarization",
+        "validChoices": "8k / 16k / 32k tokens",
+        "defaultFallback": "Optimal Compact Window"
+      },
+      {
+        "name": "{{MONTHLY_TOKEN_BUDGET}}",
+        "description": "Target spend cap for LLM operations",
+        "validChoices": "\\$50/month / Free Tier Limits",
+        "defaultFallback": "Frugal API Target"
+      }
+    ],
+    "workflow": [
+      "Token Consumption Profiling: Measure input prompt size, output completion tokens, and recurring tool response payloads.",
+      "Context Compaction & Sliding Windows: Prune stale historical conversation turns and replace verbose logs with concise state diffs.",
+      "Tiered Model Routing: Route simple lookups, classification, and formatting to fast flash models; reserve deep reasoning models for complex synthesis.",
+      "Prompt & Cache Optimization: Structure system prompts to leverage API context-caching, avoiding redundant token transmission on multi-turn sessions."
+    ],
+    "guardrails": [
+      "Over-Pruning Risks: Aggressively truncating context can strip critical user constraints and lead to hallucination; always retain core factual anchors.",
+      "Cache Invalidation Traps: Modifying the header of a cached system prompt invalidates downstream cache hits and spikes token costs."
+    ]
+  },
+  {
+    "num": 35,
+    "id": "energy-restoration-and-sabbatical-planner",
+    "name": "Energy Restoration and Sabbatical Planner",
+    "department": "Executive Function & Focus Architecture",
+    "description": "Plans micro-sabbaticals, sensory resets, and structured recovery blocks to prevent cognitive burnout and replenish creative energy.",
+    "enabled": true,
+    "allowedTiers": [
+      "BEGINNER",
+      "INTERMEDIATE",
+      "ADVANCED",
+      "ADMIN"
+    ],
+    "quickQuestions": [
+      {
+        "title": "Fatigue Type",
+        "prompt": "\\[MCQ\\]: What is your primary fatigue symptom?",
+        "options": [
+          "[A] Screen / Cognitive Fatigue",
+          "[B] Decision Overload",
+          "[C] Social Exhaustion",
+          "[D] Physical Drain"
+        ]
+      },
+      {
+        "title": "Ideal Environment",
+        "prompt": "\\[MCQ\\]: What setting best restores your energy?",
+        "options": [
+          "[A] Quiet Nature / Forest / Mountains",
+          "[B] Coastal / Ocean Retreat",
+          "[C] Complete Offline Home Stay",
+          "[D] Wellness / Spa Resort"
+        ]
+      },
+      {
+        "title": "Transit Limit",
+        "prompt": "\\[MCQ\\]: Maximum acceptable one-way transit time for weekend resets:",
+        "options": [
+          "[A] Under 2 hours (Zero travel drag)",
+          "[B] 2 to 4 hours (Moderate drive/flight)",
+          "[C] 5+ hours (Destination escape)"
+        ]
+      }
+    ],
+    "parameters": [
+      {
+        "name": "{{USER_BASE_LOCATION}}",
+        "description": "Starting city or home base for travel planning",
+        "validChoices": "User-provided city/metro",
+        "defaultFallback": "Home Location"
+      },
+      {
+        "name": "{{MAX_TRANSIT_HOURS}}",
+        "description": "Upper limit on one-way travel duration for weekend resets",
+        "validChoices": "3-4 hours by road or flight",
+        "defaultFallback": "3 hours"
+      },
+      {
+        "name": "{{PREFERRED_REST_ENVIRONMENT}}",
+        "description": "Ideal physical setting for sensory restoration",
+        "validChoices": "Nature / Forest / Quiet Coast / Offline Resort",
+        "defaultFallback": "Quiet Natural Environment"
+      },
+      {
+        "name": "{{DIGITAL_DETOX_LEVEL}}",
+        "description": "Degree of communication disconnection during recovery",
+        "validChoices": "Total offline / Emergency phone only / 1 daily check-in",
+        "defaultFallback": "Emergency Contacts Only"
+      }
+    ],
+    "workflow": [
+      "Exhaustion Diagnosis: Determine whether burnout is decision-driven, visual/digital, or physical to match the restorative intervention.",
+      "Low-Friction Destination Curation: Identify nature-centric retreats within `{{MAX_TRANSIT_HOURS}}` from `{{USER_BASE_LOCATION}}`.",
+      "Boundary Configuration: Schedule calendar auto-responders and configure `{{DIGITAL_DETOX_LEVEL}}` protocols.",
+      "Gentle Re-entry Buffer: Protect a 3- to 4-hour low-demand buffer on the calendar upon return before jumping back into high-cognitive-load work."
+    ],
+    "guardrails": [
+      "Over-Scheduled Vacation Trap: Avoid packing itineraries with dense tourist sightseeing; prioritize unscheduled open hours for nervous system recovery.",
+      "Pre-Trip Stakeholder Alignment: Communicate unavailability clearly to team members beforehand to avoid guilt or intrusive work calls."
+    ]
+  },
+  {
+    "num": 36,
+    "id": "energy-workload-matching-coach",
+    "name": "Energy Workload Matching Coach",
+    "department": "Executive Function & Focus Architecture",
+    "description": "Aligns task difficulty and cognitive load with real-time mental energy and circadian focus rhythms throughout the day.",
+    "enabled": true,
+    "allowedTiers": [
+      "BEGINNER",
+      "INTERMEDIATE",
+      "ADVANCED",
+      "ADMIN"
+    ],
+    "quickQuestions": [
+      {
+        "title": "Chronotype Peak",
+        "prompt": "\\[MCQ\\]: When is your natural peak intellectual sharpness?",
+        "options": [
+          "[A] Early Morning (07:00 AM - 10:30 AM)",
+          "[B] Mid-Day (10:30 AM - 01:30 PM)",
+          "[C] Evening / Night (06:00 PM - 10:00 PM)"
+        ]
+      },
+      {
+        "title": "Energy Slump Window",
+        "prompt": "\\[MCQ\\]: When do you hit your natural afternoon slump?",
+        "options": [
+          "[A] Early Afternoon (01:00 PM - 03:00 PM)",
+          "[B] Late Afternoon (03:00 PM - 05:00 PM)",
+          "[C] No significant slump"
+        ]
+      },
+      {
+        "title": "Daily Deep Work Limit",
+        "prompt": "\\[MCQ\\]: What is your maximum sustainable deep work capacity per day?",
+        "options": [
+          "[A] 2 to 3 hours",
+          "[B] 3 to 4 hours",
+          "[C] 5+ hours (High intensity)"
+        ]
+      }
+    ],
+    "parameters": [
+      {
+        "name": "{{PEAK_FOCUS_HOURS}}",
+        "description": "Hours of highest cognitive sharpness and clarity",
+        "validChoices": "08:30 AM \\- 12:00 PM",
+        "defaultFallback": "Morning Focus Window"
+      },
+      {
+        "name": "{{ENERGY_DIP_HOURS}}",
+        "description": "Circadian slump window suited for routine tasks",
+        "validChoices": "02:00 PM \\- 04:00 PM",
+        "defaultFallback": "Post-Lunch Window"
+      },
+      {
+        "name": "{{MAX_DAILY_DEEP_WORK_HOURS}}",
+        "description": "Maximum sustainable deep work per day",
+        "validChoices": "3 to 4 hours",
+        "defaultFallback": "4 hours"
+      }
+    ],
+    "workflow": [
+      "Task Cognitive Demand Profiling: Classify incoming to-dos into Tier 1 (Strategic Synthesis / Hard Coding / Writing), Tier 2 (Collaborative / Creative), and Tier 3 (Frictionless Admin / Filing).",
+      "Peak Window Guarding: Lock in Tier 1 deep work blocks strictly within `{{PEAK_FOCUS_HOURS}}` up to `{{MAX_DAILY_DEEP_WORK_HOURS}}`.",
+      "Dip Slot Allocation: Channel administrative tasks and routine correspondence into `{{ENERGY_DIP_HOURS}}`.",
+      "Restoration Buffers: Ensure 15-minute sensory breaks separate distinct cognitive sprints."
+    ],
+    "guardrails": [
+      "Deep Work During Dips: Attempting strategic problem-solving during biological energy slumps produces frustration and slow execution.",
+      "Cognitive Overbooking: Exceeding daily deep work limits leads to diminishing returns and severe evening exhaustion."
+    ]
+  },
+  {
+    "num": 37,
+    "id": "focus-my-energy",
+    "name": "Focus My Energy",
+    "department": "Executive Function & Focus Architecture",
+    "description": "Aligns daily task execution with the user's real-time mental energy level instead of a rigid calendar.",
+    "enabled": true,
+    "allowedTiers": [
+      "BEGINNER",
+      "INTERMEDIATE",
+      "ADVANCED",
+      "ADMIN"
+    ],
+    "quickQuestions": [
+      {
+        "title": "Current Energy Tier",
+        "prompt": "\\[MCQ\\]: What is your cognitive state right now?",
+        "options": [
+          "[A] Peak Focus (Sharp, analytical, deep work)",
+          "[B] Creative Flow (Ideation, drafting, visual work)",
+          "[C] Low Energy (Administrative, routine chores, inbox clearing)",
+          "[D] Depleted / Rest Needed"
+        ]
+      },
+      {
+        "title": "Available Window",
+        "prompt": "\\[MCQ\\]: How much time do you have for this sprint?",
+        "options": [
+          "[A] 15-25 minutes (Micro Sprint)",
+          "[B] 45-60 minutes (Standard Block)",
+          "[C] 90+ minutes (Deep Work Session)"
+        ]
+      },
+      {
+        "title": "Execution Mode",
+        "prompt": "\\[MCQ\\]: What priority mode should the Agent enforce?",
+        "options": [
+          "[A] Knock out quick low-friction wins (Build momentum)",
+          "[B] Tackle the highest-impact needle mover",
+          "[C] Balanced auto-match"
+        ]
+      }
+    ],
+    "parameters": [
+      {
+        "name": "{{REPORTED_ENERGY_TIER}}",
+        "description": "Current self-reported cognitive state",
+        "validChoices": "High Focus / Creative Flow / Low Energy Admin",
+        "defaultFallback": "Moderate Focus"
+      },
+      {
+        "name": "{{CURRENT_TIME_BLOCK_MINUTES}}",
+        "description": "Duration of current execution window",
+        "validChoices": "25 mins / 60 mins / 90 mins",
+        "defaultFallback": "45 minutes"
+      },
+      {
+        "name": "{{COGNITIVE_OVERRIDE_PREFERENCE}}",
+        "description": "Whether to prioritize momentum-building quick wins or needle-movers",
+        "validChoices": "Quick Momentum / Deep Needle-Mover",
+        "defaultFallback": "Best Energy Match"
+      }
+    ],
+    "workflow": [
+      "Cognitive Demand Triage: Categorize incoming tasks into High Load (deep synthesis, complex writing, hard logic), Medium Load (meetings, project planning), and Low Load (email sorting, filing, routine updates).",
+      "Energy & Time Matching: Match current `{{REPORTED_ENERGY_TIER}}` and `{{CURRENT_TIME_BLOCK_MINUTES}}` to the optimal candidate task.",
+      "Single Immediate Directive: Present exactly ONE task to execute immediately, eliminating choice paralysis.",
+      "Momentum Transition: Upon completion, prompt a quick 1-tap energy re-check before assigning the next task."
+    ],
+    "guardrails": [
+      "Guilt-Free Admin Work: When mental energy is fried, doing routine administrative tasks is a productive win; never force deep work during severe exhaustion.",
+      "Choice Fatigue Elimination: Never present a menu of 5 choices when the user is exhausted; issue a single concrete recommendation."
+    ]
+  },
+  {
+    "num": 38,
+    "id": "micro-timer-friction-breaker",
+    "name": "Micro Timer Friction Breaker",
+    "department": "Executive Function & Focus Architecture",
+    "description": "Guides 5- to 15-minute countdown sprints and micro-commitments to overcome heavy task inertia and kickstart focus.",
+    "enabled": true,
+    "allowedTiers": [
+      "BEGINNER",
+      "INTERMEDIATE",
+      "ADVANCED",
+      "ADMIN"
+    ],
+    "quickQuestions": [
+      {
+        "title": "Target Task",
+        "prompt": "(1-2 words only): What high-friction task are you procrastinating on? *(e.g., \"Finish proposal / File receipt\")*"
+      },
+      {
+        "title": "Sprint Length",
+        "prompt": "\\[MCQ\\]: Select your countdown sprint commitment:",
+        "options": [
+          "[A] 5 minutes (Zero-friction start)",
+          "[B] 10 minutes (Standard kickstarter)",
+          "[C] 15 minutes (Deep initiation)"
+        ]
+      },
+      {
+        "title": "First Physical Step",
+        "prompt": "(1-2 words only): What is the immediate first physical step? *(e.g., \"Open doc and write header\")*"
+      }
+    ],
+    "parameters": [
+      {
+        "name": "{{AVOIDED_TASK_NAME}}",
+        "description": "The deliverable or chore experiencing high friction",
+        "validChoices": "Draft Proposal / File Taxes / Organize Drive",
+        "defaultFallback": "High-Friction Task"
+      },
+      {
+        "name": "{{SPRINT_DURATION_MINUTES}}",
+        "description": "Countdown window for the micro-commitment",
+        "validChoices": "5 mins / 10 mins / 15 mins",
+        "defaultFallback": "10 minutes"
+      },
+      {
+        "name": "{{FIRST_PHYSICAL_STEP}}",
+        "description": "The zero-friction starting action",
+        "validChoices": "Create doc and write title",
+        "defaultFallback": "Open tool and execute first action"
+      }
+    ],
+    "workflow": [
+      "Commitment Shrinking: Reduce the mental definition of `{{AVOIDED_TASK_NAME}}` strictly to `{{FIRST_PHYSICAL_STEP}}`.",
+      "Sprint Boundary Commitment: Commit unconditionally to working only for `{{SPRINT_DURATION_MINUTES}}` without obligation to finish the broader project.",
+      "Friction Removal: Open the workspace tool and execute `{{FIRST_PHYSICAL_STEP}}` immediately.",
+      "Momentum Bank or Flow Extension: When the timer expires, celebrate the win and decide whether to stop guilt-free or continue into flow."
+    ],
+    "guardrails": [
+      "No Output Quality Judgment: Never critique the quality of work produced during the first 5 minutes; the sole metric of success is starting.",
+      "Single Action Focus: Do not look at the broader project checklist during the sprint; keep attention locked on the immediate micro-step."
+    ]
+  },
+  {
+    "num": 39,
+    "id": "nightly-wind-down-extraction-session",
+    "name": "Nightly Wind Down Extraction Session",
+    "department": "Executive Function & Focus Architecture",
+    "description": "Conducts a concise 2-minute evening review to clear mental open loops, capture pending thoughts, and set tomorrow morning's focus anchor.",
+    "enabled": true,
+    "allowedTiers": [
+      "BEGINNER",
+      "INTERMEDIATE",
+      "ADVANCED",
+      "ADMIN"
+    ],
+    "quickQuestions": [
+      {
+        "title": "Wind Down Hour",
+        "prompt": "\\[MCQ\\]: At what time should the Agent trigger your nightly extraction?",
+        "options": [
+          "[A] 09:00 PM",
+          "[B] 09:30 PM",
+          "[C] 10:00 PM",
+          "[D] 10:30 PM"
+        ]
+      },
+      {
+        "title": "Capture Inbox",
+        "prompt": "\\[MCQ\\]: Where should open loops and tasks be stored?",
+        "options": [
+          "[A] Google Tasks",
+          "[B] Google Keep",
+          "[C] Daily Journal Doc"
+        ]
+      },
+      {
+        "title": "Tomorrow Anchor Mode",
+        "prompt": "\\[MCQ\\]: Include a lock-in prompt for tomorrow morning's primary task?",
+        "options": [
+          "[A] Yes (Lock exactly one morning priority)",
+          "[B] No (Dump thoughts only)"
+        ]
+      }
+    ],
+    "parameters": [
+      {
+        "name": "{{EVENING_WIND_DOWN_HOUR}}",
+        "description": "Target time for the daily mental unload review",
+        "validChoices": "09:30 PM / 10:00 PM",
+        "defaultFallback": "9:30 PM"
+      },
+      {
+        "name": "{{PRIMARY_CAPTURE_TOOL}}",
+        "description": "Digital repository receiving extracted open loops",
+        "validChoices": "Google Tasks / Google Keep",
+        "defaultFallback": "Google Tasks"
+      },
+      {
+        "name": "{{MAX_REVIEW_DURATION_MINUTES}}",
+        "description": "Strict time limit to prevent late-night analytical thought",
+        "validChoices": "2 to 3 minutes",
+        "defaultFallback": "2 minutes"
+      }
+    ],
+    "workflow": [
+      "Open-Loop Brain Dump: Prompt the user to quickly list any nagging to-dos, thoughts, or worries still occupying mental RAM.",
+      "Automated Capture & Routing: Route extracted items into `{{PRIMARY_CAPTURE_TOOL}}` for morning processing.",
+      "Daily Slate Reset: Archive today's completed items and reset daily operational checklists.",
+      "Morning Anchor Lock: Identify and lock in exactly ONE primary task for tomorrow morning before closing down."
+    ],
+    "guardrails": [
+      "Strict 3-Minute Cap: Keep the evening session under `{{MAX_REVIEW_DURATION_MINUTES}}`; engaging in deep analytical problem-solving late at night harms sleep quality.",
+      "Close Tabs, Don't Start New Ones: The purpose is purely offloading cognitive debt, not strategizing or initiating new work."
+    ]
+  },
+  {
+    "num": 40,
+    "id": "proactive-accountability-and-reporting-sentinel",
+    "name": "Proactive Accountability and Reporting Sentinel",
+    "department": "Executive Function & Focus Architecture",
+    "description": "Monitors ongoing task commitments, tracks milestone completion rates, and compiles objective weekly productivity retrospectives.",
+    "enabled": true,
+    "allowedTiers": [
+      "BEGINNER",
+      "INTERMEDIATE",
+      "ADVANCED",
+      "ADMIN"
+    ],
+    "quickQuestions": [
+      {
+        "title": "Retrospective Day",
+        "prompt": "\\[MCQ\\]: When should the Agent compile your weekly retrospective?",
+        "options": [
+          "[A] Sunday Evening (06:00 PM)",
+          "[B] Sunday Night (09:00 PM)",
+          "[C] Monday Morning (08:30 AM)"
+        ]
+      },
+      {
+        "title": "Accountability Metrics",
+        "prompt": "\\[MCQ\\]: What key commitment areas should be tracked?",
+        "options": [
+          "[A] Deep Work Hours + Task Completion %",
+          "[B] Work Tasks + Health / Workout Consistency",
+          "[C] Comprehensive (Work, Health, Life Goals)"
+        ]
+      },
+      {
+        "title": "Rollover Alert Threshold",
+        "prompt": "\\[MCQ\\]: Flag tasks postponed more than how many times?",
+        "options": [
+          "[A] 2 times",
+          "[B] 3 times",
+          "[C] 4 times"
+        ]
+      }
+    ],
+    "parameters": [
+      {
+        "name": "{{WEEKLY_RETROSPECTIVE_TIME}}",
+        "description": "Scheduled time for weekly review scorecard generation",
+        "validChoices": "Sunday 06:00 PM / Monday 08:30 AM",
+        "defaultFallback": "Sunday Evening"
+      },
+      {
+        "name": "{{CORE_HABIT_TRACKERS}}",
+        "description": "Key daily and weekly commitments measured",
+        "validChoices": "Deep Work Hours, Exercise Sessions, Project Sprints",
+        "defaultFallback": "Core Commitments"
+      },
+      {
+        "name": "{{MAX_TASK_ROLLOVERS}}",
+        "description": "Number of postponements before a task is flagged for review",
+        "validChoices": "3 postponements",
+        "defaultFallback": "3 rollovers"
+      }
+    ],
+    "workflow": [
+      "Task & Calendar Ledger Ingestion: Ingest completed and pending items across Google Tasks and Google Calendar for the past 7 days.",
+      "Completion Velocity Calculation: Calculate percentage execution rate against `{{CORE_HABIT_TRACKERS}}`.",
+      "Procrastination Bottleneck Flagging: Identify tasks that have rolled over more than `{{MAX_TASK_ROLLOVERS}}` times and prompt scope re-evaluation.",
+      "Scorecard Delivery: Deliver an objective, balanced weekly scorecard at `{{WEEKLY_RETROSPECTIVE_TIME}}` highlighting wins and focus areas for next week."
+    ],
+    "guardrails": [
+      "Constructive Framing: Accountability reports must remain objective and constructive; avoid guilt-inducing or discouraging language.",
+      "Frequent Rollovers Signal Unclear Scope: Tasks postponed repeatedly usually suffer from ambiguous definitions or missing prerequisites."
+    ]
+  },
+  {
+    "num": 41,
+    "id": "single-daily-north-star-filter",
+    "name": "Single Daily North Star Filter",
+    "department": "Executive Function & Focus Architecture",
+    "description": "Filters out backlog noise and locks in exactly one high-impact needle-mover priority per realm to Google Tasks and Calendar each morning.",
+    "enabled": true,
+    "allowedTiers": [
+      "BEGINNER",
+      "INTERMEDIATE",
+      "ADVANCED",
+      "ADMIN"
+    ],
+    "quickQuestions": [
+      {
+        "title": "Planning Time",
+        "prompt": "\\[MCQ\\]: When should the Agent initiate your morning alignment?",
+        "options": [
+          "[A] 07:30 AM",
+          "[B] 08:00 AM",
+          "[C] 08:30 AM",
+          "[D] 09:00 AM"
+        ]
+      },
+      {
+        "title": "Deep Work Duration",
+        "prompt": "\\[MCQ\\]: What is your standard focus block duration?",
+        "options": [
+          "[A] 60 minutes",
+          "[B] 90 minutes",
+          "[C] 120 minutes"
+        ]
+      },
+      {
+        "title": "Primary Life Realms",
+        "prompt": "\\[MCQ\\]: Which operational realms should receive daily North Stars?",
+        "options": [
+          "[A] Work only",
+          "[B] Work + Personal / Life",
+          "[C] Work + Health + Personal"
+        ]
+      }
+    ],
+    "parameters": [
+      {
+        "name": "{{MORNING_PLANNING_TIME}}",
+        "description": "Scheduled hour for morning priority extraction",
+        "validChoices": "08:00 AM / 08:30 AM",
+        "defaultFallback": "8:30 AM"
+      },
+      {
+        "name": "{{OPERATIONAL_REALMS}}",
+        "description": "Distinct life and business categories tracked",
+        "validChoices": "Work (Venture) & Personal (Life)",
+        "defaultFallback": "Work and Personal"
+      },
+      {
+        "name": "{{FOCUS_BLOCK_MINUTES}}",
+        "description": "Length of protected morning calendar block",
+        "validChoices": "90 minutes",
+        "defaultFallback": "90 minutes"
+      }
+    ],
+    "workflow": [
+      "Backlog Noise Filtering: Scan all active tasks, emails, and obligations across `{{OPERATIONAL_REALMS}}`.",
+      "Leverage Question Application: Apply the test: \"Which single action, if completed today, will make everything else easier or unnecessary?\"",
+      "Calendar Block Defense: Lock in an uninterrupted `{{FOCUS_BLOCK_MINUTES}}` block on Google Calendar during morning peak focus.",
+      "Google Tasks Top Placement: Push the chosen North Star to the top of Google Tasks with a distinct high-priority tag."
+    ],
+    "guardrails": [
+      "Urgent vs. Important Trap: Do not confuse administrative brush fires with true strategic needle-movers.",
+      "Strict Rule of One: Never select more than one North Star per realm per day; multiple priorities guarantee divided focus."
+    ]
+  },
+  {
+    "num": 42,
+    "id": "sleep-architecture-optimizer",
+    "name": "Sleep Architecture Optimizer",
+    "department": "Executive Function & Focus Architecture",
+    "description": "Optimizes circadian rhythm alignment, evening digital wind-down buffers, bedroom environment factors, and morning light anchoring.",
+    "enabled": true,
+    "allowedTiers": [
+      "BEGINNER",
+      "INTERMEDIATE",
+      "ADVANCED",
+      "ADMIN"
+    ],
+    "quickQuestions": [
+      {
+        "title": "Target Bedtime",
+        "prompt": "\\[MCQ\\]: What is your target bedtime?",
+        "options": [
+          "[A] 10:00 PM",
+          "[B] 10:30 PM",
+          "[C] 11:00 PM",
+          "[D] 11:30 PM",
+          "[E] 12:00 AM"
+        ]
+      },
+      {
+        "title": "Target Wake Time",
+        "prompt": "\\[MCQ\\]: What is your target wake-up time?",
+        "options": [
+          "[A] 06:00 AM",
+          "[B] 06:30 AM",
+          "[C] 07:00 AM",
+          "[D] 07:30 AM",
+          "[E] 08:00 AM"
+        ]
+      },
+      {
+        "title": "Primary Sleep Challenge",
+        "prompt": "\\[MCQ\\]: What is your biggest sleep hurdle?",
+        "options": [
+          "[A] Falling asleep (Latency / Racing mind)",
+          "[B] Mid-night waking",
+          "[C] Morning grogginess / Sleep inertia"
+        ]
+      }
+    ],
+    "parameters": [
+      {
+        "name": "{{TARGET_BEDTIME}}",
+        "description": "Envisioned time for sleep onset",
+        "validChoices": "10:30 PM / 11:00 PM",
+        "defaultFallback": "11:00 PM"
+      },
+      {
+        "name": "{{TARGET_WAKE_TIME}}",
+        "description": "Envisioned morning wake-up time",
+        "validChoices": "06:30 AM / 07:00 AM",
+        "defaultFallback": "7:00 AM"
+      },
+      {
+        "name": "{{WIND_DOWN_BUFFER_MINUTES}}",
+        "description": "Pre-sleep window free of intense work and blue light",
+        "validChoices": "45 to 60 minutes",
+        "defaultFallback": "60 minutes"
+      }
+    ],
+    "workflow": [
+      "Sleep Architecture Baseline Audit: Analyze bedtime consistency, evening meals, caffeine cutoff times, and bedroom ambient lighting.",
+      "Wind-Down Buffer Protocol: Establish an uninterrupted `{{WIND_DOWN_BUFFER_MINUTES}}` buffer before `{{TARGET_BEDTIME}}` dedicated to reading, stretching, or offline journaling.",
+      "Environmental Optimization: Optimize bedroom conditions: total black-out darkness, cool ambient temperature (65-68°F / 18-20°C), and sound masking.",
+      "Morning Circadian Anchoring: Schedule 10-15 minutes of outdoor sunlight exposure within 30 minutes of waking at `{{TARGET_WAKE_TIME}}` to anchor the biological clock."
+    ],
+    "guardrails": [
+      "Inconsistent Weekend Wake Times: Sleeping in 3 hours later on weekends induces social jetlag and damages Monday morning sleep architecture.",
+      "Late Heavy Meals: Eating heavy dinners within 2 hours of bedtime elevates core body temperature and suppresses deep restorative sleep."
+    ]
+  },
+  {
+    "num": 43,
+    "id": "execution-burden-absorber",
+    "name": "Execution Burden Absorber",
+    "department": "Personal Acceleration & Core Protocols",
+    "description": "Transforms unstructured voice directives, messy brain dumps, and rough notes into finished executive documents, spreadsheets, and presentation decks.",
+    "enabled": true,
+    "allowedTiers": [
+      "BEGINNER",
+      "INTERMEDIATE",
+      "ADVANCED",
+      "ADMIN"
+    ],
+    "quickQuestions": [
+      {
+        "title": "Default Deliverable Medium",
+        "prompt": "\\[MCQ\\]: What artifact format do you produce most frequently?",
+        "options": [
+          "[A] Google Doc Executive Brief / Memo",
+          "[B] Google Sheet Model / Tracker",
+          "[C] Google Slides Deck"
+        ]
+      },
+      {
+        "title": "Executive Writing Style",
+        "prompt": "\\[MCQ\\]: What communication tone reflects your professional voice?",
+        "options": [
+          "[A] Direct Executive (High signal, bulleted hierarchy)",
+          "[B] Strategic Analytical (Detailed rationale & data)",
+          "[C] Warm Collaborative (Team-oriented)"
+        ]
+      },
+      {
+        "title": "Drive Destination Folder",
+        "prompt": "(1-2 words only): Google Drive destination folder name (1-2 words): *(e.g., \"Executive Drafts / Projects\")*"
+      }
+    ],
+    "parameters": [
+      {
+        "name": "{{PREFERRED_ARTIFACT_FORMAT}}",
+        "description": "Default output document structure",
+        "validChoices": "Google Docs Executive Brief / Google Sheets Model / Slides Deck",
+        "defaultFallback": "Google Doc"
+      },
+      {
+        "name": "{{USER_WRITING_STYLE}}",
+        "description": "Stylistic tone and voice guidelines",
+        "validChoices": "Direct, high signal-to-noise, bulleted hierarchy",
+        "defaultFallback": "Concise Executive Professional"
+      },
+      {
+        "name": "{{TARGET_DRIVE_FOLDER}}",
+        "description": "Destination folder in Google Drive for generated artifacts",
+        "validChoices": "Projects / Executive Briefs / Drafts",
+        "defaultFallback": "Root Drive / Projects"
+      }
+    ],
+    "workflow": [
+      "Unstructured Directive Ingestion: Transcribe and analyze raw voice transcripts or bullet points, extracting core intent, decisions, constraints, and metrics.",
+      "Hierarchical Content Structuring: Organize extracted concepts into an executive narrative arc in `{{USER_WRITING_STYLE}}`.",
+      "Production Artifact Synthesis: Construct the complete deliverable in `{{PREFERRED_ARTIFACT_FORMAT}}` within `{{TARGET_DRIVE_FOLDER}}`.",
+      "One-Sentence Summary & Link Delivery: Deliver a concise 1-sentence confirmation card featuring a direct clickable Drive link to the user."
+    ],
+    "guardrails": [
+      "Generic Corporate Filler: Never dilute the user's authentic voice with generic AI fluff; preserve original nuance, technical terms, and core decisions.",
+      "Ambiguity Flagging: If crucial parameters or financial numbers are missing from the raw voice dump, explicitly flag them as review questions."
+    ]
+  },
+  {
+    "num": 44,
+    "id": "family-relationships-and-social-calendar",
+    "name": "Family Relationships and Social Calendar",
+    "department": "Personal Acceleration & Core Protocols",
+    "description": "Tracks family birthdays, wedding anniversaries, social milestones, gift ideas, and thoughtful relationship connection touches.",
+    "enabled": true,
+    "allowedTiers": [
+      "BEGINNER",
+      "INTERMEDIATE",
+      "ADVANCED",
+      "ADMIN"
+    ],
+    "quickQuestions": [
+      {
+        "title": "Advance Alert Window",
+        "prompt": "\\[MCQ\\]: How many days in advance do you need milestone reminders?",
+        "options": [
+          "[A] 3 Days Before",
+          "[B] 7 Days Before (Standard for gift ordering)",
+          "[C] 14 Days Before (Extended planning)"
+        ]
+      },
+      {
+        "title": "Greeting Message Drafting",
+        "prompt": "\\[MCQ\\]: Should the Agent automatically draft personalized celebration messages?",
+        "options": [
+          "[A] Yes (Warm, thoughtful, ready to send)",
+          "[B] No (Date reminders only)"
+        ]
+      }
+    ],
+    "parameters": [
+      {
+        "name": "{{SOCIAL_RELATIONSHIPS_REGISTRY}}",
+        "description": "Roster of key contacts, birth dates, and anniversaries",
+        "validChoices": "Immediate Family, Extended Relatives, Close Friends",
+        "defaultFallback": "Family & Friends Roster"
+      },
+      {
+        "name": "{{GIFT_ADVANCE_ALERT_DAYS}}",
+        "description": "Days in advance of milestone to trigger gift recommendations",
+        "validChoices": "7 days / 14 days",
+        "defaultFallback": "7 days"
+      },
+      {
+        "name": "{{GREETING_MESSAGE_TONE}}",
+        "description": "Tone of drafted celebration messages",
+        "validChoices": "Warm, affectionate, culturally respectful",
+        "defaultFallback": "Warm and Thoughtful"
+      }
+    ],
+    "workflow": [
+      "Milestone Catalog Synchronization: Record dates, milestone types, and relationship tags in a Google Sheet and sync recurring all-day events to Google Calendar.",
+      "Proactive Gift Ideation: At `{{GIFT_ADVANCE_ALERT_DAYS}}` prior to the date, surface gift ideas and florist/bakery reminders.",
+      "Personalized Greeting Drafting: Draft customized celebration messages in `{{GREETING_MESSAGE_TONE}}` reflecting the recipient's unique role.",
+      "Gift History & Idea Logging: Log gifts given and future ideas mentioned in conversation into a pinned Google Keep note."
+    ],
+    "guardrails": [
+      "Peak Holiday Rush: Cake, flower, and courier services during major holidays experience delays; place milestone orders 2-3 days in advance.",
+      "Capture Ideas Year-Round: Record gift preferences whenever friends or family mention items they desire throughout the year."
+    ]
+  },
+  {
+    "num": 45,
+    "id": "gemini-spark-instructions",
+    "name": "the Agent Core Instructions",
+    "department": "Personal Acceleration & Core Protocols",
+    "description": "Master operational guidelines, executive function coaching, low cognitive load communication standards, and user preference protocols for the Agent.",
+    "enabled": true,
+    "allowedTiers": [
+      "BEGINNER",
+      "INTERMEDIATE",
+      "ADVANCED",
+      "ADMIN"
+    ],
+    "quickQuestions": [
+      {
+        "title": "User Name",
+        "prompt": "(1-2 words only): Your preferred name (1-2 words): *(e.g., \"Alex / Jordan / Sam\")*"
+      },
+      {
+        "title": "Primary Timezone",
+        "prompt": "(1-2 words only): Your primary timezone (1-2 words): *(e.g., \"EST / PST / IST / GMT\")*"
+      },
+      {
+        "title": "Communication Style",
+        "prompt": "\\[MCQ\\]: What communication style do you prefer from the Agent?",
+        "options": [
+          "[A] Single-Step Action (Low cognitive load, 1 step at a time)",
+          "[B] Executive Summary (Scannable bullet points, immediate next steps)",
+          "[C] In-Depth Comprehensive (Full context and analysis)"
+        ]
+      },
+      {
+        "title": "Evening Summary Hour",
+        "prompt": "\\[MCQ\\]: Scheduled evening hour for personal updates and non-work alerts:",
+        "options": [
+          "[A] 08:30 PM",
+          "[B] 09:00 PM",
+          "[C] 09:30 PM",
+          "[D] Off (Deliver as they happen)"
+        ]
+      }
+    ],
+    "parameters": [
+      {
+        "name": "{{USER_DISPLAY_NAME}}",
+        "description": "Name or title preferred by the user",
+        "validChoices": "User Name / First Name",
+        "defaultFallback": "User"
+      },
+      {
+        "name": "{{USER_LOCATION_TIMEZONE}}",
+        "description": "Geographic city and IANA timezone",
+        "validChoices": "New York (America/New\\_York) / London (Europe/London)",
+        "defaultFallback": "Local Timezone"
+      },
+      {
+        "name": "{{CORE_QUARTERLY_PRIORITIES}}",
+        "description": "Primary objectives guiding high-level prioritization",
+        "validChoices": "Career restart, Startup launch, Health optimization",
+        "defaultFallback": "Core Goals"
+      },
+      {
+        "name": "{{EVENING_NOTIFICATION_TIME}}",
+        "description": "Scheduled hour for non-urgent daily summaries and personal alerts",
+        "validChoices": "09:00 PM",
+        "defaultFallback": "9:00 PM"
+      }
+    ],
+    "workflow": [
+      "Single-Step Action Delivery: Break complex projects down into bite-sized, sequential single steps to prevent cognitive overwhelm and shiny object syndrome for `{{USER_DISPLAY_NAME}}`.",
+      "Low Cognitive Load Formatting: Deliver structured, scannable bullet points; eliminate unnecessary walls of text and corporate filler.",
+      "Net Spend Deal Evaluation: Evaluate all shopping and purchase queries on final net out-of-pocket spend after stacking coupons, cashback, and card perks with strict \\>4.0★ and verified review filters.",
+      "Focus Window Protection: Hold personal alerts, deal notifications, and routine reminders until `{{EVENING_NOTIFICATION_TIME}}`, reserving work hours for deep focus."
+    ],
+    "guardrails": [
+      "No Multi-Step Overwhelm: Never drop a 15-item to-do list on the user; present the first actionable step and await confirmation.",
+      "Strict Deal Quality: Never recommend low-rated, suspicious marketplace sellers; maintain strict review volume thresholds."
+    ]
+  },
+  {
+    "num": 46,
+    "id": "one-tap-action-card-deck",
+    "name": "One Tap Action Card Deck",
+    "department": "Personal Acceleration & Core Protocols",
+    "description": "Structures complex decisions into tactile, binary action cards with 1-sentence rationales and direct artifact links.",
+    "enabled": true,
+    "allowedTiers": [
+      "BEGINNER",
+      "INTERMEDIATE",
+      "ADVANCED",
+      "ADMIN"
+    ],
+    "quickQuestions": [
+      {
+        "title": "Decision Scope",
+        "prompt": "\\[MCQ\\]: What items do you most frequently triage?",
+        "options": [
+          "[A] Draft Emails & Communications",
+          "[B] Financial Invoices & Purchase Approvals",
+          "[C] Document Reviews & Deliverable Sign-Offs",
+          "[D] Comprehensive Backlog Triage"
+        ]
+      },
+      {
+        "title": "Action Chip Style",
+        "prompt": "\\[MCQ\\]: What action button options do you prefer?",
+        "options": [
+          "[A] Binary (Approve & Execute / Reject)",
+          "[B] Ternary (Approve / Modify / Reject)",
+          "[C] Scheduling (Execute / Schedule / Defer)"
+        ]
+      }
+    ],
+    "parameters": [
+      {
+        "name": "{{CORE_DECISION_DOMAIN}}",
+        "description": "Context of pending decisions",
+        "validChoices": "Draft Approvals / Budget Authorizations / Task Triage",
+        "defaultFallback": "General Triage"
+      },
+      {
+        "name": "{{STANDARD_ACTION_CHIPS}}",
+        "description": "Set of binary or multiple-choice action buttons",
+        "validChoices": "Approve & Execute, Edit Draft, Defer, Reject",
+        "defaultFallback": "Approve, Modify, Reject"
+      }
+    ],
+    "workflow": [
+      "Decision Core Isolation: Extract the single specific choice requiring human judgment from the pending item.",
+      "One-Sentence Rationale Formulation: Summarize in exactly one sentence why the recommended path is optimal and what outcome it delivers.",
+      "Verifiable Artifact Attachment: Attach a direct clickable link to the underlying document, draft email, or spreadsheet.",
+      "Action Chip Presentation: Display clear binary options based on `{{STANDARD_ACTION_CHIPS}}` for 1-tap decision execution."
+    ],
+    "guardrails": [
+      "Direct Link Mandate: Never present a decision card without a direct link for the user to inspect underlying source data.",
+      "Mutually Exclusive Choices: Ensure choices are distinct and immediately actionable rather than ambiguous."
+    ]
+  },
+  {
+    "num": 47,
+    "id": "skill-acquisition-and-rapid-learning-coach",
+    "name": "Skill Acquisition and Rapid Learning Coach",
+    "department": "Personal Acceleration & Core Protocols",
+    "description": "Designs 20-hour accelerated learning curriculums, deconstructs core sub-skills, and builds deliberate practice drills.",
+    "enabled": true,
+    "allowedTiers": [
+      "BEGINNER",
+      "INTERMEDIATE",
+      "ADVANCED",
+      "ADMIN"
+    ],
+    "quickQuestions": [
+      {
+        "title": "Target Domain",
+        "prompt": "(1-2 words only): What skill do you want to learn (1-2 words)? *(e.g., \"Python Coding / Video Editing / UI Design\")*"
+      },
+      {
+        "title": "Capstone Proof",
+        "prompt": "(1-2 words only): What project proves competence (1-2 words)? *(e.g., \"Build Working App / Edit First Reel\")*"
+      },
+      {
+        "title": "Weekly Study Rhythm",
+        "prompt": "\\[MCQ\\]: Weekly practice commitment pace:",
+        "options": [
+          "[A] 5 Hours/week (4-week sprint)",
+          "[B] 10 Hours/week (2-week intensive)",
+          "[C] 2 Hours/week (10-week steady)"
+        ]
+      }
+    ],
+    "parameters": [
+      {
+        "name": "{{TARGET_SKILL_NAME}}",
+        "description": "The specific capability being acquired",
+        "validChoices": "Full-Stack React Development / Financial Modeling",
+        "defaultFallback": "Target Skill"
+      },
+      {
+        "name": "{{PRACTICAL_SUCCESS_BENCHMARK}}",
+        "description": "Concrete real-world project demonstrating competence",
+        "validChoices": "Deploy a live web application / Build a 3-statement model",
+        "defaultFallback": "Working Capstone Project"
+      },
+      {
+        "name": "{{TOTAL_PRACTICE_TARGET_HOURS}}",
+        "description": "Total deliberate practice investment",
+        "validChoices": "20 hours (Ten 2-hour sessions)",
+        "defaultFallback": "20 hours"
+      }
+    ],
+    "workflow": [
+      "Skill Deconstruction: Break `{{TARGET_SKILL_NAME}}` into core sub-skills and identify the vital 20% that delivers 80% of real-world results.",
+      "Self-Correction Setup: Establish early feedback loops (automated tests, rubrics, mentor reviews) to identify errors during practice.",
+      "Deliberate Practice Schedule: Structure ten 2-hour practice drills totaling `{{TOTAL_PRACTICE_TARGET_HOURS}}` focused on active creation.",
+      "Curate 2-3 Core Resources: Select only 2 top-tier tutorials or books, discarding redundant introductory materials to avoid tutorial hell."
+    ],
+    "guardrails": [
+      "Passive Consumption Illusion: Watching tutorials feels like learning but builds zero neural wiring; spend 80% of practice time building with hands on keyboard.",
+      "Eliminate Practice Friction: Set up all software, development environments, and tools beforehand so practice can start in under 60 seconds."
+    ]
+  },
+  {
+    "num": 48,
+    "id": "gifts-and-festive-sales-arbitrageur",
+    "name": "Gifts and Festive Sales Arbitrageur",
+    "department": "Lifestyle, Commerce & Smart Mobility",
+    "description": "Strategically plans and procures festive, wedding, and corporate gifts during mega-sale events using price history tracking and card reward stacking.",
+    "enabled": true,
+    "allowedTiers": [
+      "BEGINNER",
+      "INTERMEDIATE",
+      "ADVANCED",
+      "ADMIN"
+    ],
+    "quickQuestions": [
+      {
+        "title": "Target Festive Season",
+        "prompt": "(1-2 words only): Upcoming gifting occasion (1-2 words): *(e.g., \"Diwali / Holiday Season / Wedding Gifting\")*"
+      },
+      {
+        "title": "Primary Gift Category",
+        "prompt": "\\[MCQ\\]: What types of gifts do you curate?",
+        "options": [
+          "[A] Premium Consumer Electronics",
+          "[B] Gourmet Food & Luxury Hampers",
+          "[C] Apparel & Watches",
+          "[D] Digital Brand Gift Cards"
+        ]
+      },
+      {
+        "title": "Advance Planning Window",
+        "prompt": "\\[MCQ\\]: How far in advance should shortlists be curated?",
+        "options": [
+          "[A] 2 Weeks before sale",
+          "[B] 1 Month before sale",
+          "[C] 2 Months before sale"
+        ]
+      }
+    ],
+    "parameters": [
+      {
+        "name": "{{UPCOMING_FESTIVE_EVENTS}}",
+        "description": "Target holiday or wedding seasons being planned",
+        "validChoices": "Diwali & Festive Season / Holiday Season / Wedding Gifting",
+        "defaultFallback": "Upcoming Festive Season"
+      },
+      {
+        "name": "{{RECIPIENT_BUDGET_TIERS}}",
+        "description": "Budget bands by recipient category",
+        "validChoices": "Tier 1: High-value, Tier 2: Mid-value, Tier 3: Tokens",
+        "defaultFallback": "Curated Budget Tiers"
+      },
+      {
+        "name": "{{PRIMARY_SALE_PLATFORMS}}",
+        "description": "E-commerce portals monitored for discounts",
+        "validChoices": "Amazon, Flipkart, Brand Stores, Gyftr",
+        "defaultFallback": "Major Retail & E-commerce Platforms"
+      }
+    ],
+    "workflow": [
+      "Recipient Roster Compilation: Map recipients into organized categories with designated spend limits based on `{{RECIPIENT_BUDGET_TIERS}}`.",
+      "Pre-Sale Curated Shortlisting: Select durable, high-perceived-value items matching `{{UPCOMING_FESTIVE_EVENTS}}` weeks before sale launch.",
+      "Price History Tracking: Track product prices against historical averages to verify genuine price drops vs. inflated MRP discounts.",
+      "Discount Layer Stacking: Stack merchant promo codes, gift card vouchers, bank instant discounts, and affiliate cashback on `{{PRIMARY_SALE_PLATFORMS}}`."
+    ],
+    "guardrails": [
+      "Cart Early Mandate: Popular holiday inventory sells out rapidly; add items to cart 24 to 48 hours before the sale opens.",
+      "Return Window Awareness: Verify return and exchange windows when buying gifts weeks ahead of celebration dates."
+    ]
+  },
+  {
+    "num": 49,
+    "id": "long-horizon-trip-and-event-planner",
+    "name": "Long Horizon Trip and Event Planner",
+    "department": "Lifestyle, Commerce & Smart Mobility",
+    "description": "Maps multi-month travel runways, outstation family wedding itineraries, transit bookings, hotel room blocks, and packing logistics.",
+    "enabled": true,
+    "allowedTiers": [
+      "BEGINNER",
+      "INTERMEDIATE",
+      "ADVANCED",
+      "ADMIN"
+    ],
+    "quickQuestions": [
+      {
+        "title": "Destination City",
+        "prompt": "(1-2 words only): Travel destination city (1-2 words): *(e.g., \"Goa / Jaipur / London / Tokyo\")*"
+      },
+      {
+        "title": "Travel Occasion",
+        "prompt": "\\[MCQ\\]: What is the nature of the travel?",
+        "options": [
+          "[A] Destination Wedding / Family Celebration",
+          "[B] Multi-Week Vacation / Holiday",
+          "[C] Conference / Business Trip"
+        ]
+      },
+      {
+        "title": "Primary Transit Mode",
+        "prompt": "\\[MCQ\\]: Preferred transportation mode:",
+        "options": [
+          "[A] Commercial Flights",
+          "[B] Train Reservations",
+          "[C] Chauffeur / Road Trip Drive"
+        ]
+      }
+    ],
+    "parameters": [
+      {
+        "name": "{{DESTINATION_LOCATION}}",
+        "description": "Target city, resort, or event destination",
+        "validChoices": "User-provided destination",
+        "defaultFallback": "Travel Destination"
+      },
+      {
+        "name": "{{TRAVEL_DATES_WINDOW}}",
+        "description": "Calendar dates and duration of travel",
+        "validChoices": "Multi-day / Multi-week timeframe",
+        "defaultFallback": "Target Travel Dates"
+      },
+      {
+        "name": "{{TRAVEL_PARTY_SIZE}}",
+        "description": "Number of adults, children, and elderly travelers",
+        "validChoices": "Family group of 6 / Solo / Couple",
+        "defaultFallback": "Traveling Party"
+      }
+    ],
+    "workflow": [
+      "Booking Window Runway: Calculate booking launch windows (train reservation horizons, advance flight sale tiers) and sync alerts to Google Calendar.",
+      "Transit & Route Optimization: Search and compare flight schedules, train connections, and chauffeur routes to `{{DESTINATION_LOCATION}}`.",
+      "Room Block & Stay Logistics: Coordinate group hotel reservations, check-in logistics, and airport transit.",
+      "Master Itinerary Compilation: Assemble all confirmation numbers, dress codes, luggage checklists, and daily schedules into a shareable Google Sheet or Doc."
+    ],
+    "guardrails": [
+      "Wedding Peak Fare Spikes: During festive and wedding seasons, travel prices surge quickly; book primary transit as soon as booking windows open.",
+      "Buffer Time Around Ceremonies: Always budget at least 3-4 hours of buffer time between scheduled arrival and major event ceremonies."
+    ]
+  },
+  {
+    "num": 50,
+    "id": "nest-voice-room-orchestrator",
+    "name": "Nest Voice Room Orchestrator",
+    "department": "Lifestyle, Commerce & Smart Mobility",
+    "description": "Connects smart speakers and home devices for hands-free voice routines, timers, morning briefings, and ambient focus soundscapes.",
+    "enabled": true,
+    "allowedTiers": [
+      "BEGINNER",
+      "INTERMEDIATE",
+      "ADVANCED",
+      "ADMIN"
+    ],
+    "quickQuestions": [
+      {
+        "title": "Smart Speaker Device",
+        "prompt": "\\[MCQ\\]: What voice speaker hardware do you use?",
+        "options": [
+          "[A] Google Nest Mini / Audio",
+          "[B] Google Nest Hub (Display)",
+          "[C] Google Assistant on Mobile / Tablet"
+        ]
+      },
+      {
+        "title": "Primary Ambient Focus Audio",
+        "prompt": "\\[MCQ\\]: Preferred background soundscape for focus:",
+        "options": [
+          "[A] Lo-Fi Instrumental Beats",
+          "[B] Binaural Alpha Waves",
+          "[C] Rain / White Noise Soundscape",
+          "[D] Classical Piano"
+        ]
+      },
+      {
+        "title": "Morning Voice Briefing Scope",
+        "prompt": "\\[MCQ\\]: What should your morning voice briefing include?",
+        "options": [
+          "[A] Calendar events + Weather",
+          "[B] Calendar events + Weather + Top Tasks",
+          "[C] Quick Weather + Focus Music"
+        ]
+      }
+    ],
+    "parameters": [
+      {
+        "name": "{{SMART_SPEAKER_DEVICE_TYPE}}",
+        "description": "Hardware voice assistant in the environment",
+        "validChoices": "Google Nest Mini / Google Nest Audio",
+        "defaultFallback": "Smart Speaker Device"
+      },
+      {
+        "name": "{{MORNING_ROUTINE_TRIGGER}}",
+        "description": "Voice phrase initiating morning sequence",
+        "validChoices": "\"Hey Google, Good Morning\"",
+        "defaultFallback": "Good Morning Routine"
+      },
+      {
+        "name": "{{FOCUS_AUDIO_PLAYLIST}}",
+        "description": "Preferred ambient music or playlist for deep work",
+        "validChoices": "Binaural beats / Lo-Fi Focus / Instrumental Jazz",
+        "defaultFallback": "Deep Focus Ambient Audio"
+      }
+    ],
+    "workflow": [
+      "Voice Prompt Definition: Establish distinct voice commands for morning kick-off, deep focus, and evening wind-down.",
+      "Action Cascade Sequencing: Sequence assistant actions: read calendar appointments, deliver weather summary, and list top tasks.",
+      "Ambient Audio Integration: Attach `{{FOCUS_AUDIO_PLAYLIST}}` streams to focus routines.",
+      "Device Configuration SOP: Provide concise, step-by-step setup guides for configuring routines in the smart home application."
+    ],
+    "guardrails": [
+      "Complex Routine Fragility: Routines with too many third-party actions fail if one service disconnects; keep core voice chains bounded to 3-4 reliable actions.",
+      "Clear Wake Words: Keep routine trigger phrases short and distinct to avoid voice recognition confusion."
+    ]
+  },
+  {
+    "num": 51,
+    "id": "physical-fitness-and-workout-programmer",
+    "name": "Physical Fitness and Workout Programmer",
+    "department": "Lifestyle, Commerce & Smart Mobility",
+    "description": "Programs progressive home strength workouts, dumbbell routines, mobility drills, and weekly workout consistency tracking.",
+    "enabled": true,
+    "allowedTiers": [
+      "BEGINNER",
+      "INTERMEDIATE",
+      "ADVANCED",
+      "ADMIN"
+    ],
+    "quickQuestions": [
+      {
+        "title": "Equipment Setup",
+        "prompt": "\\[MCQ\\]: What workout equipment do you have access to?",
+        "options": [
+          "[A] Adjustable Dumbbells & Floor Mat",
+          "[B] Dumbbells + Pull-Up Bar + Bench",
+          "[C] Bodyweight & Resistance Bands",
+          "[D] Full Commercial Gym"
+        ]
+      },
+      {
+        "title": "Weekly Frequency",
+        "prompt": "\\[MCQ\\]: How many days per week will you work out?",
+        "options": [
+          "[A] 3 Days / Week (Full Body)",
+          "[B] 4 Days / Week (Upper / Lower)",
+          "[C] 5 Days / Week (Push / Pull / Legs)"
+        ]
+      },
+      {
+        "title": "Core Training Goal",
+        "prompt": "\\[MCQ\\]: What is your primary physical objective?",
+        "options": [
+          "[A] Muscle Building (Hypertrophy)",
+          "[B] Fat Loss & Conditioning",
+          "[C] Desk Posture, Mobility & Core Strength"
+        ]
+      }
+    ],
+    "parameters": [
+      {
+        "name": "{{AVAILABLE_WORKOUT_EQUIPMENT}}",
+        "description": "Hardware and weights available in home or gym setup",
+        "validChoices": "Adjustable Dumbbells, Pull-up Bar, Bench",
+        "defaultFallback": "Dumbbells and Bodyweight"
+      },
+      {
+        "name": "{{WEEKLY_WORKOUT_DAYS}}",
+        "description": "Number of dedicated training sessions per week",
+        "validChoices": "3 Days / 4 Days Split",
+        "defaultFallback": "3 Days per Week"
+      },
+      {
+        "name": "{{TRAINING_PRIMARY_GOAL}}",
+        "description": "Core physical outcome driving program selection",
+        "validChoices": "Strength & Posture / Muscle Building / Endurance",
+        "defaultFallback": "Strength & Mobility"
+      }
+    ],
+    "workflow": [
+      "Training Split Design: Construct a weekly workout split (e.g., Push/Pull/Legs or Upper/Lower) tailored to `{{AVAILABLE_WORKOUT_EQUIPMENT}}` and `{{WEEKLY_WORKOUT_DAYS}}`.",
+      "Exercise & Volume Programming: Program specific exercises, warm-up sets, target rep ranges, and rest intervals aligned with `{{TRAINING_PRIMARY_GOAL}}`.",
+      "Calendar Block Defense: Schedule workout sessions on Google Calendar to protect workout consistency.",
+      "Progressive Overload Logging: Maintain a Google Sheets log tracking weight, reps, and perceived exertion to ensure progressive overload."
+    ],
+    "guardrails": [
+      "Consistency Over Complexity: Progressive overload on foundational compound movements yields far greater results than constantly rotating exotic exercises.",
+      "Warm-Up & Mobility Defense: Never skip dynamic mobility warm-ups; protecting joints and spinal health is essential for longevity."
+    ]
+  },
+  {
+    "num": 52,
+    "id": "smart-shopping-optimizer",
+    "name": "Smart Shopping and Finance Optimizer",
+    "department": "Lifestyle, Commerce & Smart Mobility",
+    "description": "Optimizes shopping, deals, cashback, credit cards, gift cards, medicines, local dining, and asset reselling across e-commerce platforms and local stores.",
+    "enabled": true,
+    "allowedTiers": [
+      "BEGINNER",
+      "INTERMEDIATE",
+      "ADVANCED",
+      "ADMIN"
+    ],
+    "quickQuestions": [
+      {
+        "title": "Active Card Rewards",
+        "prompt": "\\[MCQ\\]: What primary card reward types do you optimize?",
+        "options": [
+          "[A] 5% Cashback co-branded retail cards",
+          "[B] Travel reward points & Air miles",
+          "[C] Flat 1-2% cashback on all spends",
+          "[D] Multi-card optimization"
+        ]
+      },
+      {
+        "title": "Cashback Apps Used",
+        "prompt": "(1-2 words only): Cashback or voucher platforms used (1-2 words): *(e.g., \"CashKaro / Rakuten / Gyftr / Magicpin\")*"
+      },
+      {
+        "title": "Deal Digest Hour",
+        "prompt": "\\[MCQ\\]: Scheduled evening hour for consolidated deal digests:",
+        "options": [
+          "[A] 08:30 PM",
+          "[B] 09:00 PM",
+          "[C] 09:30 PM",
+          "[D] Weekend only"
+        ]
+      }
+    ],
+    "parameters": [
+      {
+        "name": "{{ACTIVE_CARD_PORTFOLIO}}",
+        "description": "Credit cards and bank payment methods available for discounts",
+        "validChoices": "5% Co-branded retail card, UPI RuPay card, Travel reward card",
+        "defaultFallback": "Active Payment Cards"
+      },
+      {
+        "name": "{{CASHBACK_REWARD_APPS}}",
+        "description": "Affiliate cashback platforms and gift card voucher hubs",
+        "validChoices": "Cashback aggregators, Voucher portals",
+        "defaultFallback": "Cashback & Voucher Hubs"
+      },
+      {
+        "name": "{{SAVED_SIZING_REGISTRY}}",
+        "description": "Apparel and footwear measurements per family member",
+        "validChoices": "User: L/XL, Partner: S/M, Shoe sizes",
+        "defaultFallback": "Household Sizing Registry"
+      },
+      {
+        "name": "{{DEAL_DIGEST_TIME}}",
+        "description": "Scheduled evening hour for consolidated deal notifications",
+        "validChoices": "09:00 PM",
+        "defaultFallback": "9:00 PM"
+      }
+    ],
+    "workflow": [
+      "Net Spend Calculation: Apply the formula: Net effective spend \\= Listed price \\- instant discounts \\- coupon codes \\- gift card savings \\- cashback \\- net reward points value \\+ shipping/platform fees.",
+      "Quality & Review Verification: Filter out suspicious sellers; require strict \\>4.0★ customer ratings and verified purchase review counts.",
+      "Brand-Specific Fit Calibration: Recommend sizes tailored to brand-specific cuts based on `{{SAVED_SIZING_REGISTRY}}`.",
+      "Zero-Noise Evening Digest Delivery: Deliver a single, scannable chat digest at `{{DEAL_DIGEST_TIME}}` only if verified items meet target net prices; send zero messages if no genuine deals qualify."
+    ],
+    "guardrails": [
+      "Headline Price Illusion: Never judge a deal by advertised percentage discounts; verify net out-of-pocket spend after all checkout fees and real cashback.",
+      "Medicine Bio-Equivalence: When comparing pharmaceutical prices, verify exact active ingredients and strengths; never alter medications without physician consultation."
+    ]
+  },
+  {
+    "num": 53,
+    "id": "vehicle-care-and-mobility-desk",
+    "name": "Vehicle Care and Mobility Desk",
+    "department": "Lifestyle, Commerce & Smart Mobility",
+    "description": "Manages automobile maintenance logs, scheduled dealer servicing, insurance policy renewals, emissions certifications, and toll tollway balances.",
+    "enabled": true,
+    "allowedTiers": [
+      "BEGINNER",
+      "INTERMEDIATE",
+      "ADVANCED",
+      "ADMIN"
+    ],
+    "quickQuestions": [
+      {
+        "title": "Vehicle Make / Model",
+        "prompt": "(1-2 words only): Primary vehicle make and model (1-2 words): *(e.g., \"Honda City / Hyundai Creta / Tesla Model 3\")*"
+      },
+      {
+        "title": "Service Interval Standard",
+        "prompt": "\\[MCQ\\]: Manufacturer recommended service interval:",
+        "options": [
+          "[A] 10,000 km or 12 months",
+          "[B] 15,000 km or 12 months",
+          "[C] 5,000 km or 6 months"
+        ]
+      },
+      {
+        "title": "Emissions Test Cycle",
+        "prompt": "\\[MCQ\\]: Mandatory emissions renewal frequency (PUC / Smog):",
+        "options": [
+          "[A] Every 6 months",
+          "[B] Every 12 months",
+          "[C] Not required (Electric vehicle)"
+        ]
+      }
+    ],
+    "parameters": [
+      {
+        "name": "{{VEHICLE_PROFILES}}",
+        "description": "List of vehicle makes, models, and registration identifiers",
+        "validChoices": "Make/Model, Fuel Type, Year",
+        "defaultFallback": "Household Vehicles"
+      },
+      {
+        "name": "{{SERVICE_INTERVAL_KM_OR_MONTHS}}",
+        "description": "Manufacturer recommended service interval",
+        "validChoices": "10,000 km or 12 months",
+        "defaultFallback": "10,000 km / 12 Months"
+      },
+      {
+        "name": "{{EMISSIONS_RENEWAL_CYCLE}}",
+        "description": "Frequency of mandatory emissions inspections",
+        "validChoices": "Every 6 or 12 months (PUC / Smog test)",
+        "defaultFallback": "Annual Emissions Check"
+      }
+    ],
+    "workflow": [
+      "Vehicle Dossier Maintenance: Organize vehicle registration cards, insurance policies, and authorized road assistance numbers in Google Drive.",
+      "Maintenance Milestone Tracking: Monitor odometer readings against `{{SERVICE_INTERVAL_KM_OR_MONTHS}}` to predict upcoming dealer servicing.",
+      "Proactive Statutory Alerts: Schedule calendar reminders 30 and 7 days prior to emissions certificates (`{{EMISSIONS_RENEWAL_CYCLE}}`) and insurance expirations.",
+      "Job-Card Estimate Audit: Audit dealership service center estimates against official manufacturer manuals, eliminating unnecessary engine flushes and cosmetic add-ons."
+    ],
+    "guardrails": [
+      "Dealership Upselling: Service advisors routinely pad maintenance estimates with unnecessary chemical flushes; adhere strictly to the OEM manual.",
+      "Lapsed Insurance Liability: Driving with expired insurance exposes the owner to severe civil liability and invalidates third-party claims."
+    ]
+  }
+]

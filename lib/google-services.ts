@@ -722,3 +722,34 @@ export async function searchInternet(query: string) {
     return { error: error.message };
   }
 }
+
+export async function shareFile(accessToken: string, fileId: string, role = 'reader', type = 'anyone', emailAddress?: string) {
+  try {
+    const auth = getAuth(accessToken);
+    const drive = google.drive({ version: 'v3', auth });
+    const requestBody: any = { role, type };
+    if (type === 'user' && emailAddress) {
+      requestBody.emailAddress = emailAddress;
+    }
+    await drive.permissions.create({
+      fileId,
+      requestBody,
+      fields: 'id',
+    });
+    const fileRes = await drive.files.get({
+      fileId,
+      fields: 'webViewLink, name',
+    });
+    return {
+      success: true,
+      fileId,
+      name: fileRes.data.name,
+      shareLink: fileRes.data.webViewLink,
+      role,
+      type,
+    };
+  } catch (error: any) {
+    return { error: error.message };
+  }
+}
+

@@ -287,6 +287,20 @@ export const functionDeclarations: FunctionDeclaration[] = [
       required: ['title', 'content'],
     },
   },
+  {
+    name: 'share_file',
+    description: 'Shares a Google Doc, Sheet, or Slide with anyone via link or with a specific user email.',
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        fileId: { type: Type.STRING, description: 'ID of the document, spreadsheet, or presentation' },
+        role: { type: Type.STRING, description: 'Permission role: reader, commenter, or writer' },
+        type: { type: Type.STRING, description: 'Permission type: anyone (public link) or user' },
+        emailAddress: { type: Type.STRING, description: 'Email address if sharing with a specific user' },
+      },
+      required: ['fileId'],
+    },
+  },
 ];
 
 export async function executeFunction(
@@ -431,6 +445,20 @@ export async function executeFunction(
         
         resultData = await googleServices.createTask(accessToken, listId, args.title, args.content);
         action.summary = `Created note: ${args.title}`;
+        break;
+      }
+      case 'share_file': {
+        resultData = await googleServices.shareFile(
+          accessToken,
+          args.fileId,
+          args.role || 'reader',
+          args.type || 'anyone',
+          args.emailAddress
+        );
+        action.summary = resultData.shareLink
+          ? `Shared file: ${resultData.name || args.fileId}`
+          : `Share file: ${args.fileId}`;
+        if (resultData.shareLink) action.link = resultData.shareLink;
         break;
       }
       default:

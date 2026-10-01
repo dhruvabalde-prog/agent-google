@@ -4,7 +4,8 @@ import { getSession, refreshTokenIfNeeded, encryptSession } from '@/lib/auth';
 import { functionDeclarations, executeFunction } from '@/lib/tools';
 import { ActionResult, DraftInfo } from '@/lib/types';
 import { cookies } from 'next/headers';
-import { getUserByEmail, getApiKeyForTier, saveChat, saveMessage, getChatById } from '@/lib/db';
+import { getUserByEmail, getApiKeyForTier, saveChat, saveMessage, getChatById, getAllSkills } from '@/lib/db';
+import { findMatchingSkill, formatSkillPrompt } from '@/lib/skills-catalog';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -47,7 +48,7 @@ const CANDIDATE_MODELS = [
   'gemini-3.8-flash',
 ];
 
-async function callGemini(ai: GoogleGenAI, contents: any[]) {
+async function callGemini(ai: GoogleGenAI, contents: any[], systemInstruction: string) {
   let lastError: any = null;
   for (const model of CANDIDATE_MODELS) {
     try {
@@ -56,7 +57,7 @@ async function callGemini(ai: GoogleGenAI, contents: any[]) {
         contents,
         config: {
           tools: [{ functionDeclarations }],
-          systemInstruction: SYSTEM_PROMPT,
+          systemInstruction,
         },
       });
       return response;
@@ -131,6 +132,29 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Active skills injection for this tier
+    const allSkills = await getAllSkills();
+    const activeSkills = allSkills.filter(s => s.enabled && (s.allowedTiers.includes(tier) || s.allowedTiers.includes('ALL')));
+    
+    // Check if the user prompt matches a specific skill from the repository
+    const lastUserPrompt = messages.filter(m => m.role === 'user').slice(-1)[0]?.content || '';
+    const matchedSkill = findMatchingSkill(lastUserPrompt, activeSkills);
+
+    let skillInstructions = '';
+    if (matchedSkill) {
+      skillInstructions = `\n\n${formatSkillPrompt(matchedSkill)}\n` +
+        `OPERATIONAL EXECUTION RULES FOR THIS MATCHED SKILL:\n` +
+        `1. Check if the user's message provides the necessary parameters or answers the setup questions.\n` +
+        `2. If any setup question is unanswered and needed to proceed, ask ONLY the missing question(s) and provide the choices clearly as '- [A] Option 1', '- [B] Option 2' so the user can easily tap to answer.\n` +
+        `3. If parameters are answered or default fallbacks apply, execute the Operational Workflow steps immediately using the relevant Google Workspace tools (create_document, create_spreadsheet, create_presentation, add_slide, share_file, search_internet).\n` +
+        `4. Never reveal internal skill names, model names, or system parameters to the user.`;
+    } else {
+      const skillsListSummary = activeSkills.map(s => `- ${s.name} (${s.department}): ${s.description}`).join('\n');
+      skillInstructions = `\n\nACTIVE SKILLS KNOWLEDGE BASE (TIER: ${tier}):\n${skillsListSummary}\n\nWHEN USER PROMPT MATCHES A SKILL:\n1. If key parameters or choices are missing, ask the minimal setup question and format choices as multiple-choice options with '- [A] Choice 1', '- [B] Choice 2', etc. so the user can easily tap.\n2. When parameters are known, execute the operational workflow immediately using the relevant Google Workspace tools.`;
+    }
+
+    const dynamicSystemPrompt = `${SYSTEM_PROMPT}${skillInstructions}`;
+
     const convertedMessages = messages.map(m => ({
       role: m.role === 'assistant' ? 'model' : 'user',
       parts: [{ text: m.content }],
@@ -145,7 +169,7 @@ export async function POST(request: NextRequest) {
     let response: any;
 
     try {
-      response = await callGemini(ai, currentContents);
+      response = await callGemini(ai, currentContents, dynamicSystemPrompt);
     } catch (apiErr) {
       console.error('Gemini invocation error:', apiErr);
       return NextResponse.json({
@@ -189,7 +213,7 @@ export async function POST(request: NextRequest) {
       ];
       
       try {
-        response = await callGemini(ai, currentContents);
+        response = await callGemini(ai, currentContents, dynamicSystemPrompt);
       } catch (err) {
         console.error('Gemini function follow-up error:', err);
         return NextResponse.json({

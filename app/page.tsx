@@ -37,12 +37,31 @@ const AGENT_SUGGESTIONS_POOL = [
   'Tip: Confirm the meaningful outcome at the top when you are happy with the draft.',
 ];
 
+function extractOptions(text: string): { label: string; text: string }[] {
+  if (!text) return [];
+  const options: { label: string; text: string }[] = [];
+  const lines = text.split('\n');
+  for (const line of lines) {
+    const trimmed = line.trim();
+    const match = trimmed.match(/^(?:[-*]|\d+\.)?\s*(?:\[([A-Z0-9])\]|\(([A-Z0-9])\))\s*(.+)$/i);
+    if (match) {
+      const key = (match[1] || match[2]).toUpperCase();
+      const val = match[3].trim();
+      options.push({ label: key, text: val });
+    }
+  }
+  return options;
+}
+
 export default function Home() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [progressIndex, setProgressIndex] = useState(0);
   const [user, setUser] = useState<{ email: string; name: string; picture: string } | null>(null);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [isInstallable, setIsInstallable] = useState(false);
+
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [draftStatuses, setDraftStatuses] = useState<Map<string, 'approved' | 'rejected'>>(new Map());
 
@@ -110,6 +129,35 @@ export default function Home() {
     checkAuth();
     setCurrentChatId(crypto.randomUUID());
   }, []);
+
+  // PWA beforeinstallprompt handler
+  useEffect(() => {
+    const handleBeforeInstall = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setIsInstallable(true);
+    };
+    window.addEventListener('beforeinstallprompt', handleBeforeInstall);
+    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
+  }, []);
+
+  const handleInstallApp = async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const choice = await deferredPrompt.userChoice;
+      if (choice?.outcome === 'accepted') {
+        setIsInstallable(false);
+        setDeferredPrompt(null);
+      }
+    } else {
+      alert(
+        'To install Agent Google:\n\n' +
+        '• iPhone/iPad (Safari): Tap the Share icon, then select "Add to Home Screen".\n' +
+        '• Android (Chrome): Tap the three-dot menu ⋮, then select "Install app" or "Add to Home screen".\n' +
+        '• PC/Mac (Chrome/Edge): Click the install icon in the URL bar.'
+      );
+    }
+  };
 
   // Incognito auto-exit on tab change or window blur
   useEffect(() => {
@@ -420,11 +468,13 @@ export default function Home() {
   }
 
   // Auth Handlers
-  const handleLogin = () => { window.location.href = '/api/auth/login'; };
+  const handleLogin = () => { window.location.href = '/connect'; };
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' });
     setUser(null);
     setMessages([]);
+    setAttachedFiles([]);
+    setRecordedAudioUrl(null);
     setIsSettingsOpen(false);
   };
 
@@ -479,68 +529,108 @@ export default function Home() {
           </div>
         )}
 
-        {/* Right: Settings Dropdown */}
-        <div className="relative">
-          <button
-            onClick={() => setIsSettingsOpen(!isSettingsOpen)}
-            className="flex items-center gap-1.5 p-1.5 rounded-lg border border-gray-200 hover:bg-gray-100 text-xs font-medium transition-colors"
-          >
-            {user ? (
-              <img src={user.picture} alt={user.name} className="w-6 h-6 rounded-full" />
-            ) : (
-              <span className="text-gray-600">Settings ▾</span>
-            )}
-          </button>
-
-          {/* Dropdown Menu */}
-          {isSettingsOpen && (
-            <div className="absolute right-0 mt-2 w-52 bg-white border border-gray-200 rounded-xl shadow-xl py-2 z-50 text-xs text-gray-700">
-              {user ? (
-                <>
-                  <div className="px-3 py-2 border-b border-gray-100 font-semibold text-gray-900 truncate">
-                    {user.name}
-                  </div>
-                  <button
-                    onClick={openArchive}
-                    className="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center justify-between"
-                  >
-                    <span>Chats Archive</span>
-                    <span className="text-[10px] text-gray-400">Ctrl+A</span>
-                  </button>
-                  <button
-                    onClick={() => { setIsIncognito(!isIncognito); setIsSettingsOpen(false); }}
-                    className="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center justify-between text-purple-700 font-medium"
-                  >
-                    <span>{isIncognito ? 'Exit Incognito' : 'Incognito Mode'}</span>
-                    <span className="text-[10px]">🔒</span>
-                  </button>
-                  <button
-                    onClick={handleDeleteCurrentChat}
-                    className="w-full text-left px-3 py-2 hover:bg-red-50 text-red-600"
-                  >
-                    Delete Chat
-                  </button>
-                  <div className="border-t border-gray-100 my-1"></div>
-                  <button
-                    onClick={handleLogout}
-                    className="w-full text-left px-3 py-2 hover:bg-gray-100 text-gray-500"
-                  >
-                    Disconnect Google / Sign Out
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button
-                    onClick={handleLogin}
-                    className="w-full text-left px-3 py-2 hover:bg-gray-100 font-semibold text-blue-600"
-                  >
-                    Connect Google Account
-                  </button>
-                </>
-              )}
-            </div>
+        {/* Right: Settings Dropdown & Install Button */}
+        <div className="flex items-center gap-2">
+          {isInstallable && (
+            <button
+              onClick={handleInstallApp}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 border border-blue-200 text-blue-700 text-xs font-semibold hover:bg-blue-100 transition-colors shadow-sm"
+              title="Install Web App"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+              <span>Install App</span>
+            </button>
           )}
+
+          <div className="relative">
+            <button
+              onClick={() => setIsSettingsOpen(!isSettingsOpen)}
+              className="flex items-center gap-1.5 p-1.5 rounded-lg border border-gray-200 hover:bg-gray-100 text-xs font-medium transition-colors"
+            >
+              {user ? (
+                <img src={user.picture} alt={user.name} className="w-6 h-6 rounded-full" />
+              ) : (
+                <span className="text-gray-600">Settings ▾</span>
+              )}
+            </button>
+
+            {/* Dropdown Menu */}
+            {isSettingsOpen && (
+              <div className="absolute right-0 mt-2 w-52 bg-white border border-gray-200 rounded-xl shadow-xl py-2 z-50 text-xs text-gray-700">
+                {user ? (
+                  <>
+                    <div className="px-3 py-2 border-b border-gray-100 font-semibold text-gray-900 truncate">
+                      {user.name}
+                    </div>
+                    <button
+                      onClick={() => { handleInstallApp(); setIsSettingsOpen(false); }}
+                      className="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center justify-between text-blue-600 font-medium"
+                    >
+                      <span className="flex items-center gap-1.5">
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                        <span>Install App</span>
+                      </span>
+                      {isInstallable && <span className="bg-blue-100 text-blue-700 text-[9px] px-1.5 py-0.5 rounded font-bold">READY</span>}
+                    </button>
+                    <button
+                      onClick={openArchive}
+                      className="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center justify-between"
+                    >
+                      <span>Chats Archive</span>
+                      <span className="text-[10px] text-gray-400">Ctrl+A</span>
+                    </button>
+                    <button
+                      onClick={() => { setIsIncognito(!isIncognito); setIsSettingsOpen(false); }}
+                      className="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center justify-between text-purple-700 font-medium"
+                    >
+                      <span>{isIncognito ? 'Exit Incognito' : 'Incognito Mode'}</span>
+                      <span className="text-[10px]">🔒</span>
+                    </button>
+                    <button
+                      onClick={handleDeleteCurrentChat}
+                      className="w-full text-left px-3 py-2 hover:bg-red-50 text-red-600"
+                    >
+                      Delete Chat
+                    </button>
+                    <div className="border-t border-gray-100 my-1"></div>
+                    <button
+                      onClick={handleLogout}
+                      className="w-full text-left px-3 py-2 hover:bg-gray-100 text-gray-500"
+                    >
+                      Disconnect Google / Sign Out
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => { handleInstallApp(); setIsSettingsOpen(false); }}
+                      className="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center justify-between text-blue-600 font-medium"
+                    >
+                      <span className="flex items-center gap-1.5">
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                        <span>Install App</span>
+                      </span>
+                      {isInstallable && <span className="bg-blue-100 text-blue-700 text-[9px] px-1.5 py-0.5 rounded font-bold">READY</span>}
+                    </button>
+                    <button
+                      onClick={handleLogin}
+                      className="w-full text-left px-3 py-2 hover:bg-gray-100 font-semibold text-blue-600"
+                    >
+                      Connect Google Account
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
         </div>
+
       </header>
 
       {/* MESSAGES SCROLL AREA */}
@@ -568,50 +658,74 @@ export default function Home() {
             </div>
           )}
 
-          {messages.map((msg) => (
-            <div
-              key={msg.id}
-              className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}
-            >
-              <div
-                className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
-                  msg.role === 'user'
-                    ? 'bg-blue-600 text-white rounded-br-sm'
-                    : isIncognito
-                    ? 'bg-gray-900 border border-gray-800 text-gray-200 rounded-bl-sm'
-                    : 'bg-white border border-gray-200 text-gray-800 rounded-bl-sm shadow-sm'
-                }`}
-              >
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
-              </div>
+          {messages.map((msg) => {
+            const isAssistant = msg.role === 'assistant';
+            const options = isAssistant ? extractOptions(msg.content) : [];
 
-              {/* Actions Badges */}
-              {msg.actions && msg.actions.length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-1.5 max-w-[85%]">
-                  {msg.actions.map((action, idx) => (
-                    <div
-                      key={idx}
-                      className="flex items-center gap-1.5 py-1 px-2.5 rounded-full border bg-gray-50 border-gray-200 text-[11px] text-gray-600"
-                    >
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                      <span className="font-semibold">{action.tool}:</span>
-                      <span>{action.summary}</span>
-                      {action.link && (
-                        <a
-                          href={action.link}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-blue-600 hover:underline font-semibold ml-1 inline-flex items-center gap-0.5"
-                        >
-                          Open ↗
-                        </a>
-                      )}
-                    </div>
-                  ))}
+            return (
+              <div
+                key={msg.id}
+                className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}
+              >
+                <div
+                  className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
+                    msg.role === 'user'
+                      ? 'bg-blue-600 text-white rounded-br-sm'
+                      : isIncognito
+                      ? 'bg-gray-900 border border-gray-800 text-gray-200 rounded-bl-sm'
+                      : 'bg-white border border-gray-200 text-gray-800 rounded-bl-sm shadow-sm'
+                  }`}
+                >
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
                 </div>
-              )}
-            </div>
-          ))}
+
+                {/* Interactive MCQ Option Buttons */}
+                {options.length > 0 && (
+                  <div className="mt-2.5 flex flex-wrap gap-2 max-w-[85%]">
+                    {options.map((opt, i) => (
+                      <button
+                        key={i}
+                        disabled={isLoading || isChatLocked}
+                        onClick={() => sendMessage(`[${opt.label}] ${opt.text}`)}
+                        className="px-3 py-1.5 rounded-xl border border-blue-200 bg-blue-50/90 hover:bg-blue-100 text-xs font-medium text-blue-900 transition-all shadow-sm flex items-center gap-2 hover:scale-[1.02] active:scale-[0.98]"
+                      >
+                        <span className="w-5 h-5 rounded-md bg-blue-600 text-white flex items-center justify-center font-bold text-[10px] shadow-xs">
+                          {opt.label}
+                        </span>
+                        <span className="text-left">{opt.text}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* Actions Badges */}
+                {msg.actions && msg.actions.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-1.5 max-w-[85%]">
+                    {msg.actions.map((action, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-center gap-1.5 py-1 px-2.5 rounded-full border bg-gray-50 border-gray-200 text-[11px] text-gray-600"
+                      >
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                        <span className="font-semibold">{action.tool}:</span>
+                        <span>{action.summary}</span>
+                        {action.link && (
+                          <a
+                            href={action.link}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-blue-600 hover:underline font-semibold ml-1 inline-flex items-center gap-0.5"
+                          >
+                            Open ↗
+                          </a>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
 
           {/* Long Running Progress Indicator */}
           {isLoading && (
@@ -692,6 +806,18 @@ export default function Home() {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
                   sendMessage();
+                }
+              }}
+              onPaste={(e) => {
+                const text = e.clipboardData.getData('text');
+                if (text && text.length > 500 && attachedFiles.length < 10) {
+                  const titleMatch = text.match(/^#\s+([^\n]+)/);
+                  const fileName = titleMatch ? `${titleMatch[1].slice(0, 20).trim()}.md` : `pasted-content-${Date.now().toString().slice(-4)}.md`;
+                  setAttachedFiles(prev => [...prev.slice(0, 9), {
+                    name: fileName,
+                    size: `${(text.length / 1024).toFixed(1)} KB`,
+                    content: text,
+                  }]);
                 }
               }}
               placeholder={
