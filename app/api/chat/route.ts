@@ -96,16 +96,20 @@ export async function POST(request: NextRequest) {
           pendingDraft = result.draft;
         }
         functionResponses.push({
+          id: fc.id,
           name: fc.name,
           response: result.data,
         });
       }
       
+      // Critical for Gemini Thinking models: preserve the exact model content with thoughtSignature
+      const modelContent = response.candidates?.[0]?.content;
+      
       currentContents = [
         ...currentContents,
-        { 
+        modelContent || { 
           role: 'model', 
-          parts: response.functionCalls.map(fc => ({ functionCall: { name: fc.name!, args: fc.args } })), 
+          parts: response.functionCalls.map(fc => ({ functionCall: { id: fc.id, name: fc.name!, args: fc.args } })), 
         },
         { 
           role: 'user', 
@@ -116,8 +120,17 @@ export async function POST(request: NextRequest) {
       response = await callGemini(ai, currentContents);
     }
 
+    // Extract text, excluding thought parts for clean presentation
+    let finalText = response.text || '';
+    if (!finalText && response.candidates?.[0]?.content?.parts) {
+      finalText = response.candidates[0].content.parts
+        .filter((p: any) => p.text && !p.thought)
+        .map((p: any) => p.text)
+        .join('');
+    }
+
     return NextResponse.json({
-      content: response.text || '',
+      content: finalText,
       actions,
       pendingDraft,
     });
