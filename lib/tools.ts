@@ -346,8 +346,7 @@ export async function executeFunction(
         break;
       case 'add_slide':
         resultData = await googleServices.addSlide(accessToken, args.presentationId, args.title, args.body);
-        action.summary = `Added slide to presentation: ${args.presentationId}`;
-        if (resultData.url) action.link = resultData.url;
+        action.summary = args.title ? `Added slide: "${args.title}"` : 'Added slide';
         break;
       case 'list_task_lists':
         resultData = await googleServices.listTaskLists(accessToken);

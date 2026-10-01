@@ -345,8 +345,9 @@ export async function addSlide(accessToken: string, presentationId: string, titl
     });
     
     return {
+      success: true,
+      slideId,
       presentationId,
-      url: `https://docs.google.com/presentation/d/${presentationId}/edit#slide=id.${slideId}`,
     };
   } catch (error: any) {
     return { error: error.message };
