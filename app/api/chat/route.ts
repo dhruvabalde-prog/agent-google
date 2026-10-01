@@ -69,6 +69,19 @@ async function callGemini(ai: GoogleGenAI, contents: any[]) {
   throw lastError || new Error('All Gemini model candidates failed to respond.');
 }
 
+function formatResponseData(data: any): Record<string, any> {
+  if (data === null || data === undefined) {
+    return { result: 'success' };
+  }
+  if (Array.isArray(data)) {
+    return { results: data };
+  }
+  if (typeof data !== 'object') {
+    return { result: data };
+  }
+  return data;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const session = await getSession();
@@ -117,11 +130,14 @@ export async function POST(request: NextRequest) {
         if (result.draft) {
           pendingDraft = result.draft;
         }
-        functionResponses.push({
-          id: fc.id,
+        const frItem: any = {
           name: fc.name,
-          response: result.data,
-        });
+          response: formatResponseData(result.data),
+        };
+        if (fc.id) {
+          frItem.id = fc.id;
+        }
+        functionResponses.push(frItem);
       }
       
       // Critical for Gemini Thinking models: preserve the exact model content with thoughtSignature
