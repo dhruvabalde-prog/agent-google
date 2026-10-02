@@ -1010,7 +1010,7 @@ export default function AdminPage() {
                     <div className="p-2.5 rounded-lg bg-gray-800/80 border border-gray-700">
                       <span className="text-[10px] text-gray-400 uppercase font-semibold">Gemini AI Model</span>
                       <p className="text-emerald-400 font-bold mt-0.5">{gcpAudit.diagnostics?.geminiAi?.status || 'Active'}</p>
-                      <p className="text-[11px] text-gray-400">Latency: {gcpAudit.diagnostics?.geminiAi?.latencyMs || 0}ms ({gcpAudit.diagnostics?.geminiAi?.model || 'gemini-2.0-flash'})</p>
+                      <p className="text-[11px] text-gray-400">Latency: {gcpAudit.diagnostics?.geminiAi?.latencyMs || 0}ms ({gcpAudit.diagnostics?.geminiAi?.model || 'gemini-3.8-flash'})</p>
                     </div>
 
                     <div className="p-2.5 rounded-lg bg-gray-800/80 border border-gray-700">

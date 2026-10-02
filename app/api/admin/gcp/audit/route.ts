@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
     try {
       const ai = new GoogleGenAI({ apiKey });
       const testRes = await ai.models.generateContent({
-        model: 'gemini-2.0-flash',
+        model: 'gemini-3.8-flash',
         contents: [{ role: 'user', parts: [{ text: 'Ping: reply with "PONG"' }] }],
       });
       geminiLatencyMs = Date.now() - startTime;
@@ -100,7 +100,7 @@ export async function GET(request: NextRequest) {
         status: geminiStatus,
         latencyMs: geminiLatencyMs,
         error: geminiError,
-        model: 'gemini-2.0-flash',
+        model: 'gemini-3.8-flash',
       },
       database: {
         status: dbStatus,

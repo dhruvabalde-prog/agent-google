@@ -96,10 +96,10 @@ export async function POST(request: NextRequest) {
     });
 
     const CANDIDATE_MODELS = [
-      'gemini-2.5-flash',
-      'gemini-2.0-flash',
-      'gemini-1.5-flash',
-      'gemini-2.5-pro'
+      'gemini-3.8-flash',
+      'gemini-3.5-flash',
+      'gemini-flash-latest',
+      'gemini-3.1-flash-lite'
     ];
 
     let reply = '';
