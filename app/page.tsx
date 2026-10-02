@@ -54,6 +54,56 @@ function extractOptions(text: string): { label: string; text: string }[] {
   return options;
 }
 
+function CodeBlock({ children, className }: { children: React.ReactNode; className?: string }) {
+  const [copied, setCopied] = useState(false);
+  const codeText = String(children).replace(/\n$/, '');
+  const match = /language-(\w+)/.exec(className || '');
+  const lang = match ? match[1] : '';
+
+  const handleCopy = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      navigator.clipboard.writeText(codeText);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {}
+  };
+
+  return (
+    <div className="relative my-2.5 rounded-xl overflow-hidden border border-zinc-700/80 bg-zinc-950 font-mono text-xs shadow-md">
+      <div className="flex items-center justify-between px-3 py-1.5 bg-zinc-900/90 border-b border-zinc-800 text-[11px] text-zinc-400">
+        <span className="font-semibold uppercase tracking-wider text-zinc-300">{lang || 'code'}</span>
+        <button
+          onClick={handleCopy}
+          type="button"
+          className="flex items-center gap-1 text-zinc-400 hover:text-white transition-colors"
+          title="Copy code to clipboard"
+        >
+          {copied ? (
+            <>
+              <span className="text-emerald-400 font-bold">✓</span>
+              <span className="text-emerald-400 font-sans text-[10px]">Copied</span>
+            </>
+          ) : (
+            <>
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+              </svg>
+              <span className="font-sans text-[10px]">Copy</span>
+            </>
+          )}
+        </button>
+      </div>
+      <div className="p-3 overflow-x-auto text-zinc-200">
+        <pre className="m-0 p-0 bg-transparent">
+          <code className={className}>{children}</code>
+        </pre>
+      </div>
+    </div>
+  );
+}
+
 export default function Home() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
@@ -62,6 +112,35 @@ export default function Home() {
   const [user, setUser] = useState<{ email: string; name: string; picture: string } | null>(null);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [isInstallable, setIsInstallable] = useState(false);
+
+  // System 1: AbortController for Stop Generation
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  // System 3: Scroll Management & Jump-to-Latest
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const isAtBottomRef = useRef(true);
+  const [showJumpToBottom, setShowJumpToBottom] = useState(false);
+
+  // System 1: Draft persistence in localStorage
+  useEffect(() => {
+    try {
+      const savedDraft = localStorage.getItem('suchi_composer_draft');
+      if (savedDraft && !input) {
+        setInput(savedDraft);
+      }
+    } catch (e) {}
+  }, []);
+
+  const handleComposerInputChange = (val: string) => {
+    setInput(val);
+    try {
+      if (val.trim()) {
+        localStorage.setItem('suchi_composer_draft', val);
+      } else {
+        localStorage.removeItem('suchi_composer_draft');
+      }
+    } catch (e) {}
+  };
 
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [draftStatuses, setDraftStatuses] = useState<Map<string, 'approved' | 'rejected'>>(new Map());
@@ -400,12 +479,27 @@ export default function Home() {
     return () => clearInterval(interval);
   }, [isLoading]);
 
-  // Auto-scroll
+  // Auto-scroll with smart sticky-bottom awareness (System 3)
   useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    const lastMsg = messages[messages.length - 1];
+    if (isAtBottomRef.current || lastMsg?.role === 'user') {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages, isLoading, outcomeStatus]);
+
+  function handleMessagesScroll(e: React.UIEvent<HTMLDivElement>) {
+    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+    const distanceToBottom = scrollHeight - (scrollTop + clientHeight);
+    const atBottom = distanceToBottom < 120;
+    isAtBottomRef.current = atBottom;
+    setShowJumpToBottom(!atBottom && scrollHeight > clientHeight + 150);
+  }
+
+  function handleJumpToBottom() {
+    isAtBottomRef.current = true;
+    setShowJumpToBottom(false);
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }
 
   // Fetch Archive chats
   async function fetchArchiveChats() {
@@ -639,6 +733,9 @@ export default function Home() {
     const newHistory = [...messages, userMessage];
     setMessages(newHistory);
     setInput('');
+    try {
+      localStorage.removeItem('suchi_composer_draft');
+    } catch (e) {}
     setAttachedFiles([]);
     setRecordedAudioUrl(null);
     if (textareaRef.current) textareaRef.current.style.height = 'auto';
@@ -646,15 +743,43 @@ export default function Home() {
     await executeChatWithHistory(newHistory);
   }
 
+  // System 1: Stop Generation Handler
+  function handleStopGeneration() {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    setIsLoading(false);
+    triggerToast('Generation stopped');
+  }
+
+  // System 2: Regenerate Response Handler
+  async function handleRegenerateResponse(assistantMsgId: string) {
+    if (isLoading || isChatLocked) return;
+    const targetIdx = messages.findIndex(m => m.id === assistantMsgId);
+    if (targetIdx === -1) return;
+
+    // Slices history up to the previous user message
+    const priorHistory = messages.slice(0, targetIdx);
+    if (priorHistory.length === 0) return;
+
+    setMessages(priorHistory);
+    await executeChatWithHistory(priorHistory);
+  }
+
   // Core chat execution dispatcher
   async function executeChatWithHistory(chatHistory: ChatMessage[]) {
     setIsLoading(true);
     setProgressIndex(0);
 
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     try {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
         body: JSON.stringify({
           chatId: currentChatId,
           isIncognito,
@@ -682,7 +807,18 @@ export default function Home() {
       if (data.outcomeStatus) {
         setOutcomeStatus(data.outcomeStatus);
       }
-    } catch (err) {
+    } catch (err: any) {
+      if (err.name === 'AbortError') {
+        setMessages([
+          ...chatHistory,
+          {
+            id: crypto.randomUUID(),
+            role: 'assistant',
+            content: '⏹ Response stopped by user.',
+          }
+        ]);
+        return;
+      }
       setMessages([
         ...chatHistory,
         {
@@ -693,6 +829,7 @@ export default function Home() {
       ]);
     } finally {
       setIsLoading(false);
+      abortControllerRef.current = null;
     }
   }
 
@@ -1175,7 +1312,7 @@ export default function Home() {
       </header>
 
       {/* MESSAGES SCROLL AREA */}
-      <main className="flex-1 overflow-y-auto px-4 py-6">
+      <main ref={scrollContainerRef} onScroll={handleMessagesScroll} className="flex-1 overflow-y-auto px-4 py-6">
         <div className="max-w-3xl mx-auto space-y-6">
           {messages.length === 0 && (
             <div className="flex flex-col items-center justify-center min-h-[50vh] text-center px-4">
@@ -1288,9 +1425,34 @@ export default function Home() {
                           : 'bg-white border border-slate-200/90 text-slate-800 rounded-bl-xs shadow-xs'
                       }`}
                     >
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
+                      <ReactMarkdown
+                        remarkPlugins={[remarkGfm]}
+                        components={{
+                          code({ node, inline, className, children, ...props }: any) {
+                            if (!inline) {
+                              return <CodeBlock className={className}>{children}</CodeBlock>;
+                            }
+                            return (
+                              <code className={className} {...props}>
+                                {children}
+                              </code>
+                            );
+                          },
+                          table({ children, ...props }: any) {
+                            return (
+                              <div className="overflow-x-auto my-3 rounded-xl border border-zinc-200 dark:border-zinc-800">
+                                <table className="min-w-full divide-y divide-zinc-200 dark:divide-zinc-800 text-xs" {...props}>
+                                  {children}
+                                </table>
+                              </div>
+                            );
+                          },
+                        }}
+                      >
+                        {msg.content}
+                      </ReactMarkdown>
 
-                      {/* Floating Message Action Buttons (Copy, Edit, TTS, Report) */}
+                      {/* Floating Message Action Buttons (Copy, Edit, TTS, Retry, Report) */}
                       <div className={`mt-2 pt-1.5 flex items-center gap-1 border-t ${
                         isUser
                           ? 'border-white/20 text-white/80'
@@ -1352,6 +1514,21 @@ export default function Home() {
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
                               </svg>
                             )}
+                          </button>
+                        )}
+
+                        {/* Retry / Regenerate Button (For assistant messages) */}
+                        {isAssistant && !isChatLocked && (
+                          <button
+                            onClick={() => handleRegenerateResponse(msg.id)}
+                            disabled={isLoading}
+                            title="Regenerate response"
+                            className="p-1 rounded hover:bg-black/10 dark:hover:bg-white/10 transition-colors inline-flex items-center gap-1 text-[11px] opacity-80 hover:opacity-100 disabled:opacity-40"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                            <span className="text-[10px]">Retry</span>
                           </button>
                         )}
 
@@ -1569,6 +1746,23 @@ export default function Home() {
         </div>
       </main>
 
+      {/* Floating Jump to Latest Button (System 3) */}
+      {showJumpToBottom && (
+        <div className="fixed bottom-24 right-6 sm:right-10 z-20 transition-all">
+          <button
+            type="button"
+            onClick={handleJumpToBottom}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-zinc-900/95 dark:bg-zinc-100 text-white dark:text-zinc-900 text-xs font-semibold shadow-xl border border-zinc-700/50 dark:border-zinc-300 hover:scale-105 active:scale-95 transition-transform"
+            title="Scroll to latest messages"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+            </svg>
+            <span>Jump to latest</span>
+          </button>
+        </div>
+      )}
+
       {/* INPUT BAR */}
       <footer className={`border-t p-2.5 sm:p-3 relative z-10 transition-colors ${
         isDarkMode || isIncognito ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'
@@ -1593,23 +1787,35 @@ export default function Home() {
 
           {/* Attached Files Badges */}
           {attachedFiles.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
-              {attachedFiles.map((file, i) => (
-                <div key={i} className={`flex items-center gap-1.5 px-2 py-0.5 rounded text-xs border ${
-                  isDarkMode ? 'bg-gray-800 border-gray-700 text-gray-200' : 'bg-gray-100 border-gray-200 text-gray-700'
-                }`}>
-                  <svg className="w-3 h-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-                  </svg>
-                  <span className="truncate max-w-[120px]">{file.name}</span>
-                  <button
-                    onClick={() => setAttachedFiles(prev => prev.filter((_, idx) => idx !== i))}
-                    className="text-gray-400 hover:text-red-500"
-                  >
-                    ✕
-                  </button>
-                </div>
-              ))}
+            <div className="flex flex-wrap gap-2 pt-1 pb-0.5">
+              {attachedFiles.map((file, i) => {
+                const isImage = file.content?.startsWith('data:image/') || /\.(png|jpe?g|gif|webp|svg)$/i.test(file.name);
+                return (
+                  <div key={i} className={`group flex items-center gap-2 pl-2 pr-1.5 py-1 rounded-xl text-xs border transition-all ${
+                    isDarkMode ? 'bg-zinc-800/90 border-zinc-700 text-zinc-200' : 'bg-zinc-100 border-zinc-200 text-zinc-800'
+                  }`}>
+                    {isImage && file.content ? (
+                      <img src={file.content} alt={file.name} className="w-5 h-5 rounded object-cover flex-shrink-0 border border-zinc-300 dark:border-zinc-700" />
+                    ) : (
+                      <svg className="w-3.5 h-3.5 text-zinc-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                      </svg>
+                    )}
+                    <div className="flex flex-col min-w-0 pr-1">
+                      <span className="truncate max-w-[130px] font-medium text-[11px] leading-tight">{file.name}</span>
+                      {file.size && <span className="text-[9px] text-zinc-400 leading-tight">{file.size}</span>}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setAttachedFiles(prev => prev.filter((_, idx) => idx !== i))}
+                      className="w-4 h-4 rounded-full flex items-center justify-center text-zinc-400 hover:text-rose-500 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors ml-auto"
+                      title="Remove attachment"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           )}
 
@@ -1665,7 +1871,7 @@ export default function Home() {
                 disabled={isChatLocked || isLoading}
                 value={input}
                 onChange={(e) => {
-                  setInput(e.target.value);
+                  handleComposerInputChange(e.target.value);
                   e.target.style.height = 'auto';
                   e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
                 }}
@@ -1676,6 +1882,27 @@ export default function Home() {
                   }
                 }}
                 onPaste={(e) => {
+                  // Handle image paste from clipboard
+                  const items = e.clipboardData.items;
+                  if (items) {
+                    for (let i = 0; i < items.length; i++) {
+                      if (items[i].type.indexOf('image') !== -1) {
+                        const file = items[i].getAsFile();
+                        if (file && attachedFiles.length < 10) {
+                          const reader = new FileReader();
+                          reader.onload = (uploadEvent) => {
+                            const base64 = uploadEvent.target?.result as string;
+                            setAttachedFiles(prev => [...prev.slice(0, 9), {
+                              name: `pasted-image-${Date.now().toString().slice(-4)}.png`,
+                              size: `${(file.size / 1024).toFixed(1)} KB`,
+                              content: base64,
+                            }]);
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }
+                    }
+                  }
                   const text = e.clipboardData.getData('text');
                   if (text && text.length > 500 && attachedFiles.length < 10) {
                     const titleMatch = text.match(/^#\s+([^\n]+)/);
@@ -1768,12 +1995,21 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Extreme Right: Mic / Send Button (HIGHLIGHTED & PROPERLY SIZED) */}
-            {input.trim() || attachedFiles.length > 0 || recordedAudioUrl ? (
+            {/* Extreme Right: Mic / Send / Stop Button (HIGHLIGHTED & PROPERLY SIZED) */}
+            {isLoading ? (
+              <button
+                type="button"
+                onClick={handleStopGeneration}
+                title="Stop generation"
+                className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-zinc-900 dark:bg-zinc-100 hover:bg-zinc-800 dark:hover:bg-white text-white dark:text-zinc-900 shadow-md transition-all flex-shrink-0 flex items-center justify-center hover:scale-105 active:scale-95 group"
+              >
+                <div className="w-3.5 h-3.5 sm:w-4 sm:h-4 bg-current rounded-xs group-hover:scale-90 transition-transform" />
+              </button>
+            ) : input.trim() || attachedFiles.length > 0 || recordedAudioUrl ? (
               <button
                 type="button"
                 onClick={() => sendMessage()}
-                disabled={isLoading || isChatLocked}
+                disabled={isChatLocked}
                 title="Send message"
                 className={`w-11 h-11 sm:w-12 sm:h-12 rounded-2xl shadow-md transition-all flex-shrink-0 flex items-center justify-center disabled:opacity-50 hover:scale-105 active:scale-95 ${
                   isIncognito
