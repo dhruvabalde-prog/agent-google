@@ -707,6 +707,14 @@ export default function AdminPage() {
             </svg>
             Download App
           </button>
+          <Link
+            href="/admin/sparring"
+            className="text-xs bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-semibold px-3 py-1.5 rounded-lg flex items-center gap-1.5 shadow-sm border border-purple-400/30 transition-all"
+            title="Launch Voice Sparring Lab to Grill Navia"
+          >
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            🎙️ Voice Sparring Lab
+          </Link>
           <Link href="/" className="text-xs bg-gray-700 hover:bg-gray-600 text-white px-3 py-1.5 rounded-lg transition-colors">
             Go to Chat
           </Link>
@@ -769,6 +777,29 @@ export default function AdminPage() {
               <div className="bg-gray-800 border border-gray-700 rounded-xl p-4">
                 <span className="text-xs text-gray-400 uppercase font-semibold">Cloud APIs Enabled</span>
                 <p className="text-2xl font-bold text-white mt-1">{adminData?.stats?.activeApps || 20} / 20</p>
+              </div>
+            </div>
+
+            {/* Voice Sparring Lab Hero Card */}
+            <div className="relative overflow-hidden bg-gradient-to-r from-purple-950/40 via-indigo-950/30 to-gray-900 border border-purple-500/30 rounded-xl p-6 shadow-lg">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <span className="text-xs font-bold text-purple-400 uppercase tracking-wider">Live Voice & Defensibility Lab</span>
+                  </div>
+                  <h2 className="text-lg font-bold text-white">Grill Navia (The Life OS Advocate)</h2>
+                  <p className="text-xs text-gray-300 max-w-2xl leading-relaxed">
+                    Test the existential argument for the Life OS. Challenge Navia by voice or text on security, why Google/Apple won't kill it, why custom prompts fail, and how it delivers a 20x ROI. Navia responds in real-time with steel-trap logic.
+                  </p>
+                </div>
+                <Link
+                  href="/admin/sparring"
+                  className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-semibold text-xs px-5 py-3 rounded-xl shadow-md transition-all whitespace-nowrap self-start sm:self-auto border border-purple-400/40"
+                >
+                  <span>🎙️ Enter Voice Arena</span>
+                  <span>→</span>
+                </Link>
               </div>
             </div>
 
