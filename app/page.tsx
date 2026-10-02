@@ -86,6 +86,8 @@ function CodeBlock({ children, className }: { children: React.ReactNode; classNa
   const codeText = String(children).replace(/\n$/, '');
   const match = /language-(\w+)/.exec(className || '');
   const lang = match ? match[1] : '';
+  const isHtml = lang === 'html' || (codeText.trim().startsWith('<') && (codeText.includes('<div') || codeText.includes('<button') || codeText.includes('<table') || codeText.includes('<!DOCTYPE') || codeText.includes('<html')));
+  const [viewMode, setViewMode] = useState<'code' | 'preview'>(isHtml ? 'preview' : 'code');
 
   const handleCopy = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -97,9 +99,29 @@ function CodeBlock({ children, className }: { children: React.ReactNode; classNa
   };
 
   return (
-    <div className="relative my-2.5 rounded-xl overflow-hidden border border-zinc-700/80 bg-zinc-950 font-mono text-xs shadow-md">
+    <div className="relative my-3 rounded-xl overflow-hidden border border-zinc-700/80 bg-zinc-950 font-mono text-xs shadow-md">
       <div className="flex items-center justify-between px-3 py-1.5 bg-zinc-900/90 border-b border-zinc-800 text-[11px] text-zinc-400">
-        <span className="font-semibold uppercase tracking-wider text-zinc-300">{lang || 'code'}</span>
+        <div className="flex items-center gap-2">
+          <span className="font-semibold uppercase tracking-wider text-zinc-300">{lang || (isHtml ? 'HTML UI' : 'CODE')}</span>
+          {isHtml && (
+            <div className="flex items-center bg-zinc-800 rounded p-0.5 text-[10px]">
+              <button
+                type="button"
+                onClick={() => setViewMode('code')}
+                className={`px-2 py-0.5 rounded font-sans transition-all ${viewMode === 'code' ? 'bg-zinc-700 text-white font-medium' : 'text-zinc-400 hover:text-zinc-200'}`}
+              >
+                Code
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('preview')}
+                className={`px-2 py-0.5 rounded font-sans transition-all flex items-center gap-1 ${viewMode === 'preview' ? 'bg-blue-600 text-white font-medium' : 'text-zinc-400 hover:text-zinc-200'}`}
+              >
+                <span>👁️</span> Live Preview
+              </button>
+            </div>
+          )}
+        </div>
         <button
           onClick={handleCopy}
           type="button"
@@ -122,11 +144,23 @@ function CodeBlock({ children, className }: { children: React.ReactNode; classNa
           )}
         </button>
       </div>
-      <div className="p-3 overflow-x-auto text-zinc-200">
-        <pre className="m-0 p-0 bg-transparent">
-          <code className={className}>{children}</code>
-        </pre>
-      </div>
+
+      {isHtml && viewMode === 'preview' ? (
+        <div className="w-full bg-slate-900 border-t border-zinc-800/80 p-2">
+          <iframe
+            title="HTML UI Preview"
+            srcDoc={`<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><script src="https://cdn.tailwindcss.com"></script><style>body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 12px; color: #f8fafc; background: #0f172a; }</style></head><body>${codeText}</body></html>`}
+            className="w-full h-80 rounded-lg border border-zinc-800 bg-slate-950"
+            sandbox="allow-scripts"
+          />
+        </div>
+      ) : (
+        <div className="p-3 overflow-x-auto text-zinc-200">
+          <pre className="m-0 p-0 bg-transparent">
+            <code className={className}>{children}</code>
+          </pre>
+        </div>
+      )}
     </div>
   );
 }
@@ -144,6 +178,7 @@ export default function Home() {
   const [slot2OutcomeStatus, setSlot2OutcomeStatus] = useState<string>('NONE');
   const [slot1Locked, setSlot1Locked] = useState<boolean>(false);
   const [slot2Locked, setSlot2Locked] = useState<boolean>(false);
+  const [isRestored, setIsRestored] = useState<boolean>(false);
 
   // Active slot proxies
   const messages = activeSlot === 1 ? slot1Messages : slot2Messages;
@@ -477,8 +512,100 @@ export default function Home() {
       }
     }
     checkAuth();
-    setCurrentChatId(crypto.randomUUID());
   }, []);
+
+  // Chat Persistence & Restore: always stay upon reload and scroll directly to the last message sent
+  useEffect(() => {
+    let loadedFromLocal = false;
+    try {
+      const raw = localStorage.getItem('suchi_active_session_v2');
+      if (raw) {
+        const saved = JSON.parse(raw);
+        if (saved && (saved.slot1?.messages?.length > 0 || saved.slot2?.messages?.length > 0)) {
+          if (saved.activeSlot === 1 || saved.activeSlot === 2) {
+            setActiveSlot(saved.activeSlot);
+          }
+          if (saved.slot1) {
+            setSlot1Id(saved.slot1.id || crypto.randomUUID());
+            setSlot1Messages(saved.slot1.messages || []);
+            setSlot1Outcome(saved.slot1.outcome || '');
+            setSlot1OutcomeStatus(saved.slot1.outcomeStatus || 'NONE');
+            setSlot1Locked(Boolean(saved.slot1.locked));
+          }
+          if (saved.slot2) {
+            setSlot2Id(saved.slot2.id || crypto.randomUUID());
+            setSlot2Messages(saved.slot2.messages || []);
+            setSlot2Outcome(saved.slot2.outcome || '');
+            setSlot2OutcomeStatus(saved.slot2.outcomeStatus || 'NONE');
+            setSlot2Locked(Boolean(saved.slot2.locked));
+          }
+          loadedFromLocal = true;
+          setIsRestored(true);
+
+          // Scroll immediately to the last message sent
+          setTimeout(() => {
+            messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
+          }, 80);
+        }
+      }
+    } catch (err) {
+      console.warn('Error reading chat session from localStorage:', err);
+    }
+
+    if (!loadedFromLocal) {
+      const restoreLatestFromDb = async () => {
+        try {
+          const res = await fetch('/api/chats');
+          if (res.ok) {
+            const data = await res.json();
+            if (data.chats && data.chats.length > 0) {
+              const latestChat = data.chats[0];
+              const chatRes = await fetch(`/api/chats/${latestChat.id}`);
+              if (chatRes.ok) {
+                const chatData = await chatRes.json();
+                if (chatData.messages && chatData.messages.length > 0) {
+                  setSlot1Id(latestChat.id);
+                  setSlot1Messages(chatData.messages.map((m: any) => ({
+                    id: m.id,
+                    role: m.role,
+                    content: m.content,
+                    actions: m.actions,
+                  })));
+                  setSlot1Outcome(latestChat.meaningful_outcome || '');
+                  setSlot1OutcomeStatus(latestChat.outcome_status || 'NONE');
+                  setSlot1Locked(Boolean(latestChat.is_locked));
+
+                  setTimeout(() => {
+                    messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
+                  }, 80);
+                }
+              }
+            }
+          }
+        } catch (e) {
+          console.warn('Could not restore chat from DB:', e);
+        } finally {
+          setIsRestored(true);
+        }
+      }
+      restoreLatestFromDb();
+    }
+  }, []);
+
+  // Save session across slots and reloads
+  useEffect(() => {
+    if (!isRestored) return;
+    try {
+      const payload = {
+        activeSlot,
+        slot1: { id: slot1Id, messages: slot1Messages, outcome: slot1Outcome, outcomeStatus: slot1OutcomeStatus, locked: slot1Locked },
+        slot2: { id: slot2Id, messages: slot2Messages, outcome: slot2Outcome, outcomeStatus: slot2OutcomeStatus, locked: slot2Locked },
+      };
+      localStorage.setItem('suchi_active_session_v2', JSON.stringify(payload));
+    } catch (e) {
+      console.warn('Failed to save chat session:', e);
+    }
+  }, [activeSlot, slot1Messages, slot2Messages, slot1Id, slot2Id, slot1Outcome, slot2Outcome, slot1OutcomeStatus, slot2OutcomeStatus, slot1Locked, slot2Locked, isRestored]);
 
   // PWA beforeinstallprompt handler
   useEffect(() => {
@@ -1325,6 +1452,9 @@ export default function Home() {
       }
     }
     setActiveAppTab('suchi');
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
+    }, 60);
   }
 
   // Computed Actions from chat messages + actionCards state
