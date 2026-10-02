@@ -115,7 +115,7 @@ export async function POST(request: NextRequest) {
       case 'BULK_IMPORT_SKILLS':
         const res = await bulkImportSkillsFromMarkdown(payload.markdownContent, payload.mode || 'merge');
         await logAdminAction(session.email, 'BULK_IMPORT_SKILLS', `${res.importedCount} skills`, `Mode: ${payload.mode}`);
-        return NextResponse.json({ success: true, count: res.importedCount });
+        return NextResponse.json({ success: res.importedCount > 0, count: res.importedCount, error: (res as any).error || null });
 
       // API Key Pool Actions
       case 'ADD_API_KEY':

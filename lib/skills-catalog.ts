@@ -132,79 +132,121 @@ export function formatSkillPrompt(skill: SkillDefinition): string {
 }
 
 /**
- * Intelligent Markdown Skill Parser
- * Reads markdown repository files and extracts skill definitions
+ * Intelligent Markdown Skill Parser — Multi-Format
+ * Handles these markdown formats:
+ *   Format A: ## 1. Skill Name           (numbered heading)
+ *   Format B: ### Skill 1: Skill Name    (skill-prefixed heading)
+ *   Format C: ## Skill Name / ### Name   (plain heading, no number)
+ *   Format D: - **Skill Name**: desc     (bullet list)
+ *
+ * Extracts Skill ID, Department, Objective/Description from body content.
+ * Returns EMPTY array on failure — caller decides fallback.
  */
 export function parseSkillsFromMarkdown(markdownText: string): SkillDefinition[] {
+  if (!markdownText || !markdownText.trim()) return [];
+
   const skills: SkillDefinition[] = [];
-  const regex = /##\s+(\d+)\\\.\s+([^\n]+)([\s\S]*?)(?=(?:##\s+\d+\\\.\s+|$))/g;
-  let match;
 
-  while ((match = regex.exec(markdownText)) !== null) {
-    const num = parseInt(match[1], 10);
-    const title = match[2].trim();
-    const body = match[3];
+  // ---- Strategy 1: Split on heading lines (##/### with optional number) ----
+  // Matches: "## 1. Name", "### Skill 1: Name", "## Name", "### Name"
+  const headingPattern = /^(#{2,3})\s+(?:Skill\s+)?(\d+)?[.:\s]*\s*(.+)$/gm;
+  const headings: { index: number; level: number; num: number; title: string }[] = [];
+  let hMatch;
 
-    const nameMatch = body.match(/name:\s*([^\s\n]+)/);
-    const descMatch = body.match(/description:\s*([^\n]+)/);
-    const deptMatch = body.match(/department:\s*([^\n]+)/) || body.match(/\*\*Department\*\*:\s*([^\n]+)/);
-
-    // Setup questions
-    const setupMatch = body.match(/## Setup & Onboarding[\s\S]*?(?=## Configuration Parameters|$)/);
-    const setupText = setupMatch ? setupMatch[0] : '';
-    const qMatches = Array.from(setupText.matchAll(/\d+\.\s+\*\*([^*]+)\*\*([^\n]*)([\s\S]*?)(?=(?:\d+\.\s+\*\*|$))/g));
-    const quickQuestions = qMatches.map(m => {
-      const qTitle = m[1].trim();
-      const qPrompt = m[2].trim();
-      const qRest = m[3];
-      const optMatches = Array.from(qRest.matchAll(/-\s*\\?\[([A-Z0-9])\\?\]\s*([^\n]+)/g));
-      const options = optMatches.map(o => '[' + o[1] + '] ' + o[2].replace(/\\/g, '').trim());
-      return {
-        title: qTitle,
-        prompt: qPrompt,
-        options: options.length > 0 ? options : undefined,
-      };
-    });
-
-    // Parameters
-    const paramMatch = body.match(/## Configuration Parameters[\s\S]*?(?=## Operational Workflow|$)/);
-    const paramText = paramMatch ? paramMatch[0] : '';
-    const paramRows = Array.from(paramText.matchAll(/\|\s*`(\{\{[A-Z0-9_]+\}\})`\s*\|\s*([^|]+)\|\s*([^|]+)\|\s*([^|]+)\|/g));
-    const parameters = paramRows.map(r => ({
-      name: r[1].trim(),
-      description: r[2].trim(),
-      validChoices: r[3].trim(),
-      defaultFallback: r[4].trim(),
-    }));
-
-    // Workflow steps
-    const wfMatch = body.match(/## Operational Workflow[\s\S]*?(?=## Guardrails|$)/);
-    const wfText = wfMatch ? wfMatch[0] : '';
-    const wfSteps = Array.from(wfText.matchAll(/\d+\.\s+\*\*([^*]+)\*\*:\s*([^\n]+)/g)).map(
-      s => s[1].trim() + ': ' + s[2].trim()
-    );
-
-    // Guardrails
-    const grMatch = body.match(/## Guardrails & Gotchas[\s\S]*?(?=---|##|$)/);
-    const grText = grMatch ? grMatch[0] : '';
-    const guardrails = Array.from(grText.matchAll(/-\s+\*\*([^*]+)\*\*:\s*([^\n]+)/g)).map(
-      g => g[1].trim() + ': ' + g[2].trim()
-    );
-
-    skills.push({
-      num,
-      id: nameMatch ? nameMatch[1].trim() : title.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
-      name: title,
-      department: deptMatch ? deptMatch[1].replace(/allowed-tools:.*$/, '').trim() : 'General Operations',
-      description: descMatch ? descMatch[1].replace(/department:.*$/, '').trim() : '',
-      enabled: true,
-      allowedTiers: ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'ADMIN'],
-      quickQuestions,
-      parameters,
-      workflow: wfSteps,
-      guardrails,
+  while ((hMatch = headingPattern.exec(markdownText)) !== null) {
+    const title = hMatch[3].trim();
+    // Skip generic section headings (Part 1, Part 2, Table of Contents, etc.)
+    if (/^part\s+\d/i.test(title) || /^table\s+of/i.test(title) || /^appendix/i.test(title)) continue;
+    headings.push({
+      index: hMatch.index,
+      level: hMatch[1].length,
+      num: hMatch[2] ? parseInt(hMatch[2], 10) : 0,
+      title,
     });
   }
 
-  return skills.length > 0 ? skills : INITIAL_53_SKILLS;
+  // Extract body between consecutive headings
+  for (let i = 0; i < headings.length; i++) {
+    const h = headings[i];
+    const bodyStart = markdownText.indexOf('\n', h.index);
+    const bodyEnd = i + 1 < headings.length ? headings[i + 1].index : markdownText.length;
+    if (bodyStart < 0) continue;
+    const body = markdownText.slice(bodyStart, bodyEnd);
+
+    // Skip headings that are clearly section titles (no skill-like content)
+    const hasSkillMarkers = /\*\*(?:Skill ID|Department|Objective|Description|Tool Calls|Workspace Tool|Delivery)\*\*/i.test(body)
+      || /`[a-z0-9_-]+`/i.test(body)
+      || body.trim().length > 50;
+    if (!hasSkillMarkers && body.trim().length < 30) continue;
+
+    const parsed = extractSkillFromBody(h.title, body, h.num || (i + 1));
+    if (parsed) skills.push(parsed);
+  }
+
+  // ---- Strategy 2: Bullet-list skills (- **Name**: description) ----
+  if (skills.length === 0) {
+    const bulletPattern = /^[-*]\s+\*\*([^*]+)\*\*[:\s]*(.+)$/gm;
+    let bMatch;
+    let bNum = 1;
+    while ((bMatch = bulletPattern.exec(markdownText)) !== null) {
+      const name = bMatch[1].trim();
+      const desc = bMatch[2].trim();
+      if (name.length < 3 || name.length > 120) continue;
+      skills.push({
+        num: bNum,
+        id: name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''),
+        name,
+        department: 'General Operations',
+        description: desc,
+        enabled: true,
+        allowedTiers: ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'ADMIN'],
+      });
+      bNum++;
+    }
+  }
+
+  return skills;
+}
+
+/** Helper: extract a SkillDefinition from a heading title + body block */
+function extractSkillFromBody(title: string, body: string, fallbackNum: number): SkillDefinition | null {
+  // Extract key-value fields from **Key**: Value or * **Key**: Value patterns
+  const kv = (key: string): string => {
+    const patterns = [
+      new RegExp(`\\*\\*${key}\\*\\*\\s*:\\s*(.+)`, 'i'),
+      new RegExp(`${key}\\s*:\\s*\`([^\`]+)\``, 'i'),
+      new RegExp(`${key}\\s*:\\s*(.+)`, 'i'),
+    ];
+    for (const p of patterns) {
+      const m = body.match(p);
+      if (m) return m[1].trim();
+    }
+    return '';
+  };
+
+  const skillId = kv('Skill ID').replace(/`/g, '') || title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  const department = kv('Department') || 'General Operations';
+  const description = kv('Objective') || kv('Description') || '';
+
+  // Extract workflow steps (numbered items with bold prefix)
+  const wfSteps = Array.from(body.matchAll(/\d+\.\s+\*\*([^*]+)\*\*[:\s]*([^\n]+)/g)).map(
+    s => s[1].trim() + ': ' + s[2].trim()
+  );
+
+  // Extract guardrails (bullet items with bold prefix)
+  const guardrails = Array.from(body.matchAll(/-\s+\*\*([^*]+)\*\*[:\s]*([^\n]+)/g))
+    .filter(g => /guard|gotcha|rule|limit|warning|never|always/i.test(g[1] + g[2]))
+    .map(g => g[1].trim() + ': ' + g[2].trim());
+
+  return {
+    num: fallbackNum,
+    id: skillId,
+    name: title,
+    department,
+    description,
+    enabled: true,
+    allowedTiers: ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'ADMIN'],
+    workflow: wfSteps.length > 0 ? wfSteps : undefined,
+    guardrails: guardrails.length > 0 ? guardrails : undefined,
+  };
 }

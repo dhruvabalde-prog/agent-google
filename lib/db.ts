@@ -927,6 +927,11 @@ export async function toggleDepartmentSkills(department: string, enabled: boolea
 
 export async function bulkImportSkillsFromMarkdown(markdownContent: string, mode: 'merge' | 'replace' = 'merge') {
   const parsedSkills = parseSkillsFromMarkdown(markdownContent);
+
+  if (parsedSkills.length === 0) {
+    return { importedCount: 0, error: 'No skills could be parsed from the markdown. Use headings like "## 1. Skill Name" or "### Skill Name" with body content.' };
+  }
+
   if (mode === 'replace') {
     memoryStore.skills.clear();
     if (pool && isPgAvailable) {

@@ -575,7 +575,6 @@ export default function AdminPage() {
     fetchAdminData();
   }
 
-  // Bulk Markdown Import
   async function handleBulkImport() {
     if (!bulkMarkdown.trim()) return;
     setBulkStatus('Importing skills...');
@@ -589,11 +588,15 @@ export default function AdminPage() {
         }),
       });
       const data = await res.json();
-      setBulkStatus(`Successfully imported ${data.count} skills!`);
-      setBulkMarkdown('');
+      if (data.count > 0) {
+        setBulkStatus(`✅ Successfully imported ${data.count} skills!`);
+        setBulkMarkdown('');
+      } else {
+        setBulkStatus(`⚠️ ${data.error || 'No skills found. Use headings like "## 1. Skill Name" or "### Skill Name" with description content below each heading.'}`);
+      }
       fetchAdminData();
     } catch {
-      setBulkStatus('Bulk import failed. Check markdown format.');
+      setBulkStatus('❌ Bulk import failed. Check markdown format.');
     }
   }
 
