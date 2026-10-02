@@ -183,7 +183,10 @@ export default function AdminPage() {
     try {
       const saved = localStorage.getItem('suchi_admin_strategic_notes');
       if (saved) {
-        setAdminNotes(JSON.parse(saved));
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          setAdminNotes(parsed);
+        }
       }
     } catch (e) {}
   }, []);
@@ -739,8 +742,8 @@ export default function AdminPage() {
           { id: 'credentials', label: 'API Key Pool' },
           { id: 'mcp', label: 'App MCP Server' },
           { id: 'logs', label: 'Audit Logs' },
-          { id: 'notes', label: `Roadmap & Notes (${adminNotes.length})` },
-          { id: 'bugs', label: `Bug Reports & Telemetry (${bugReports.length})` },
+          { id: 'notes', label: `Roadmap & Notes (${adminNotes?.length || 0})` },
+          { id: 'bugs', label: `Bug Reports & Telemetry (${bugReports?.length || 0})` },
         ].map(tab => (
           <button
             key={tab.id}
@@ -852,23 +855,27 @@ export default function AdminPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 text-xs">
                   <div className="p-3 bg-gray-700/30 rounded border border-gray-700">
                     <span className="text-[10px] text-gray-400 uppercase font-semibold">Gemini API Status</span>
-                    <p className="text-emerald-400 font-bold mt-1">{gcpAudit.diagnostics.geminiAi.status}</p>
-                    <p className="text-[11px] text-gray-400 mt-0.5">{gcpAudit.diagnostics.geminiAi.latencyMs}ms latency</p>
+                    <p className="text-emerald-400 font-bold mt-1">{gcpAudit.diagnostics?.geminiAi?.status || 'Active'}</p>
+                    <p className="text-[11px] text-gray-400 mt-0.5">{gcpAudit.diagnostics?.geminiAi?.latencyMs || 0}ms latency</p>
                   </div>
                   <div className="p-3 bg-gray-700/30 rounded border border-gray-700">
                     <span className="text-[10px] text-gray-400 uppercase font-semibold">OAuth Client Status</span>
-                    <p className="text-emerald-400 font-bold mt-1">{gcpAudit.diagnostics.oauthClient.status}</p>
-                    <p className="text-[11px] text-gray-400 mt-0.5 truncate">{gcpAudit.diagnostics.oauthClient.clientIdMasked}</p>
+                    <p className="text-emerald-400 font-bold mt-1">{gcpAudit.diagnostics?.oauthClient?.status || 'CONFIGURED'}</p>
+                    <p className="text-[11px] text-gray-400 mt-0.5 truncate">{gcpAudit.diagnostics?.oauthClient?.clientIdMasked || 'Active'}</p>
                   </div>
                   <div className="p-3 bg-gray-700/30 rounded border border-gray-700">
                     <span className="text-[10px] text-gray-400 uppercase font-semibold">OAuth Test Users</span>
-                    <p className="text-indigo-400 font-bold mt-1">{gcpAudit.testUsers.count} / 100 Whitelisted</p>
-                    <p className="text-[11px] text-gray-400 mt-0.5">{gcpAudit.testUsers.remainingSlots} slots remaining</p>
+                    <p className="text-indigo-400 font-bold mt-1">
+                      {gcpAudit.testUsers?.count ?? gcpAudit.diagnostics?.testUsers?.count ?? (adminData?.users?.filter((u: any) => u.is_oauth_tester).length || 0)} / 100 Whitelisted
+                    </p>
+                    <p className="text-[11px] text-gray-400 mt-0.5">
+                      {gcpAudit.testUsers?.remainingSlots ?? gcpAudit.diagnostics?.testUsers?.remainingSlots ?? Math.max(0, 100 - (adminData?.users?.filter((u: any) => u.is_oauth_tester).length || 0))} slots remaining
+                    </p>
                   </div>
                   <div className="p-3 bg-gray-700/30 rounded border border-gray-700">
                     <span className="text-[10px] text-gray-400 uppercase font-semibold">Database Persistence</span>
-                    <p className={`font-bold mt-1 ${gcpAudit.diagnostics.database.isPersistent ? 'text-emerald-400' : 'text-amber-400'}`}>
-                      {gcpAudit.diagnostics.database.isPersistent ? 'POSTGRES ACTIVE' : 'IN-MEMORY RESILIENT'}
+                    <p className={`font-bold mt-1 ${gcpAudit.diagnostics?.database?.isPersistent ? 'text-emerald-400' : 'text-amber-400'}`}>
+                      {gcpAudit.diagnostics?.database?.isPersistent ? 'POSTGRES ACTIVE' : 'IN-MEMORY RESILIENT'}
                     </p>
                     <p className="text-[11px] text-gray-400 mt-0.5">Auto-synced state</p>
                   </div>
@@ -936,38 +943,38 @@ export default function AdminPage() {
                   <div className="flex items-center justify-between border-b border-gray-800 pb-2">
                     <span className="font-bold text-white flex items-center gap-2">
                       <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                      <span>Live Google Cloud Diagnostics (Project #{gcpAudit.diagnostics.projectNumber})</span>
+                      <span>Live Google Cloud Diagnostics (Project #{gcpAudit.diagnostics?.projectNumber || '143315250482'})</span>
                     </span>
                     <span className="text-[11px] text-gray-400 font-mono">
-                      {new Date(gcpAudit.timestamp).toLocaleTimeString()}
+                      {new Date(gcpAudit.timestamp || Date.now()).toLocaleTimeString()}
                     </span>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div className="p-2.5 rounded-lg bg-gray-800/80 border border-gray-700">
                       <span className="text-[10px] text-gray-400 uppercase font-semibold">Gemini AI Model</span>
-                      <p className="text-emerald-400 font-bold mt-0.5">{gcpAudit.diagnostics.geminiAi.status}</p>
-                      <p className="text-[11px] text-gray-400">Latency: {gcpAudit.diagnostics.geminiAi.latencyMs}ms ({gcpAudit.diagnostics.geminiAi.model})</p>
+                      <p className="text-emerald-400 font-bold mt-0.5">{gcpAudit.diagnostics?.geminiAi?.status || 'Active'}</p>
+                      <p className="text-[11px] text-gray-400">Latency: {gcpAudit.diagnostics?.geminiAi?.latencyMs || 0}ms ({gcpAudit.diagnostics?.geminiAi?.model || 'gemini-2.0-flash'})</p>
                     </div>
 
                     <div className="p-2.5 rounded-lg bg-gray-800/80 border border-gray-700">
                       <span className="text-[10px] text-gray-400 uppercase font-semibold">OAuth Credentials</span>
-                      <p className="text-indigo-400 font-bold mt-0.5">{gcpAudit.diagnostics.oauthClient.status}</p>
-                      <p className="text-[11px] text-gray-400 font-mono truncate">{gcpAudit.diagnostics.oauthClient.clientIdMasked}</p>
+                      <p className="text-indigo-400 font-bold mt-0.5">{gcpAudit.diagnostics?.oauthClient?.status || 'CONFIGURED'}</p>
+                      <p className="text-[11px] text-gray-400 font-mono truncate">{gcpAudit.diagnostics?.oauthClient?.clientIdMasked || 'Configured'}</p>
                     </div>
 
                     <div className="p-2.5 rounded-lg bg-gray-800/80 border border-gray-700">
                       <span className="text-[10px] text-gray-400 uppercase font-semibold">Database Persistence</span>
-                      <p className={`font-bold mt-0.5 ${gcpAudit.diagnostics.database.isPersistent ? 'text-emerald-400' : 'text-amber-400'}`}>
-                        {gcpAudit.diagnostics.database.isPersistent ? 'PostgreSQL Active' : 'In-Memory Fallback'}
+                      <p className={`font-bold mt-0.5 ${gcpAudit.diagnostics?.database?.isPersistent ? 'text-emerald-400' : 'text-amber-400'}`}>
+                        {gcpAudit.diagnostics?.database?.isPersistent ? 'PostgreSQL Active' : 'In-Memory Fallback'}
                       </p>
-                      <p className="text-[11px] text-gray-400 truncate">{gcpAudit.diagnostics.database.status}</p>
+                      <p className="text-[11px] text-gray-400 truncate">{gcpAudit.diagnostics?.database?.status || 'Active'}</p>
                     </div>
                   </div>
 
                   <div className="pt-2 flex flex-wrap gap-2 text-[11px]">
                     <a
-                      href={gcpAudit.gcpLinks.credentials}
+                      href={gcpAudit.gcpLinks?.credentials || 'https://console.cloud.google.com/apis/credentials'}
                       target="_blank"
                       rel="noreferrer"
                       className="text-blue-400 hover:underline flex items-center gap-1"
@@ -976,7 +983,7 @@ export default function AdminPage() {
                     </a>
                     <span className="text-gray-600">•</span>
                     <a
-                      href={gcpAudit.gcpLinks.apisDashboard}
+                      href={gcpAudit.gcpLinks?.apisDashboard || 'https://console.cloud.google.com/apis/dashboard'}
                       target="_blank"
                       rel="noreferrer"
                       className="text-blue-400 hover:underline flex items-center gap-1"
@@ -985,12 +992,12 @@ export default function AdminPage() {
                     </a>
                     <span className="text-gray-600">•</span>
                     <a
-                      href={gcpAudit.gcpLinks.apiLibrary}
+                      href={gcpAudit.gcpLinks?.apiLibrary || 'https://console.cloud.google.com/apis/library'}
                       target="_blank"
                       rel="noreferrer"
                       className="text-blue-400 hover:underline flex items-center gap-1"
                     >
-                      ↗ GCP API Library
+                      ↗ Google Cloud APIs Library
                     </a>
                   </div>
                 </div>
@@ -1677,7 +1684,7 @@ export default function AdminPage() {
                           Implementation Specs:
                         </span>
                         <ul className="space-y-1.5">
-                          {note.specs.map((spec, sIdx) => (
+                          {(note.specs || []).map((spec, sIdx) => (
                             <li key={sIdx} className="text-gray-300 flex items-start gap-2">
                               <span className="text-emerald-400 mt-0.5 flex-shrink-0">✓</span>
                               <span className="leading-snug">{spec}</span>

@@ -78,6 +78,14 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     timestamp: new Date().toISOString(),
     gcpLinks,
+    testUsers: {
+      publishingStatus: 'Testing (Up to 100 users allowed)',
+      count: testUsers.length,
+      maxAllowed: 100,
+      remainingSlots: Math.max(0, 100 - testUsers.length),
+      commaSeparatedTesters,
+      emails: testUserEmails,
+    },
     diagnostics: {
       projectNumber,
       oauthClient: {
@@ -102,6 +110,7 @@ export async function GET(request: NextRequest) {
         publishingStatus: 'Testing (Up to 100 users allowed)',
         count: testUsers.length,
         maxAllowed: 100,
+        remainingSlots: Math.max(0, 100 - testUsers.length),
         commaSeparatedTesters,
         emails: testUserEmails,
       },
