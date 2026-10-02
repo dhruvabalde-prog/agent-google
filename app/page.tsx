@@ -8,7 +8,7 @@ import { ChatMessage, ActionResult, DraftInfo } from '@/lib/types';
 import ActionCardsDeck, { ActionCardItem } from '@/components/ActionCardsDeck';
 import MyDayView, { CalendarEvent, TaskItem, GoalItem } from '@/components/MyDayView';
 import ActionsDeckView, { ActionDeckItem } from '@/components/ActionsDeckView';
-import SuchiLiveVoiceModal from '@/components/SuchiLiveVoiceModal';
+
 import { RoutineItem } from '@/components/RoutinePlayerModal';
 
 interface ArchiveChat {
@@ -207,8 +207,9 @@ export default function Home() {
     else setSlot2Locked(l);
   };
 
-  // Live Voice & Dynamic Capabilities
-  const [isLiveVoiceOpen, setIsLiveVoiceOpen] = useState(false);
+  // Voice Typing (Speech-to-Text dictation)
+  const [isVoiceTyping, setIsVoiceTyping] = useState(false);
+  const speechRecognitionRef = useRef<any>(null);
   const [welcomeCapabilities, setWelcomeCapabilities] = useState<string[]>([]);
 
   useEffect(() => {
@@ -892,6 +893,65 @@ export default function Home() {
     });
   }
 
+  // Voice Typing — Speech-to-Text using Web Speech API
+  function toggleVoiceTyping() {
+    if (isVoiceTyping) {
+      // Stop
+      if (speechRecognitionRef.current) {
+        speechRecognitionRef.current.stop();
+      }
+      setIsVoiceTyping(false);
+      return;
+    }
+
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert('Speech recognition is not supported in this browser. Try Chrome or Edge.');
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = 'en-US';
+
+    let finalTranscript = input; // preserve existing text in the input
+
+    recognition.onresult = (event: any) => {
+      let interim = '';
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const t = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          finalTranscript += (finalTranscript ? ' ' : '') + t;
+        } else {
+          interim += t;
+        }
+      }
+      setInput(finalTranscript + (interim ? ' ' + interim : ''));
+      // Auto-grow textarea
+      if (textareaRef.current) {
+        textareaRef.current.style.height = 'auto';
+        textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 120) + 'px';
+      }
+    };
+
+    recognition.onerror = (event: any) => {
+      console.error('Speech recognition error:', event.error);
+      if (event.error === 'not-allowed') {
+        alert('Microphone permission denied. Please allow microphone access.');
+      }
+      setIsVoiceTyping(false);
+    };
+
+    recognition.onend = () => {
+      setIsVoiceTyping(false);
+    };
+
+    recognition.start();
+    speechRecognitionRef.current = recognition;
+    setIsVoiceTyping(true);
+  }
+
   // Audio Recording (First tap start, second tap stop)
   async function toggleAudioRecording() {
     if (isRecording) {
@@ -1367,46 +1427,7 @@ export default function Home() {
     }
   }
 
-  // Live Voice Message Processing (Calls Suchi, Strictly Female Voice)
-  async function handleVoiceUserMessage(text: string): Promise<string> {
-    if (!text.trim()) return '';
 
-    const userMessage: ChatMessage = {
-      id: crypto.randomUUID(),
-      role: 'user',
-      content: text.trim(),
-    };
-
-    setMessages(prev => [...prev, userMessage]);
-
-    try {
-      const res = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: [...messages, userMessage].map(m => ({ role: m.role, content: m.content })),
-          isIncognito,
-        }),
-      });
-
-      if (!res.ok) throw new Error('Voice chat failed');
-      const data = await res.json();
-
-      const assistantMessage: ChatMessage = {
-        id: crypto.randomUUID(),
-        role: 'assistant',
-        content: data.content,
-        actions: data.actions,
-        pendingDraft: data.pendingDraft,
-      };
-
-      setMessages(prev => [...prev, assistantMessage]);
-      return data.content || "Suchi here. I've taken care of that for you.";
-    } catch (e) {
-      console.error('Voice chat error:', e);
-      return "Suchi here. I encountered an issue connecting. Please try again.";
-    }
-  }
 
   // Take Context to New Chat (Attached as .md)
   function handleTakeContextToNewChat() {
@@ -2688,14 +2709,14 @@ export default function Home() {
               )}
             </div>
 
-            {/* Mic Button OUTSIDE of the input bar (Gemini Live Mode) */}
+            {/* Mic Button — Voice Typing (Speech-to-Text) */}
             <button
               type="button"
-              onClick={() => setIsLiveVoiceOpen(true)}
+              onClick={toggleVoiceTyping}
               disabled={isChatLocked}
-              title="Talk Live with Suchi (Gemini Live Voice Mode)"
+              title={isVoiceTyping ? 'Stop voice typing' : 'Voice typing — tap to speak'}
               className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 transition-all shadow-sm hover:scale-105 active:scale-95 disabled:opacity-40 ${
-                isLiveVoiceOpen
+                isVoiceTyping
                   ? 'bg-rose-500 text-white animate-pulse'
                   : isIncognito
                   ? 'bg-purple-600 hover:bg-purple-500 text-white'
@@ -2711,13 +2732,6 @@ export default function Home() {
       </footer>
       )}
 
-      {/* GEMINI LIVE VOICE MODAL (Strictly female voice, continuous dialogue, auto-saved to chat) */}
-      <SuchiLiveVoiceModal
-        isOpen={isLiveVoiceOpen}
-        onClose={() => setIsLiveVoiceOpen(false)}
-        onUserMessage={handleVoiceUserMessage}
-        isDarkMode={isDarkMode}
-      />
 
       {/* BOTTOM FOOTER NAVIGATION TABS (From Left to Right: My Day, Suchi, Actions) */}
       <nav className={`h-14 sm:h-16 border-t px-6 flex items-center justify-around z-20 flex-shrink-0 transition-colors ${
