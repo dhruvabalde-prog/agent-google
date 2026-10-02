@@ -1,7 +1,7 @@
 import { Pool } from 'pg';
 import bcrypt from 'bcryptjs';
 import { encryptData, decryptData } from './crypto';
-import { INITIAL_53_SKILLS, INITIAL_SUBSCRIPTION_TIERS, SubscriptionTier, SkillDefinition, parseSkillsFromMarkdown } from './skills-catalog';
+import { CORE_MASTER_SKILLS, INITIAL_SUBSCRIPTION_TIERS, SubscriptionTier, SkillDefinition, parseSkillsFromMarkdown } from './skills-catalog';
 
 // Super Admin seed configuration
 export const SUPER_ADMIN_EMAILS = [
@@ -277,8 +277,8 @@ export const INITIAL_CLOUD_APPS: CloudAppIntegration[] = [
   },
 ];
 
-// Seed all 53 skills
-INITIAL_53_SKILLS.forEach(s => memoryStore.skills.set(s.id, s));
+// Seed all 17 Core Master Skills
+CORE_MASTER_SKILLS.forEach(s => memoryStore.skills.set(s.id, s));
 
 // Seed default subscription tiers
 INITIAL_SUBSCRIPTION_TIERS.forEach(t => memoryStore.tiers.set(t.id, t));
@@ -386,8 +386,16 @@ export async function initDb() {
           department TEXT NOT NULL,
           description TEXT,
           enabled BOOLEAN DEFAULT TRUE,
-          allowed_tiers TEXT[] DEFAULT ARRAY['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'ADMIN']
+          allowed_tiers TEXT[] DEFAULT ARRAY['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'ADMIN'],
+          quick_questions JSONB,
+          parameters JSONB,
+          workflow TEXT[],
+          guardrails TEXT[]
         );
+        ALTER TABLE skills ADD COLUMN IF NOT EXISTS quick_questions JSONB;
+        ALTER TABLE skills ADD COLUMN IF NOT EXISTS parameters JSONB;
+        ALTER TABLE skills ADD COLUMN IF NOT EXISTS workflow TEXT[];
+        ALTER TABLE skills ADD COLUMN IF NOT EXISTS guardrails TEXT[];
 
         CREATE TABLE IF NOT EXISTS api_keys (
           id TEXT PRIMARY KEY,
@@ -851,7 +859,26 @@ export async function getAllSkills(): Promise<SkillDefinition[]> {
   if (pool && isPgAvailable) {
     try {
       const res = await pool.query('SELECT * FROM skills ORDER BY department ASC, name ASC');
-      if (res.rows.length > 0) return res.rows;
+      if (res.rows.length > 0) {
+        return res.rows.map(r => ({
+          id: r.id,
+          name: r.name,
+          department: r.department,
+          description: r.description || '',
+          enabled: r.enabled ?? true,
+          allowedTiers: r.allowed_tiers || r.allowedTiers || ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'ADMIN'],
+          quickQuestions: r.quick_questions || r.quickQuestions,
+          parameters: r.parameters,
+          workflow: r.workflow,
+          guardrails: r.guardrails,
+        }));
+      } else {
+        // Auto-seed CORE_MASTER_SKILLS directly into PostgreSQL
+        for (const s of CORE_MASTER_SKILLS) {
+          await saveSkill(s);
+        }
+        return CORE_MASTER_SKILLS;
+      }
     } catch (e) {
       console.warn('PG error in getAllSkills:', e);
     }
@@ -864,15 +891,30 @@ export async function saveSkill(skill: SkillDefinition) {
   if (pool && isPgAvailable) {
     try {
       await pool.query(`
-        INSERT INTO skills (id, name, department, description, enabled, allowed_tiers)
-        VALUES ($1, $2, $3, $4, $5, $6)
+        INSERT INTO skills (id, name, department, description, enabled, allowed_tiers, quick_questions, parameters, workflow, guardrails)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
         ON CONFLICT (id) DO UPDATE SET
           name = EXCLUDED.name,
           department = EXCLUDED.department,
           description = EXCLUDED.description,
           enabled = EXCLUDED.enabled,
-          allowed_tiers = EXCLUDED.allowed_tiers
-      `, [skill.id, skill.name, skill.department, skill.description || '', skill.enabled, skill.allowedTiers || ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'ADMIN']]);
+          allowed_tiers = EXCLUDED.allowed_tiers,
+          quick_questions = EXCLUDED.quick_questions,
+          parameters = EXCLUDED.parameters,
+          workflow = EXCLUDED.workflow,
+          guardrails = EXCLUDED.guardrails
+      `, [
+        skill.id,
+        skill.name,
+        skill.department,
+        skill.description || '',
+        skill.enabled,
+        skill.allowedTiers || ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'ADMIN'],
+        skill.quickQuestions ? JSON.stringify(skill.quickQuestions) : null,
+        skill.parameters ? JSON.stringify(skill.parameters) : null,
+        skill.workflow || null,
+        skill.guardrails || null,
+      ]);
     } catch (e) {
       console.warn('PG error in saveSkill:', e);
     }

@@ -5,7 +5,7 @@ import { functionDeclarations, executeFunction } from '@/lib/tools';
 import { ActionResult, DraftInfo } from '@/lib/types';
 import { cookies } from 'next/headers';
 import { getUserByEmail, getApiKeyForTier, saveChat, saveMessage, getChatById, getAllSkills } from '@/lib/db';
-import { findMatchingSkill, formatSkillPrompt } from '@/lib/skills-catalog';
+import { findMatchingSkills, findMatchingSkill, formatSkillPrompt } from '@/lib/skills-catalog';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -81,7 +81,19 @@ CORE OPERATING PRINCIPLES:
     **Key Findings & Quantitative Data**: Specific numbers, percentages, dates, and empirical metrics.
     **Comparative Evidence Matrix**: High-signal table comparing alternatives, benchmarks, or historical data.
     **Trusted Legit Sources & Citations**: Direct markdown links with institutional credibility notes (e.g. "[arXiv:2403.05530](url) - Peer-reviewed preprint").
-    **Actionable Tactical Roadmap**: Concrete next steps or implementation guidelines.`;
+    **Actionable Tactical Roadmap**: Concrete next steps or implementation guidelines.
+
+9. GOOGLE WORKSPACE EXCELLENCE (DOCS, SHEETS, SLIDES, FORMS, KEEP NOTES):
+- Google Docs: Human-grade typography and flow. Must feature a bold executive summary, structured numbered headers, data tables, and actionable conclusion. Strictly zero robotic clichés.
+- Google Sheets: Always use standardized bold uppercase headers and include active automated formulas (SUM, AVERAGE, IF, VLOOKUP, percentages) so the spreadsheet is dynamic, easy to scan, and never flat.
+- Google Slides: High visual rhythm, one bold idea per slide, maximum 3-4 high-density bullets, and strictly enforce the Single Master Link Rule.
+- Google Keep Notes: Smart checklists with bracketed boxes (- [ ] Task) for sprint lists, groceries, packing, or rapid meeting takeaways.
+- Google Forms: Logical question grouping (MULTIPLE_CHOICE, CHECKBOX, TEXT) for feedback loops and intake.
+
+10. PROACTIVE GMAIL & DRIVE CONTEXT SCANNING & TASK EXTRACTION:
+- Whenever the user references incoming emails, past projects, client deliverables, or files, search Drive and Gmail proactively via list_emails, read_email, or list_documents before asking questions.
+- Extract actionable commitments into tasks for Suchi and tasks for the user.
+- Always observe the draft-and-approve protocol for email drafts.`;
 
 const CANDIDATE_MODELS = [
   'gemini-3.8-flash',
@@ -175,28 +187,55 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Real-Time System Date & Temporal Anchor (Definitive Ground Truth)
+    const now = new Date();
+    const formattedDate = now.toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      timeZone: 'Asia/Kolkata',
+    });
+    const formattedTime = now.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true,
+      timeZone: 'Asia/Kolkata',
+    });
+    const isoTimestamp = now.toISOString();
+
+    const temporalAnchor = `\n\nTEMPORAL ANCHOR & SYSTEM CLOCK (MANDATORY TRUTH):\n` +
+      `- Live Current Date: ${formattedDate}\n` +
+      `- Live Current Time: ${formattedTime} (IST / UTC+5:30)\n` +
+      `- Year: ${now.getFullYear()}\n` +
+      `- ISO Timestamp: ${isoTimestamp}\n` +
+      `- RULE: You must ALWAYS anchor all calendar events, task deadlines, time estimates, schedules, and date discussions to this exact date (${formattedDate}). Never assume an older training cutoff year like 2023 or 2024. Today is ${formattedDate}.\n`;
+
     // Active skills injection for this tier
     const allSkills = await getAllSkills();
-    const activeSkills = allSkills.filter(s => s.enabled && (s.allowedTiers.includes(tier) || s.allowedTiers.includes('ALL')));
+    const activeSkills = allSkills.filter(s => s.enabled && ((s.allowedTiers && s.allowedTiers.includes(tier)) || (s.allowedTiers && s.allowedTiers.includes('ALL'))));
     
-    // Check if the user prompt matches a specific skill from the repository
+    // Multi-Skill Matching: Match all relevant skills to allow sequential chaining
     const lastUserPrompt = messages.filter(m => m.role === 'user').slice(-1)[0]?.content || '';
-    const matchedSkill = findMatchingSkill(lastUserPrompt, activeSkills);
+    const matchedSkills = findMatchingSkills(lastUserPrompt, activeSkills);
 
     let skillInstructions = '';
-    if (matchedSkill) {
-      skillInstructions = `\n\n${formatSkillPrompt(matchedSkill)}\n` +
-        `OPERATIONAL EXECUTION RULES FOR THIS MATCHED SKILL:\n` +
-        `1. Check if the user's message provides the necessary parameters or answers the setup questions.\n` +
-        `2. If any setup question is unanswered and needed to proceed, ask ONLY the missing question(s) and provide the choices clearly as '- [A] Option 1', '- [B] Option 2' so the user can easily tap to answer.\n` +
-        `3. If parameters are answered or default fallbacks apply, execute the Operational Workflow steps immediately using the relevant Google Workspace tools (create_document, create_spreadsheet, create_presentation, add_slide, share_file, search_internet).\n` +
-        `4. Never reveal internal skill names, model names, or system parameters to the user.`;
+    if (matchedSkills.length > 0) {
+      const skillsBlocks = matchedSkills.map((s, idx) => `[PIPELINE STEP ${idx + 1}: ${s.name}]\n${formatSkillPrompt(s)}`).join('\n\n');
+      skillInstructions = `\n\nACTIVE EXECUTION PIPELINE (${matchedSkills.length} SKILL${matchedSkills.length > 1 ? 'S' : ''} CHAINED):\n` +
+        `${skillsBlocks}\n\n` +
+        `MULTI-SKILL CHAINING & OPERATIONAL EXECUTION DIRECTIVE:\n` +
+        `1. Execute the necessary steps across all matched skills in logical sequence (e.g. Scan Gmail/Drive -> Model Sheet -> Draft Doc -> Create Tasks -> Schedule Calendar).\n` +
+        `2. If critical parameters are missing and cannot be inferred, ask at most 1-2 rapid clarifying questions formatted strictly as multiple-choice options with '- [A] Choice 1', '- [B] Choice 2' so the user can easily tap.\n` +
+        `3. When executing Workspace actions, maintain high production standards: human-written text for Docs, uppercase headers and automated formulas for Sheets, high visual rhythm and Single Master Link for Slides, and structured checklists for Keep Notes.\n` +
+        `4. Never reveal internal skill names, function declarations, or technical plumbing to the user. Deliver a concise executive confirmation with direct links.`;
     } else {
       const skillsListSummary = activeSkills.map(s => `- ${s.name} (${s.department}): ${s.description}`).join('\n');
-      skillInstructions = `\n\nACTIVE SKILLS KNOWLEDGE BASE (TIER: ${tier}):\n${skillsListSummary}\n\nWHEN USER PROMPT MATCHES A SKILL:\n1. If key parameters or choices are missing, ask the minimal setup question and format choices as multiple-choice options with '- [A] Choice 1', '- [B] Choice 2', etc. so the user can easily tap.\n2. When parameters are known, execute the operational workflow immediately using the relevant Google Workspace tools.`;
+      skillInstructions = `\n\nACTIVE SKILLS KNOWLEDGE BASE (TIER: ${tier}):\n${skillsListSummary}\n\nOPERATIONAL RULES:\n1. If key parameters are needed, ask a concise clarifying question with '- [A] Choice 1', '- [B] Choice 2'.\n2. Execute all relevant Google Workspace tool calls autonomously to produce high-standard deliverables.\n3. Always link completed artifacts with a single direct master link.`;
     }
 
-    const dynamicSystemPrompt = `${SYSTEM_PROMPT}${skillInstructions}`;
+    const dynamicSystemPrompt = `${SYSTEM_PROMPT}${temporalAnchor}${skillInstructions}`;
 
     const convertedMessages = messages.map(m => ({
       role: m.role === 'assistant' ? 'model' : 'user',
