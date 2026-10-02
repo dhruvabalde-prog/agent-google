@@ -209,8 +209,85 @@ A clean, rich visual card delivered to the nearest screen (phone notification or
 
 ---
 
+## Part 7: Future Architectural Roadmap: Autonomous Scheduling & Smart Home Bridge
+
+### 1. The Autonomous Schedules & Recurring Automations Engine
+The next operational leap transforms Navia from an on-demand assistant into a **proactive 24/7 background operator**. 
+
+```
+                                [ SCHEDULE TRIGGER ENGINE ]
+                User defines exact frequency: Daily 7:30 AM, Hourly,
+                Weekly Business Review, or Event-Driven Heartbeats
+                                         │
+                                         ▼
+                               [ TIER GATEWAY & LIMITS ]
+                 Evaluates user subscription tier & execution quotas
+                                         │
+                   ┌─────────────────────┴─────────────────────┐
+                   ▼                                           ▼
+          [ Standard Tiers ]                         [ Executive Tiers ]
+          • Starter: 3 active automations            • Pro: 15 active automations
+          • Basic inbox & calendar triage            • Founder/Team: Unlimited automations
+          • Standard daily summary                   • Multi-step research & Sheet sync
+                                         │
+                                         ▼
+                         [ AUTONOMOUS BACKGROUND DAEMON ]
+             Silently executes skills without human presence, updates
+             living ledgers, and delivers unified Action Cards to user.
+```
+
+#### Tiered Automation Limits & Skill Gating Matrix:
+* **Starter Tier (\$29/mo)**:
+  * Maximum 3 active scheduled automations.
+  * Supported skills: Daily Morning Brief, Basic Calendar Conflict Check, End-of-Day Task Reconciliation.
+  * Frequency options: Daily at fixed morning hour.
+* **Pro Executive Tier (\$49/mo)**:
+  * Maximum 15 active scheduled automations.
+  * Supported skills: All Starter skills + Multi-Account Air-Gap Sync, Deep Vendor Invoice Scans, Weekly Goal & Milestones Audit, Automated Lead & Follow-Up Reminders.
+  * Frequency options: Daily, Twice-daily, Custom hourly intervals, Weekend family digest.
+* **Founder & Team Tier (\$149/mo)**:
+  * **Unlimited** active scheduled automations.
+  * Supported skills: All Pro skills + Cross-Departmental Status Tracking, Automated Google Sheets/Excel KPI Updates, Investor Brief Compilation, Emergency Outage Monitoring.
+  * Frequency options: High-frequency continuous polling, event-driven webhooks, custom cron rules.
+
+---
+
+### 2. Universal Smart Home & Speaker Ecosystem Bridge
+Extending the reach of the autonomous operating system beyond the screen and into the **physical environment** via ambient voice hardware and IoT protocols.
+
+```
+                           [ NAVIA / AGENT CORE ]
+                                     │
+           ┌─────────────────────────┼─────────────────────────┐
+           ▼                         ▼                         ▼
+   [ Amazon Alexa ]          [ Google Home / Nest ]     [ Apple HomePod ]
+   Custom Alexa Skill        Google Actions SDK         HomeKit / Siri Shortcut
+   • Morning audio brief     • Ambient speaker chimes   • Voice-triggered scenes
+   • Hands-free dictation    • Broadcast reminders      • Intercom integration
+                                     │
+                                     ▼
+                     [ UNIVERSAL MATTER & THREAD BRIDGE ]
+           Direct, vendor-agnostic control over local hardware:
+           • Philips Hue / Smart Lighting: Auto-dims during deep work sprints
+           • Smart Thermostats (Nest/Ecobee): Pre-sets focus temperatures
+           • Smart Locks & Shades: Automated evening lockdown routines
+           • Home Assistant & Tuya: Secure local encrypted webhook triggers
+```
+
+#### Key Capabilities of the Smart Home Bridge:
+1. **In-App Device Control**: Users manage and trigger their smart home routines directly inside the Navia chat and action interface without switching between separate Google Home or Alexa apps.
+2. **Context-Aware Environmental Adaptation**: 
+   * When Navia schedules a **2-hour Deep Work sprint**, it automatically dims ambient lights, sets the thermostat, and silences non-urgent speaker notifications.
+   * At **7:00 AM**, Navia broadcasts the morning briefing directly through the bedroom or kitchen speaker with a gentle chime.
+3. **Hands-Free Ambient Wake Command**:
+   * Works through your existing smart speakers: *"Alexa, ask Navia for my daily conflict brief"* or *"Hey Google, tell Navia to reschedule my afternoon."*
+4. **Zero-Audio Hardware Privacy**:
+   * Uses local Matter and Thread protocols wherever possible to ensure smart home command payloads remain local, encrypted, and free from third-party advertising tracking.
+
+---
+
 ## Conclusion & Guiding North Star
 
-1. **Keep the software sovereign**: Own the context, reasoning, and execution layers across Google Workspace and Microsoft 365.
-2. **Resist hardware distractions**: Let consumer electronics giants build the glass and batteries; Agent provides the intelligence.
-3. **Anchor in one operational vertical**: Start with logistics or clean energy operations, secure 3 reference customers, establish high-margin cash flow, and expand horizontally.
+1. **Keep the software sovereign**: Own the context, reasoning, and execution layers across Google Workspace, Microsoft 365, and ambient smart devices.
+2. **Resist hardware manufacturing**: Let Amazon, Apple, and Google spend billions on smart speakers and screens; Navia acts as the sovereign intelligence that controls them all.
+3. **Monetize via Autonomous Leverage**: Tie subscription tiers directly to automation capacity and high-value background skills.

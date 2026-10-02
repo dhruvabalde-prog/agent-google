@@ -63,6 +63,22 @@ const DEFAULT_ADMIN_NOTES: AdminNoteItem[] = [
     status: 'Architecture Ready',
     priority: 'CRITICAL',
     updatedAt: '2026-10-02'
+  },
+  {
+    id: 'note-tiered-automations-and-schedules',
+    category: 'Roadmap',
+    title: 'Autonomous Recurring Automations, Schedules & Tiered Quotas',
+    details: 'User-configured automation schedules (daily, hourly, cron heartbeats) with subscription tier limits on active automations and gated skill access.',
+    specs: [
+      'User-configurable frequency: choose daily morning hours (e.g. 7:30 AM), hourly monitors, weekly reviews, or event-driven webhook triggers.',
+      'Subscription tier quotas: Starter (max 3 automations), Pro Executive (max 15 automations), Founder/Team (unlimited automations).',
+      'Skill gating: basic email/calendar triage on Starter; advanced deep-research, sheets sync, and cross-account air-gap skills reserved for Pro & Team tiers.',
+      'Background daemon: executes unattended cron jobs, updates Google Sheets/Excel ledgers, and delivers 1-tap actionable approval cards.',
+      'Audit & logs: every automated execution is timestamped and logged with status tracking in the user settings and admin console.'
+    ],
+    status: 'Planned',
+    priority: 'HIGH',
+    updatedAt: '2026-10-02'
   }
 ];
 
