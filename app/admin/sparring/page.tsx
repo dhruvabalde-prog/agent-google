@@ -13,32 +13,32 @@ interface SparringMessage {
 
 const PRESET_CHALLENGES = [
   {
-    title: 'The Free Tools Challenge',
+    title: 'Free Tools Defensibility',
     prompt: 'Why should you exist when Google Calendar, Apple Reminders, and basic to-do lists are 100% free?',
     category: 'Market Defensibility'
   },
   {
-    title: 'The Custom Prompts Challenge',
+    title: 'Custom Prompts Fallacy',
     prompt: 'I can literally open ChatGPT or Gemini, write a custom prompt, and add it to my skills page for free. Why would anyone pay you $49 a month?',
     category: 'Platform Risk'
   },
   {
-    title: 'The Corporate CISO / Security Challenge',
+    title: 'Corporate CISO & IT Security',
     prompt: 'No enterprise CISO or IT admin in their right mind will let an employee connect corporate email to a personal Life OS. You are dead on arrival.',
     category: 'Enterprise Security'
   },
   {
-    title: 'The Big Tech Steamroller Challenge',
+    title: 'Big Tech Steamroller',
     prompt: 'Apple Intelligence and Google Gemini are integrating deep into iOS and Android. Why won’t they just steamroll you next year?',
     category: 'Competitive Moat'
   },
   {
-    title: 'The "Glorified To-Do List" Challenge',
+    title: 'Glorified To-Do List',
     prompt: 'Isn’t a Life OS just an over-engineered to-do list for people who lack personal discipline? What is the actual hard ROI?',
     category: 'Value Proposition'
   },
   {
-    title: 'The Dual-Context Bleed Challenge',
+    title: 'Dual-Context Air-Gap',
     prompt: 'How can you possibly guarantee that my private family health notes or spouse correspondence won’t accidentally bleed into a corporate email draft?',
     category: 'Privacy Architecture'
   }
@@ -51,15 +51,20 @@ export default function VoiceSparringPage() {
   const [inputText, setInputText] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [speakingMessageId, setSpeakingMessageId] = useState<string | null>(null);
   const [speechSupported, setSpeechSupported] = useState(true);
   const [autoSpeak, setAutoSpeak] = useState(true);
-  const [currentTranscript, setCurrentTranscript] = useState('');
-  const [audioLevel, setAudioLevel] = useState(0);
+  const [showPresets, setShowPresets] = useState(true);
 
   const recognitionRef = useRef<any>(null);
+  const isListeningRef = useRef(false);
+  const accumulatedTextRef = useRef('');
+  const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
   const synthRef = useRef<SpeechSynthesis | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // 1. Verify Admin Session on Mount
   useEffect(() => {
@@ -84,38 +89,67 @@ export default function VoiceSparringPage() {
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
       if (SpeechRecognition) {
         const recognition = new SpeechRecognition();
-        recognition.continuous = false;
+        // Continuous listening so it does NOT cut off after 3-4 seconds
+        recognition.continuous = true;
         recognition.interimResults = true;
         recognition.lang = 'en-US';
 
         recognition.onstart = () => {
           setIsListening(true);
-          setCurrentTranscript('');
+          isListeningRef.current = true;
         };
 
         recognition.onresult = (event: any) => {
+          let newlyFinal = '';
           let interim = '';
+
           for (let i = event.resultIndex; i < event.results.length; ++i) {
+            const transcript = event.results[i][0].transcript;
             if (event.results[i].isFinal) {
-              const finalTranscript = event.results[i][0].transcript;
-              setCurrentTranscript(finalTranscript);
-              setIsListening(false);
-              handleSendMessage(finalTranscript);
-              return;
+              newlyFinal += transcript + ' ';
             } else {
-              interim += event.results[i][0].transcript;
+              interim += transcript;
             }
           }
-          setCurrentTranscript(interim);
+
+          if (newlyFinal) {
+            accumulatedTextRef.current = (accumulatedTextRef.current + ' ' + newlyFinal).replace(/\s+/g, ' ').trim();
+          }
+
+          const fullCombined = (accumulatedTextRef.current + ' ' + interim).replace(/\s+/g, ' ').trim();
+          setInputText(fullCombined);
         };
 
         recognition.onerror = (event: any) => {
-          console.warn('Speech recognition error:', event.error);
-          setIsListening(false);
+          console.warn('Speech recognition warning/error:', event.error);
+          // If silence detected, do NOT terminate if user is still actively recording!
+          if (event.error === 'no-speech') {
+            return;
+          }
+          if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+            stopRecording(false);
+            alert('Microphone permission was denied. Please allow microphone access in your browser settings.');
+          }
         };
 
         recognition.onend = () => {
-          setIsListening(false);
+          // If browser ends speech recognition prematurely while user still wants to record, restart it immediately!
+          if (isListeningRef.current) {
+            try {
+              recognition.start();
+            } catch (err) {
+              // Retry with brief delay if immediate restart throws
+              setTimeout(() => {
+                if (isListeningRef.current) {
+                  try {
+                    recognition.start();
+                  } catch (e) {}
+                }
+              }, 250);
+            }
+          } else {
+            setIsListening(false);
+          }
         };
 
         recognitionRef.current = recognition;
@@ -131,48 +165,51 @@ export default function VoiceSparringPage() {
       {
         id: 'msg-0',
         role: 'agent',
-        content: `I am ready. I am Navia, the Sovereign Life & Work Operating System.\n\nGrill me on my existence, my business model, my security architecture, or why Google and Apple won't kill me. Speak directly into your microphone, or choose a challenge below.`,
+        content: `I am ready. I am Navia, the Sovereign Life & Work Operating System.\n\nGrill me on my defensibility, my unit economics, my security architecture, or why Google and Apple won't kill me. Speak freely into your mic or choose a challenge below.`,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       }
     ]);
+
+    return () => {
+      if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+      if (synthRef.current) synthRef.current.cancel();
+    };
   }, []);
 
   // Auto-scroll to bottom of chat
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, isProcessing, currentTranscript]);
+  }, [messages, isProcessing, isListening]);
 
-  // Audio level animation during speaking
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (isSpeaking || isListening) {
-      interval = setInterval(() => {
-        setAudioLevel(Math.floor(Math.random() * 80) + 20);
-      }, 100);
-    } else {
-      setAudioLevel(0);
-    }
-    return () => clearInterval(interval);
-  }, [isSpeaking, isListening]);
-
-  function speakText(text: string) {
-    if (!autoSpeak || !synthRef.current) return;
+  function speakText(text: string, messageId?: string) {
+    if (!synthRef.current) return;
 
     synthRef.current.cancel(); // Stop any previous speech
+    if (messageId) setSpeakingMessageId(messageId);
+
     const cleanText = text.replace(/[*_#`[\]()]/g, ''); // strip markdown
     const utterance = new SpeechSynthesisUtterance(cleanText);
 
     // Pick best English voice
     const voices = synthRef.current.getVoices();
-    const premiumVoice = voices.find(v => (v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Samantha') || v.name.includes('Daniel') || v.lang.startsWith('en')) && !v.name.includes('Whisper'));
+    const premiumVoice = voices.find(v => 
+      (v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Samantha') || v.name.includes('Daniel') || v.lang.startsWith('en')) && 
+      !v.name.includes('Whisper')
+    );
     if (premiumVoice) utterance.voice = premiumVoice;
 
     utterance.rate = 1.05;
     utterance.pitch = 1.0;
 
     utterance.onstart = () => setIsSpeaking(true);
-    utterance.onend = () => setIsSpeaking(false);
-    utterance.onerror = () => setIsSpeaking(false);
+    utterance.onend = () => {
+      setIsSpeaking(false);
+      setSpeakingMessageId(null);
+    };
+    utterance.onerror = () => {
+      setIsSpeaking(false);
+      setSpeakingMessageId(null);
+    };
 
     synthRef.current.speak(utterance);
   }
@@ -181,25 +218,78 @@ export default function VoiceSparringPage() {
     if (synthRef.current) {
       synthRef.current.cancel();
       setIsSpeaking(false);
+      setSpeakingMessageId(null);
     }
   }
 
-  function toggleListening() {
+  function startRecording() {
     if (!speechSupported) {
-      alert('Speech recognition is not supported in this browser. Please use Chrome, Edge, or Safari, or type your challenge.');
+      alert('Speech recognition is not supported in this browser. Please use Chrome, Edge, or Safari, or type your message.');
       return;
     }
 
-    if (isListening) {
+    stopSpeaking();
+    isListeningRef.current = true;
+    setIsListening(true);
+    setRecordingSeconds(0);
+    accumulatedTextRef.current = inputText; // retain any existing text or start fresh
+
+    if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+    recordingTimerRef.current = setInterval(() => {
+      setRecordingSeconds(sec => sec + 1);
+    }, 1000);
+
+    try {
+      recognitionRef.current?.start();
+    } catch (e) {
+      console.warn('Speech recognition start error:', e);
+    }
+  }
+
+  function stopRecording(sendAfterStop = true) {
+    isListeningRef.current = false;
+    setIsListening(false);
+
+    if (recordingTimerRef.current) {
+      clearInterval(recordingTimerRef.current);
+      recordingTimerRef.current = null;
+    }
+
+    try {
       recognitionRef.current?.stop();
-      setIsListening(false);
+    } catch (e) {}
+
+    if (sendAfterStop) {
+      setTimeout(() => {
+        const textToSend = accumulatedTextRef.current.trim() || inputText.trim();
+        if (textToSend) {
+          handleSendMessage(textToSend);
+        }
+      }, 200);
+    }
+  }
+
+  function cancelRecording() {
+    isListeningRef.current = false;
+    setIsListening(false);
+    if (recordingTimerRef.current) {
+      clearInterval(recordingTimerRef.current);
+      recordingTimerRef.current = null;
+    }
+    try {
+      recognitionRef.current?.stop();
+    } catch (e) {}
+    // Reset newly recorded text back to what was before
+    setInputText('');
+    accumulatedTextRef.current = '';
+  }
+
+  function toggleListening() {
+    if (isListening) {
+      // Tap while listening stops recording and sends!
+      stopRecording(true);
     } else {
-      stopSpeaking();
-      try {
-        recognitionRef.current?.start();
-      } catch (e) {
-        console.error('Failed to start recognition:', e);
-      }
+      startRecording();
     }
   }
 
@@ -207,8 +297,16 @@ export default function VoiceSparringPage() {
     const text = (textToSend || inputText).trim();
     if (!text || isProcessing) return;
 
+    // If currently recording, gracefully close recording without triggering another send
+    if (isListening) {
+      isListeningRef.current = false;
+      setIsListening(false);
+      if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+      try { recognitionRef.current?.stop(); } catch (e) {}
+    }
+
     setInputText('');
-    setCurrentTranscript('');
+    accumulatedTextRef.current = '';
     stopSpeaking();
 
     const userMsg: SparringMessage = {
@@ -245,15 +343,18 @@ export default function VoiceSparringPage() {
       const data = await res.json();
       const reply = data.reply || 'I am ready for your next counter-argument.';
 
+      const agentMsgId = `agent-${Date.now()}`;
       const agentMsg: SparringMessage = {
-        id: `agent-${Date.now()}`,
+        id: agentMsgId,
         role: 'agent',
         content: reply,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
 
       setMessages(prev => [...prev, agentMsg]);
-      speakText(reply);
+      if (autoSpeak) {
+        speakText(reply, agentMsgId);
+      }
     } catch (err: any) {
       console.error('Sparring failed:', err);
       const errorMsg: SparringMessage = {
@@ -268,11 +369,17 @@ export default function VoiceSparringPage() {
     }
   }
 
+  function formatDuration(sec: number) {
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
+  }
+
   if (isAdminAuth === null) {
     return (
-      <div className="min-h-screen bg-gray-950 flex items-center justify-center text-gray-400">
+      <div className="h-screen bg-gray-950 flex items-center justify-center text-gray-400">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+          <div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
           <span className="text-sm">Verifying executive admin clearance...</span>
         </div>
       </div>
@@ -280,286 +387,276 @@ export default function VoiceSparringPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-950 text-gray-100 flex flex-col font-sans">
-      {/* Top Navigation Bar */}
-      <header className="border-b border-gray-800 bg-gray-900/90 backdrop-blur sticky top-0 z-30 px-4 sm:px-6 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-3">
+    <div className="h-[100dvh] bg-gray-950 text-gray-100 flex flex-col font-sans overflow-hidden">
+      {/* 1. Sleek Chat Header */}
+      <header className="h-14 border-b border-gray-800 bg-gray-900/90 backdrop-blur px-4 flex items-center justify-between shrink-0 z-20">
+        <div className="flex items-center gap-2.5">
           <Link
             href="/admin"
             className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-white px-2.5 py-1.5 rounded-lg bg-gray-800/80 hover:bg-gray-800 border border-gray-700/60 transition-colors"
           >
-            ← Admin Console
+            ← Admin
           </Link>
-          <div className="h-4 w-px bg-gray-700"></div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="font-bold text-sm text-white tracking-wide flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-purple-500 animate-pulse"></span>
-                Voice Sparring Lab
-              </span>
-              <span className="text-[10px] bg-purple-950/80 text-purple-300 font-semibold px-2 py-0.5 rounded border border-purple-800/50">
-                Grill Navia / Life OS
-              </span>
+          <div className="h-4 w-px bg-gray-800"></div>
+          <div className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-purple-500 animate-pulse"></span>
+            <div>
+              <h1 className="font-semibold text-sm text-white leading-tight">Navia Voice Sparring</h1>
+              <p className="text-[10px] text-gray-400 hidden sm:block">Executive Life & Work OS Defensibility Arena</p>
             </div>
-            <p className="text-[11px] text-gray-400">Autonomous Executive Advocacy Engine & Defensibility Arena</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          {/* Quick Challenges Toggle */}
+          <button
+            onClick={() => setShowPresets(!showPresets)}
+            className={`text-xs px-2.5 py-1.5 rounded-lg border transition-all flex items-center gap-1.5 ${
+              showPresets
+                ? 'bg-purple-950/60 text-purple-300 border-purple-800/80'
+                : 'bg-gray-800 text-gray-400 border-gray-700 hover:text-gray-200'
+            }`}
+            title="Toggle Challenge Prompts"
+          >
+            <span>⚡</span>
+            <span className="hidden sm:inline">Challenges</span>
+          </button>
+
           {/* Audio Auto-Speak Toggle */}
           <button
             onClick={() => {
               if (isSpeaking) stopSpeaking();
               setAutoSpeak(!autoSpeak);
             }}
-            className={`flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg border transition-all ${
+            className={`text-xs px-2.5 py-1.5 rounded-lg border transition-all flex items-center gap-1.5 ${
               autoSpeak
                 ? 'bg-emerald-950/40 text-emerald-300 border-emerald-800/60'
                 : 'bg-gray-800 text-gray-400 border-gray-700'
             }`}
-            title={autoSpeak ? 'Voice output enabled' : 'Muted (Text only)'}
+            title={autoSpeak ? 'Audio playback enabled' : 'Muted (Text only)'}
           >
-            <span>{autoSpeak ? '🔊 Voice On' : '🔇 Muted'}</span>
+            <span>{autoSpeak ? '🔊' : '🔇'}</span>
+            <span className="hidden sm:inline">{autoSpeak ? 'Voice On' : 'Muted'}</span>
           </button>
 
-          {isSpeaking && (
-            <button
-              onClick={stopSpeaking}
-              className="text-xs bg-rose-950/80 hover:bg-rose-900 text-rose-200 border border-rose-800/80 px-2.5 py-1.5 rounded-lg transition-colors"
-            >
-              Stop Audio ⏹
-            </button>
-          )}
+          {/* Clear Arena */}
+          <button
+            onClick={() => {
+              stopSpeaking();
+              setMessages([
+                {
+                  id: `reset-${Date.now()}`,
+                  role: 'agent',
+                  content: 'Arena reset. Present your next cross-examination.',
+                  timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                }
+              ]);
+            }}
+            className="text-xs text-gray-400 hover:text-rose-400 p-2 rounded-lg bg-gray-800/60 hover:bg-gray-800 border border-gray-700/60 transition-colors"
+            title="Clear Chat History"
+          >
+            🗑️
+          </button>
         </div>
       </header>
 
-      {/* Main Interactive Stage */}
-      <div className="flex-1 max-w-5xl w-full mx-auto p-4 sm:p-6 flex flex-col gap-6">
-        {/* Visualizer & Mic Hero Status Card */}
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-b from-gray-900 via-gray-900 to-gray-950 border border-gray-800 p-6 shadow-2xl flex flex-col items-center justify-center text-center">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-indigo-900/20 via-transparent to-transparent pointer-events-none"></div>
+      {/* 2. Chat Messages Area (Full Viewport Scrollable Stream) */}
+      <div className="flex-1 overflow-y-auto px-3 sm:px-4 py-4 space-y-4 max-w-3xl w-full mx-auto">
+        {messages.map(msg => (
+          <div
+            key={msg.id}
+            className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}
+          >
+            <div className="flex items-center gap-1.5 mb-1 px-1 text-[11px] text-gray-400 font-medium">
+              <span>{msg.role === 'user' ? '🥊 You' : '🛡️ Navia (Chief of Staff)'}</span>
+              <span>•</span>
+              <span className="text-[10px] text-gray-400">{msg.timestamp}</span>
+            </div>
 
-          {/* Animated Pulsing Halo */}
-          <div className="relative mb-4 flex items-center justify-center">
             <div
-              className={`absolute -inset-4 rounded-full transition-all duration-300 ${
-                isSpeaking
-                  ? 'bg-purple-500/20 blur-xl animate-pulse'
-                  : isListening
-                  ? 'bg-emerald-500/25 blur-xl animate-ping'
-                  : isProcessing
-                  ? 'bg-indigo-500/20 blur-lg animate-pulse'
-                  : 'bg-transparent'
-              }`}
-            ></div>
-
-            {/* Central Mic Button */}
-            <button
-              onClick={toggleListening}
-              disabled={isProcessing}
-              className={`relative z-10 w-20 h-20 rounded-full flex flex-col items-center justify-center shadow-xl transition-all duration-200 border-2 ${
-                isListening
-                  ? 'bg-emerald-600 hover:bg-emerald-500 border-emerald-400 text-white scale-105 shadow-emerald-500/30'
-                  : isSpeaking
-                  ? 'bg-purple-600 hover:bg-purple-500 border-purple-400 text-white shadow-purple-500/30'
-                  : isProcessing
-                  ? 'bg-gray-800 border-indigo-500 text-indigo-400 cursor-not-allowed'
-                  : 'bg-gradient-to-br from-gray-800 to-gray-900 hover:from-gray-700 hover:to-gray-800 border-gray-700 text-gray-200 hover:border-indigo-500'
+              className={`p-3.5 sm:p-4 rounded-2xl max-w-[90%] sm:max-w-[80%] text-sm leading-relaxed whitespace-pre-wrap ${
+                msg.role === 'user'
+                  ? 'bg-purple-600 text-white rounded-br-sm shadow-md'
+                  : 'bg-gray-900 border border-gray-800 text-gray-100 rounded-bl-sm shadow-sm'
               }`}
             >
-              {isProcessing ? (
-                <div className="w-7 h-7 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin"></div>
-              ) : isListening ? (
-                <>
-                  <span className="text-2xl animate-pulse">🎙️</span>
-                  <span className="text-[10px] font-bold tracking-tight">Listening</span>
-                </>
-              ) : isSpeaking ? (
-                <>
-                  <span className="text-2xl animate-bounce">🔊</span>
-                  <span className="text-[10px] font-bold tracking-tight">Speaking</span>
-                </>
-              ) : (
-                <>
-                  <span className="text-2xl">🎙️</span>
-                  <span className="text-[10px] font-semibold text-gray-300">Tap to Grill</span>
-                </>
+              {msg.content}
+
+              {msg.role === 'agent' && (
+                <div className="mt-2.5 pt-2 border-t border-gray-800/80 flex items-center justify-between gap-2">
+                  <span className="text-[10px] text-gray-400">Autonomous Executive OS</span>
+                  <button
+                    onClick={() => {
+                      if (speakingMessageId === msg.id && isSpeaking) {
+                        stopSpeaking();
+                      } else {
+                        speakText(msg.content, msg.id);
+                      }
+                    }}
+                    className={`text-xs px-2 py-1 rounded flex items-center gap-1 transition-colors ${
+                      speakingMessageId === msg.id && isSpeaking
+                        ? 'bg-rose-950/80 text-rose-300 border border-rose-800/60'
+                        : 'text-purple-400 hover:text-purple-300 hover:bg-gray-800/80'
+                    }`}
+                  >
+                    <span>{speakingMessageId === msg.id && isSpeaking ? '⏹ Stop' : '🔊 Listen'}</span>
+                  </button>
+                </div>
               )}
-            </button>
+            </div>
           </div>
+        ))}
 
-          {/* Soundwave Simulation Bars */}
-          <div className="h-6 flex items-center justify-center gap-1 mb-2">
-            {[20, 45, 75, 30, 90, 60, 35, 80, 50, 25, 65, 40].map((h, i) => (
-              <span
-                key={i}
-                className={`w-1 rounded-full transition-all duration-150 ${
-                  isSpeaking
-                    ? 'bg-purple-400'
-                    : isListening
-                    ? 'bg-emerald-400'
-                    : 'bg-gray-800'
-                }`}
-                style={{
-                  height: isSpeaking || isListening ? `${Math.max(4, (h * audioLevel) / 100)}px` : '4px'
-                }}
-              ></span>
-            ))}
+        {isProcessing && (
+          <div className="flex flex-col items-start">
+            <div className="flex items-center gap-1.5 mb-1 px-1 text-[11px] text-gray-400">
+              <span>🛡️ Navia</span>
+            </div>
+            <div className="p-3.5 rounded-2xl bg-gray-900 border border-gray-800 rounded-bl-sm flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-purple-400 animate-bounce" style={{ animationDelay: '0ms' }} />
+              <div className="w-2 h-2 rounded-full bg-purple-400 animate-bounce" style={{ animationDelay: '150ms' }} />
+              <div className="w-2 h-2 rounded-full bg-purple-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+              <span className="text-xs text-gray-400 ml-1">Formulating defense...</span>
+            </div>
           </div>
+        )}
+        <div ref={messagesEndRef} />
+      </div>
 
-          {/* Status Text & Interim Speech */}
-          <div className="min-h-[28px] max-w-xl">
-            {isListening ? (
-              <p className="text-xs text-emerald-400 font-medium animate-pulse">
-                {currentTranscript || 'Listening to your argument... Speak freely.'}
-              </p>
-            ) : isProcessing ? (
-              <p className="text-xs text-indigo-400 font-medium animate-pulse">
-                Formulating steel-trap counter-argument...
-              </p>
-            ) : isSpeaking ? (
-              <p className="text-xs text-purple-400 font-medium">Navia is defending the platform aloud...</p>
-            ) : (
-              <p className="text-xs text-gray-400">
-                Tap microphone to speak aloud, or pick a challenge card below to test my reasoning.
-              </p>
-            )}
-          </div>
-        </div>
-
-        {/* Quick Challenge Cards: The Gauntlet */}
-        <div>
-          <div className="flex items-center justify-between mb-2.5">
-            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
-              <span>⚡</span> The Skeptic's Gauntlet (Instant Grilling Prompts)
-            </h3>
-            <span className="text-[11px] text-gray-400">Tap any card to challenge Navia</span>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5">
+      {/* 3. Bottom Area: Quick Prompts Drawer + Dedicated Chat Input */}
+      <div className="border-t border-gray-800 bg-gray-900/95 backdrop-blur shrink-0 z-20 pb-safe">
+        {/* Horizontal Chips: Preset Challenges */}
+        {showPresets && (
+          <div className="px-4 py-2 border-b border-gray-800/60 overflow-x-auto no-scrollbar flex items-center gap-2 max-w-3xl mx-auto">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-purple-400/80 shrink-0">
+              Grill:
+            </span>
             {PRESET_CHALLENGES.map((item, idx) => (
               <button
                 key={idx}
                 onClick={() => handleSendMessage(item.prompt)}
-                disabled={isProcessing}
-                className="text-left p-3 rounded-xl bg-gray-900/60 hover:bg-gray-800/80 border border-gray-800 hover:border-purple-500/50 transition-all group flex flex-col justify-between"
+                disabled={isProcessing || isListening}
+                className="shrink-0 text-xs px-2.5 py-1 rounded-full bg-gray-800/80 hover:bg-purple-900/40 text-gray-300 hover:text-purple-200 border border-gray-700/60 hover:border-purple-600/50 transition-all text-left"
               >
-                <div>
-                  <span className="text-[10px] font-semibold text-purple-400/80 uppercase tracking-wider block mb-1">
-                    {item.category}
-                  </span>
-                  <p className="text-xs font-semibold text-gray-200 group-hover:text-white transition-colors">
-                    {item.title}
-                  </p>
-                </div>
-                <p className="text-[11px] text-gray-400 line-clamp-2 mt-2 leading-relaxed italic">
-                  "{item.prompt}"
-                </p>
+                {item.title}
               </button>
             ))}
           </div>
-        </div>
+        )}
 
-        {/* Sparring Conversation Turn Log */}
-        <div className="flex-1 bg-gray-900/40 border border-gray-800 rounded-2xl p-4 sm:p-5 flex flex-col gap-4 min-h-[350px]">
-          <div className="flex items-center justify-between border-b border-gray-800 pb-3">
-            <span className="text-xs font-bold text-gray-300 uppercase tracking-wider flex items-center gap-2">
-              <span>⚔️</span> Sparring Transcript & Record
-            </span>
-            <button
-              onClick={() => {
-                stopSpeaking();
-                setMessages([
-                  {
-                    id: `reset-${Date.now()}`,
-                    role: 'agent',
-                    content: 'Arena reset. Present your next cross-examination.',
-                    timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                  }
-                ]);
-              }}
-              className="text-[11px] text-gray-400 hover:text-white transition-colors"
-            >
-              Clear Arena
-            </button>
-          </div>
-
-          {/* Turn-by-Turn Chat Deck */}
-          <div className="flex-1 space-y-4 overflow-y-auto max-h-[500px] pr-2">
-            {messages.map(msg => (
-              <div
-                key={msg.id}
-                className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}
-              >
-                <div className="flex items-center gap-1.5 mb-1 px-1">
-                  <span
-                    className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${
-                      msg.role === 'user'
-                        ? 'bg-rose-950/60 text-rose-300 border border-rose-800/40'
-                        : 'bg-purple-950/60 text-purple-300 border border-purple-800/40'
-                    }`}
-                  >
-                    {msg.role === 'user' ? '🥊 Admin / Griller' : '🛡️ Navia / Sovereign OS'}
-                  </span>
-                  <span className="text-[10px] text-gray-400">{msg.timestamp}</span>
-                </div>
-
-                <div
-                  className={`p-3.5 rounded-2xl max-w-2xl text-xs sm:text-sm leading-relaxed whitespace-pre-wrap ${
-                    msg.role === 'user'
-                      ? 'bg-rose-950/30 text-rose-100 border border-rose-900/40 rounded-tr-none'
-                      : 'bg-gray-800/80 text-gray-100 border border-gray-700/60 rounded-tl-none shadow-md'
-                  }`}
+        <div className="max-w-3xl mx-auto p-3 sm:p-4">
+          {/* Active Voice Recording Banner (When recording continuously) */}
+          {isListening && (
+            <div className="mb-2.5 px-3 py-2 rounded-xl bg-purple-950/40 border border-purple-800/60 flex items-center justify-between animate-fadeIn">
+              <div className="flex items-center gap-2 text-xs text-purple-300">
+                <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping"></span>
+                <span className="font-semibold text-rose-400">Recording</span>
+                <span className="font-mono bg-purple-900/50 px-1.5 py-0.5 rounded text-[11px] text-purple-200">
+                  {formatDuration(recordingSeconds)}
+                </span>
+                <span className="text-[11px] text-gray-400 hidden sm:inline">
+                  (Speak as long as you want. Tap Stop or Send when done)
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={cancelRecording}
+                  className="text-[11px] text-gray-400 hover:text-rose-400 px-2 py-1 rounded hover:bg-gray-800 transition-colors"
                 >
-                  {msg.content}
-
-                  {msg.role === 'agent' && (
-                    <div className="mt-2.5 pt-2 border-t border-gray-700/40 flex items-center justify-end gap-2">
-                      <button
-                        onClick={() => speakText(msg.content)}
-                        className="text-[11px] text-purple-400 hover:text-purple-300 flex items-center gap-1 font-medium"
-                      >
-                        <span>🔊</span> Replay Voice
-                      </button>
-                    </div>
-                  )}
-                </div>
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => stopRecording(true)}
+                  className="text-xs bg-purple-600 hover:bg-purple-500 text-white font-semibold px-2.5 py-1 rounded-lg transition-colors shadow-sm"
+                >
+                  Done & Send ✓
+                </button>
               </div>
-            ))}
+            </div>
+          )}
 
-            {isProcessing && (
-              <div className="flex flex-col items-start">
-                <div className="p-3.5 rounded-2xl bg-gray-800/60 border border-gray-700/40 rounded-tl-none flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-indigo-400 animate-ping"></div>
-                  <span className="text-xs text-gray-400">Navia is assembling counter-arguments...</span>
-                </div>
-              </div>
-            )}
-            <div ref={messagesEndRef} />
-          </div>
-
-          {/* Text Input Fallback Bar */}
+          {/* Main Input Form */}
           <form
             onSubmit={e => {
               e.preventDefault();
-              handleSendMessage();
+              if (isListening) {
+                stopRecording(true);
+              } else {
+                handleSendMessage();
+              }
             }}
-            className="mt-2 flex items-center gap-2 border-t border-gray-800 pt-3"
+            className="flex items-end gap-2"
           >
-            <input
-              type="text"
-              value={inputText}
-              onChange={e => setInputText(e.target.value)}
-              placeholder="Or type a tough counter-argument here (e.g. 'Why wouldn't an executive just hire an intern?')..."
-              className="flex-1 bg-gray-900 border border-gray-700/80 rounded-xl px-4 py-2.5 text-xs text-white placeholder-gray-400 focus:outline-none focus:border-purple-500 transition-colors"
+            {/* Input Box with live transcript or typed text */}
+            <div className="flex-1 relative bg-gray-900 border border-gray-700 rounded-2xl focus-within:border-purple-500 transition-colors shadow-inner flex items-center">
+              <textarea
+                ref={textareaRef}
+                value={inputText}
+                onChange={e => setInputText(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    if (isListening) {
+                      stopRecording(true);
+                    } else {
+                      handleSendMessage();
+                    }
+                  }
+                }}
+                rows={1}
+                placeholder={
+                  isListening
+                    ? 'Listening continuously... Speak your argument...'
+                    : 'Type a tough counter-argument or tap mic to speak...'
+                }
+                className="w-full bg-transparent px-3.5 py-2.5 text-xs sm:text-sm text-white placeholder-gray-400 resize-none focus:outline-none max-h-28 leading-relaxed"
+                disabled={isProcessing}
+              />
+            </div>
+
+            {/* Continuous Voice Microphone Button */}
+            <button
+              type="button"
+              onClick={toggleListening}
               disabled={isProcessing}
-            />
+              title={
+                isListening
+                  ? 'Recording in progress... Tap to Stop & Send'
+                  : 'Start Continuous Voice Recording (records until you stop it)'
+              }
+              className={`h-10 w-10 sm:h-11 sm:w-11 rounded-2xl flex items-center justify-center shrink-0 transition-all shadow-md ${
+                isListening
+                  ? 'bg-rose-600 hover:bg-rose-500 text-white scale-105 animate-pulse shadow-rose-600/30'
+                  : 'bg-gray-800 hover:bg-gray-700 text-purple-400 hover:text-purple-300 border border-gray-700/80'
+              }`}
+            >
+              {isListening ? (
+                <span className="text-sm font-bold">⏹</span>
+              ) : (
+                <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
+                  <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />
+                  <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
+                </svg>
+              )}
+            </button>
+
+            {/* Send Message Button */}
             <button
               type="submit"
-              disabled={isProcessing || !inputText.trim()}
-              className="bg-purple-600 hover:bg-purple-500 disabled:opacity-40 text-white px-4 py-2.5 rounded-xl text-xs font-semibold shadow-md transition-colors"
+              disabled={isProcessing || (!inputText.trim() && !isListening)}
+              className="h-10 w-10 sm:h-11 sm:w-11 rounded-2xl bg-purple-600 hover:bg-purple-500 disabled:opacity-30 disabled:hover:bg-purple-600 text-white flex items-center justify-center shrink-0 transition-all shadow-md"
+              title="Send Message"
             >
-              Challenge
+              {isProcessing ? (
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              ) : (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <line x1="12" y1="19" x2="12" y2="5" />
+                  <polyline points="5 12 12 5 19 12" />
+                </svg>
+              )}
             </button>
           </form>
         </div>
