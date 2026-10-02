@@ -6,6 +6,10 @@ import remarkGfm from 'remark-gfm';
 import Link from 'next/link';
 import { ChatMessage, ActionResult, DraftInfo } from '@/lib/types';
 import ActionCardsDeck, { ActionCardItem } from '@/components/ActionCardsDeck';
+import MyDayView, { CalendarEvent, TaskItem, GoalItem } from '@/components/MyDayView';
+import ActionsDeckView, { ActionDeckItem } from '@/components/ActionsDeckView';
+import SuchiLiveVoiceModal from '@/components/SuchiLiveVoiceModal';
+import { RoutineItem } from '@/components/RoutinePlayerModal';
 
 interface ArchiveChat {
   id: string;
@@ -36,6 +40,29 @@ const AGENT_SUGGESTIONS_POOL = [
   'Tip: Asking for a 5-slide presentation will auto-format title and bullets directly.',
   'Tip: You can star important chats in the Archive to keep them pinned at the top.',
   'Tip: Confirm the meaningful outcome at the top when you are happy with the draft.',
+];
+
+const CAPABILITY_POOL = [
+  'Draft executive reply to pending emails in Gmail',
+  'Create a formatted project brief in Google Docs',
+  'Build an OKR & deliverables tracker in Google Sheets',
+  'Schedule afternoon focus blocks in Google Calendar',
+  'Generate a 5-slide strategy deck in Google Slides',
+  'Audit my urgent Google Tasks due today',
+  'Summarize key action items from my unread threads',
+  'Prepare agenda for tomorrow\'s team sync',
+  'Draft an email update to project stakeholders',
+  'Organize my Google Drive project folders',
+];
+
+const EXECUTIVE_SKILL_SUGGESTIONS = [
+  'Prepare an executive summary of this week\'s key deliverables and progress.',
+  'Draft follow-up replies to high-priority pending emails in my inbox.',
+  'Analyze my Google Calendar for meeting conflicts and focus blocks tomorrow.',
+  'Set up a North Star OKR tracking sheet with milestones in Google Sheets.',
+  'Draft a 5-slide strategic update deck for leadership in Google Slides.',
+  'Organize my unread emails into actionable decisions vs informational.',
+  'Audit my pending Google Tasks and group them by strategic priority.',
 ];
 
 function extractOptions(text: string): { label: string; text: string }[] {
@@ -105,7 +132,55 @@ function CodeBlock({ children, className }: { children: React.ReactNode; classNa
 }
 
 export default function Home() {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  // Two Parallel Chat Slots (Only 2 chats at a time)
+  const [activeSlot, setActiveSlot] = useState<1 | 2>(1);
+  const [slot1Messages, setSlot1Messages] = useState<ChatMessage[]>([]);
+  const [slot2Messages, setSlot2Messages] = useState<ChatMessage[]>([]);
+  const [slot1Id, setSlot1Id] = useState<string>(() => crypto.randomUUID());
+  const [slot2Id, setSlot2Id] = useState<string>(() => crypto.randomUUID());
+  const [slot1Outcome, setSlot1Outcome] = useState<string>('');
+  const [slot2Outcome, setSlot2Outcome] = useState<string>('');
+  const [slot1OutcomeStatus, setSlot1OutcomeStatus] = useState<string>('NONE');
+  const [slot2OutcomeStatus, setSlot2OutcomeStatus] = useState<string>('NONE');
+  const [slot1Locked, setSlot1Locked] = useState<boolean>(false);
+  const [slot2Locked, setSlot2Locked] = useState<boolean>(false);
+
+  // Active slot proxies
+  const messages = activeSlot === 1 ? slot1Messages : slot2Messages;
+  const setMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>> = (val) => {
+    if (activeSlot === 1) setSlot1Messages(val);
+    else setSlot2Messages(val);
+  };
+  const currentChatId = activeSlot === 1 ? slot1Id : slot2Id;
+  const setCurrentChatId = (id: string) => {
+    if (activeSlot === 1) setSlot1Id(id);
+    else setSlot2Id(id);
+  };
+  const meaningfulOutcome = activeSlot === 1 ? slot1Outcome : slot2Outcome;
+  const setMeaningfulOutcome = (o: string) => {
+    if (activeSlot === 1) setSlot1Outcome(o);
+    else setSlot2Outcome(o);
+  };
+  const outcomeStatus = activeSlot === 1 ? slot1OutcomeStatus : slot2OutcomeStatus;
+  const setOutcomeStatus = (s: string) => {
+    if (activeSlot === 1) setSlot1OutcomeStatus(s);
+    else setSlot2OutcomeStatus(s);
+  };
+  const isChatLocked = activeSlot === 1 ? slot1Locked : slot2Locked;
+  const setIsChatLocked = (l: boolean) => {
+    if (activeSlot === 1) setSlot1Locked(l);
+    else setSlot2Locked(l);
+  };
+
+  // Live Voice & Dynamic Capabilities
+  const [isLiveVoiceOpen, setIsLiveVoiceOpen] = useState(false);
+  const [welcomeCapabilities, setWelcomeCapabilities] = useState<string[]>([]);
+
+  useEffect(() => {
+    const shuffled = [...CAPABILITY_POOL].sort(() => 0.5 - Math.random());
+    setWelcomeCapabilities(shuffled.slice(0, 5));
+  }, [currentChatId, activeSlot]);
+
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [progressIndex, setProgressIndex] = useState(0);
@@ -144,12 +219,6 @@ export default function Home() {
 
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [draftStatuses, setDraftStatuses] = useState<Map<string, 'approved' | 'rejected'>>(new Map());
-
-  // Chat Lifecycle & Meaningful Outcome
-  const [currentChatId, setCurrentChatId] = useState<string>('');
-  const [meaningfulOutcome, setMeaningfulOutcome] = useState<string>('');
-  const [outcomeStatus, setOutcomeStatus] = useState<string>('NONE'); // NONE | PROPOSED | CONFIRMED | LOCKED
-  const [isChatLocked, setIsChatLocked] = useState<boolean>(false);
 
   // Settings & Navigation
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -198,6 +267,7 @@ export default function Home() {
 
   // Attachments (up to 10 files)
   const [attachedFiles, setAttachedFiles] = useState<Array<{ name: string; size: string; content?: string }>>([]);
+  const [isAttachMenuOpen, setIsAttachMenuOpen] = useState(false);
 
   // Voice Recording
   const [isRecording, setIsRecording] = useState(false);
@@ -237,6 +307,21 @@ export default function Home() {
   const [isActionsDeckOpen, setIsActionsDeckOpen] = useState<boolean>(false);
   const [actionCards, setActionCards] = useState<ActionCardItem[]>([]);
   const [unreadActionsCount, setUnreadActionsCount] = useState<number>(0);
+
+  // Bottom Navigation Tabs: 'my_day' (left) | 'suchi' (center) | 'actions' (right)
+  const [activeAppTab, setActiveAppTab] = useState<'my_day' | 'suchi' | 'actions'>('suchi');
+
+  // My Day state (tasks, routines, goals)
+  const [hubTasks, setHubTasks] = useState<any[]>([]);
+  const [hubRoutines, setHubRoutines] = useState<any[]>([]);
+  const [hubGoals, setHubGoals] = useState<any[]>([]);
+  const [isHubLoading, setIsHubLoading] = useState(false);
+  const [newHubTaskTitle, setNewHubTaskTitle] = useState('');
+  const [hubFilter, setHubFilter] = useState<'all' | 'tasks' | 'routines' | 'goals'>('all');
+
+  // Actions Filter
+  const [actionsFilter, setActionsFilter] = useState<'all' | 'needs_approval' | 'completed'>('all');
+
 
   // Bug Reporting & Telemetry State
   const [isBugModalOpen, setIsBugModalOpen] = useState<boolean>(false);
@@ -327,13 +412,16 @@ export default function Home() {
   useEffect(() => {
     try {
       const savedTheme = localStorage.getItem('suchi_theme');
+      let isDark = false;
       if (savedTheme === 'dark') {
-        setIsDarkMode(true);
+        isDark = true;
       } else if (savedTheme === 'light') {
-        setIsDarkMode(false);
+        isDark = false;
       } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-        setIsDarkMode(true);
+        isDark = true;
       }
+      setIsDarkMode(isDark);
+      document.documentElement.classList.toggle('dark', isDark);
     } catch (e) {}
   }, []);
 
@@ -342,9 +430,25 @@ export default function Home() {
       const next = !prev;
       try {
         localStorage.setItem('suchi_theme', next ? 'dark' : 'light');
+        document.documentElement.classList.toggle('dark', next);
       } catch (e) {}
       return next;
     });
+  }
+
+  function handleLogin() {
+    window.location.href = '/api/auth/login';
+  }
+
+  async function handleLogout() {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      setUser(null);
+      window.location.href = '/connect';
+    } catch (e) {
+      console.error('Logout error:', e);
+      window.location.href = '/connect';
+    }
   }
 
   // Check auth on load - redirect to /connect if unauthenticated
@@ -968,19 +1072,390 @@ export default function Home() {
     }
   }
 
-  // Auth Handlers
-  const handleLogin = () => { window.location.href = '/connect'; };
-  const handleLogout = async () => {
-    await fetch('/api/auth/logout', { method: 'POST' });
-    setUser(null);
+  // Load hub data on mount and check ?tab= query parameter
+  useEffect(() => {
+    loadHubData();
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const tab = params.get('tab');
+      if (tab === 'my_day' || tab === 'myday' || tab === 'hub') {
+        setActiveAppTab('my_day');
+      } else if (tab === 'actions') {
+        setActiveAppTab('actions');
+      }
+    }
+  }, []);
+
+  async function loadHubData() {
+    setIsHubLoading(true);
+    try {
+      const res = await fetch('/api/hub');
+      if (res.ok) {
+        const data = await res.json();
+        setHubTasks(data.tasks || []);
+        setHubRoutines(data.routines || []);
+        setHubGoals(data.goals || []);
+      }
+    } catch (e) {
+      console.error('Failed to load hub data:', e);
+    } finally {
+      setIsHubLoading(false);
+    }
+  }
+
+  async function handleToggleHubTask(taskId: string, currentStatus: string) {
+    const newStatus = currentStatus === 'completed' ? 'needsAction' : 'completed';
+    setHubTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: newStatus } : t));
+    try {
+      await fetch('/api/hub', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'TOGGLE_TASK',
+          payload: { taskId, currentStatus },
+        }),
+      });
+    } catch (e) {
+      console.error('Failed to toggle task:', e);
+    }
+  }
+
+  // Hub Calendar Events State
+  const [hubEvents, setHubEvents] = useState<CalendarEvent[]>([
+    {
+      id: 'ev-1',
+      summary: 'Executive Briefing & Strategic Priorities',
+      start: '10:00 AM',
+      end: '10:45 AM',
+      hasMeet: true,
+      meetLink: 'https://meet.google.com/suchi-exec',
+    },
+    {
+      id: 'ev-2',
+      summary: 'Product Roadmap & Deliverables Sync',
+      start: '02:30 PM',
+      end: '03:15 PM',
+      hasMeet: true,
+      meetLink: 'https://meet.google.com/suchi-prod',
+    },
+  ]);
+
+  async function handleAddHubTask(title: string, due?: string) {
+    const tempId = `task-${Date.now()}`;
+    const newTask: TaskItem = { id: tempId, title, due, status: 'needsAction', isDueToday: true };
+    setHubTasks(prev => [newTask, ...prev]);
+    try {
+      await fetch('/api/hub', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'CREATE_TASK', payload: { title, due } }),
+      });
+    } catch (e) {}
+  }
+
+  async function handleEditHubTask(taskId: string, title: string, due?: string) {
+    setHubTasks(prev => prev.map(t => t.id === taskId ? { ...t, title, due } : t));
+  }
+
+  async function handleDeleteHubTask(taskId: string) {
+    setHubTasks(prev => prev.filter(t => t.id !== taskId));
+  }
+
+  async function handleAddHubEvent(event: Omit<CalendarEvent, 'id'>) {
+    const newEvent: CalendarEvent = { ...event, id: `ev-${Date.now()}` };
+    setHubEvents(prev => [...prev, newEvent]);
+  }
+
+  async function handleEditHubEvent(event: CalendarEvent) {
+    setHubEvents(prev => prev.map(e => e.id === event.id ? event : e));
+  }
+
+  async function handleDeleteHubEvent(eventId: string) {
+    setHubEvents(prev => prev.filter(e => e.id !== eventId));
+  }
+
+  async function handleToggleRoutineStep(routineId: string, stepId: string, currentCompleted: boolean) {
+    setHubRoutines(prev => prev.map(r => {
+      if (r.id !== routineId) return r;
+      return {
+        ...r,
+        steps: (r.steps || []).map((s: any) => s.id === stepId ? { ...s, completed: !currentCompleted } : s),
+      };
+    }));
+  }
+
+  async function handleAddHubRoutine(routine: Omit<RoutineItem, 'id'>) {
+    const newRoutine: RoutineItem = { ...routine, id: `routine-${Date.now()}` };
+    setHubRoutines(prev => [...prev, newRoutine]);
+  }
+
+  async function handleEditHubRoutine(routine: RoutineItem) {
+    setHubRoutines(prev => prev.map(r => r.id === routine.id ? routine : r));
+  }
+
+  async function handleDeleteHubRoutine(routineId: string) {
+    setHubRoutines(prev => prev.filter(r => r.id !== routineId));
+  }
+
+  async function handleAddHubGoal(goal: Omit<GoalItem, 'id'>) {
+    const newGoal: GoalItem = { ...goal, id: `goal-${Date.now()}` };
+    setHubGoals(prev => [...prev, newGoal]);
+  }
+
+  async function handleEditHubGoal(goal: GoalItem) {
+    setHubGoals(prev => prev.map(g => g.id === goal.id ? goal : g));
+  }
+
+  async function handleDeleteHubGoal(goalId: string) {
+    setHubGoals(prev => prev.filter(g => g.id !== goalId));
+  }
+
+  // Compass suggestion with 2-per-hour limit
+  function handleCompassSuggestion() {
+    const now = Date.now();
+    const ONE_HOUR = 60 * 60 * 1000;
+    let timestamps: number[] = [];
+    try {
+      const raw = localStorage.getItem('suchi_hourly_suggestions');
+      if (raw) timestamps = JSON.parse(raw);
+    } catch (e) {}
+
+    timestamps = timestamps.filter(t => now - t < ONE_HOUR);
+
+    if (timestamps.length >= 2) {
+      triggerToast('Hourly limit: 2 strategic suggestions per hour.');
+      return;
+    }
+
+    const suggestion = EXECUTIVE_SKILL_SUGGESTIONS[Math.floor(Math.random() * EXECUTIVE_SKILL_SUGGESTIONS.length)];
+    timestamps.push(now);
+    try {
+      localStorage.setItem('suchi_hourly_suggestions', JSON.stringify(timestamps));
+    } catch (e) {}
+
+    setActiveSuggestion(suggestion);
+    setInput(suggestion);
+    if (textareaRef.current) {
+      textareaRef.current.focus();
+    }
+  }
+
+  // Live Voice Message Processing (Calls Suchi, Strictly Female Voice)
+  async function handleVoiceUserMessage(text: string): Promise<string> {
+    if (!text.trim()) return '';
+
+    const userMessage: ChatMessage = {
+      id: crypto.randomUUID(),
+      role: 'user',
+      content: text.trim(),
+    };
+
+    setMessages(prev => [...prev, userMessage]);
+
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: [...messages, userMessage].map(m => ({ role: m.role, content: m.content })),
+          isIncognito,
+        }),
+      });
+
+      if (!res.ok) throw new Error('Voice chat failed');
+      const data = await res.json();
+
+      const assistantMessage: ChatMessage = {
+        id: crypto.randomUUID(),
+        role: 'assistant',
+        content: data.content,
+        actions: data.actions,
+        pendingDraft: data.pendingDraft,
+      };
+
+      setMessages(prev => [...prev, assistantMessage]);
+      return data.content || "Suchi here. I've taken care of that for you.";
+    } catch (e) {
+      console.error('Voice chat error:', e);
+      return "Suchi here. I encountered an issue connecting. Please try again.";
+    }
+  }
+
+  // Take Context to New Chat (Attached as .md)
+  function handleTakeContextToNewChat() {
+    let summary = `# Strategic Context from Locked Chat\n`;
+    if (meaningfulOutcome) {
+      summary += `**Target Outcome**: ${meaningfulOutcome}\n\n`;
+    }
+    summary += `## Key Discussion & Decisions:\n`;
+    messages.forEach(m => {
+      summary += `- **${m.role === 'user' ? 'User' : 'Suchi'}**: ${m.content.slice(0, 200).replace(/\n/g, ' ')}\n`;
+    });
+
     setMessages([]);
-    setAttachedFiles([]);
-    setRecordedAudioUrl(null);
-    setIsSettingsOpen(false);
-    window.location.href = '/connect';
-  };
+    setCurrentChatId(crypto.randomUUID());
+    setMeaningfulOutcome('');
+    setOutcomeStatus('NONE');
+    setIsChatLocked(false);
+
+    setAttachedFiles([{
+      name: 'chat_context.md',
+      size: `${(summary.length / 1024).toFixed(1)} KB`,
+      content: summary,
+    }]);
+
+    triggerToast('Context from previous chat attached as Markdown in new chat!');
+  }
+
+  // Two-Chat Switch or New Handler
+  function handleChatSwitchOrNew() {
+    const slot1HasHistory = slot1Messages.length > 0;
+    const slot2HasHistory = slot2Messages.length > 0;
+
+    if (slot1HasHistory && slot2HasHistory) {
+      setActiveSlot(prev => (prev === 1 ? 2 : 1));
+      triggerToast(`Switched to Chat ${activeSlot === 1 ? 2 : 1}`);
+    } else {
+      if (activeSlot === 1) {
+        setActiveSlot(2);
+        triggerToast('Switched to Chat 2');
+      } else {
+        setActiveSlot(1);
+        triggerToast('Switched to Chat 1');
+      }
+    }
+    setActiveAppTab('suchi');
+  }
+
+  // Computed Actions from chat messages + actionCards state
+  const computedActions = React.useMemo(() => {
+    const list: any[] = [];
+
+    // Extract from messages
+    messages.forEach(msg => {
+      if (msg.actions && msg.actions.length > 0) {
+        msg.actions.forEach((act, actIdx) => {
+          list.push({
+            id: `act-${msg.id}-${actIdx}`,
+            tool: act.tool,
+            title: act.summary || act.tool,
+            summary: act.summary,
+            success: act.success,
+            link: act.link,
+            timestamp: 'Recent',
+            status: act.success ? 'COMPLETED' : 'FAILED',
+          });
+        });
+      }
+      if (msg.pendingDraft) {
+        const status = draftStatuses.get(msg.pendingDraft.draftId) || 'NEEDS_APPROVAL';
+        list.push({
+          id: `draft-${msg.pendingDraft.draftId}`,
+          tool: 'draft_reply',
+          title: `Draft Reply to ${msg.pendingDraft.to}`,
+          summary: msg.pendingDraft.subject,
+          draftInfo: msg.pendingDraft,
+          status: status === 'approved' ? 'COMPLETED' : status === 'rejected' ? 'DISCARDED' : 'NEEDS_APPROVAL',
+          timestamp: 'Requires Consent',
+        });
+      }
+    });
+
+    // Also include actionCards state
+    actionCards.forEach(card => {
+      if (!list.some(item => item.id === card.id)) {
+        list.push({
+          id: card.id,
+          tool: card.type,
+          title: card.title,
+          summary: card.description || card.subtitle,
+          link: card.link,
+          status: card.status,
+          timestamp: card.timestamp,
+          draftInfo: card.details?.draftId ? {
+            draftId: card.details.draftId,
+            to: card.details.to || '',
+            subject: card.details.subject || '',
+            body: card.details.draftBody || '',
+          } : undefined,
+        });
+      }
+    });
+
+    return list;
+  }, [messages, actionCards, draftStatuses]);
+
+  const deckActions: ActionDeckItem[] = React.useMemo(() => {
+    const mapped: ActionDeckItem[] = computedActions.map(act => {
+      let category: 'drafts' | 'workspace' | 'tasks' | 'calendar' = 'workspace';
+      if (act.tool === 'draft_reply' || act.draftInfo) category = 'drafts';
+      else if (act.tool?.includes('calendar') || act.tool?.includes('event')) category = 'calendar';
+      else if (act.tool?.includes('task')) category = 'tasks';
+      else category = 'workspace';
+
+      return {
+        id: act.id,
+        category,
+        title: act.title,
+        summary: act.summary,
+        timestamp: act.timestamp || 'Today',
+        status: act.status || 'COMPLETED',
+        link: act.link,
+        draftInfo: act.draftInfo,
+      };
+    });
+
+    if (mapped.length === 0) {
+      return [
+        {
+          id: 'act-draft-1',
+          category: 'drafts',
+          title: 'Executive Follow-Up on Q4 Deliverables',
+          summary: 'Drafted reply to VP of Product confirming sprint delivery and milestones.',
+          timestamp: '10 mins ago',
+          status: 'NEEDS_APPROVAL',
+          draftInfo: {
+            draftId: 'sample-draft-1',
+            to: 'vp.product@company.com',
+            subject: 'Re: Q4 Deliverables & Timeline Confirmation',
+            body: 'Hi Sarah,\n\nFollowing up on our sync earlier today. We have locked the core feature set for Q4 and are on track for staging deployment by Friday. Let me know if you need any adjustments to the slide deck.\n\nBest,\nSuchi Team',
+          },
+        },
+        {
+          id: 'act-ws-1',
+          category: 'workspace',
+          title: 'Q4 Financial Projection Sheet',
+          summary: 'Created new Google Sheet with recurring expense breakdown and formula calculations.',
+          timestamp: '1 hour ago',
+          status: 'COMPLETED',
+          link: 'https://docs.google.com/spreadsheets',
+        },
+        {
+          id: 'act-task-1',
+          category: 'tasks',
+          title: 'Audit GCP Cloud IAM Roles & Keys',
+          summary: 'Review least-privilege security permissions for production service accounts.',
+          timestamp: 'Today',
+          status: 'NEEDS_APPROVAL',
+        },
+        {
+          id: 'act-cal-1',
+          category: 'calendar',
+          title: 'Weekly Strategy Review & Sync',
+          summary: 'Scheduled for tomorrow at 10:00 AM with product team.',
+          timestamp: 'Tomorrow 10:00 AM',
+          status: 'NEEDS_APPROVAL',
+          link: 'https://calendar.google.com',
+        },
+      ];
+    }
+    return mapped;
+  }, [computedActions]);
+
+  const pendingApprovalsCount = computedActions.filter(a => a.status === 'NEEDS_APPROVAL').length;
 
   return (
+
     <div className={`flex flex-col h-[100dvh] overflow-hidden ${
       isIncognito
         ? 'bg-[#0f0c1b] text-purple-100 selection:bg-purple-500/30'
@@ -1029,87 +1504,39 @@ export default function Home() {
           )}
         </div>
 
-        {/* Center: Meaningful Outcome Pinned */}
-        {meaningfulOutcome && (
-          <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium max-w-[130px] sm:max-w-xs md:max-w-md truncate border transition-all ${
-            outcomeStatus === 'PROPOSED'
-              ? 'bg-amber-500/10 border-amber-500/40 text-amber-400 animate-pulse'
-              : outcomeStatus === 'LOCKED'
-              ? 'bg-slate-800/60 border-slate-700 text-slate-400'
-              : isIncognito
-              ? 'bg-purple-900/30 border-purple-700/50 text-purple-200'
-              : 'bg-blue-500/10 border-blue-500/30 text-blue-600 dark:text-blue-400'
-          }`}>
-            <span className="truncate">🎯 {meaningfulOutcome}</span>
-            {!isChatLocked && outcomeStatus === 'PROPOSED' && (
-              <div className="flex items-center gap-1 ml-1 flex-shrink-0">
-                <button
-                  onClick={handleConfirmOutcome}
-                  title="Confirm outcome achieved & lock chat"
-                  className="p-1 hover:bg-amber-200/20 rounded text-emerald-400 font-bold"
-                >
-                  ✓
-                </button>
-                <button
-                  onClick={handleContinueChat}
-                  title="Continue conversation"
-                  className="p-1 hover:bg-amber-200/20 rounded text-gray-400"
-                >
-                  →
-                </button>
-              </div>
-            )}
-            {isChatLocked && <span className="text-[10px] bg-gray-700/50 px-1.5 py-0.5 rounded ml-1">Locked</span>}
-          </div>
-        )}
-
-        {/* Right: Hub Button, Actions Bell Button & Settings Dropdown */}
+        {/* Right: Dual Chat Switch / New Chat & Settings */}
         <div className="flex items-center gap-2 sm:gap-2.5">
-          {/* Locked Life OS Hub Button (Tasks, Routines, Goals) */}
-          <button
-            type="button"
-            onClick={() => triggerToast('Tasks, Routines & Goals is locked')}
-            title="Tasks, Routines & Goals (Locked)"
-            className={`relative w-10 h-10 rounded-xl border text-xs font-medium transition-all flex items-center justify-center hover:opacity-90 active:scale-95 ${
-              isIncognito
-                ? 'border-purple-800/40 bg-purple-950/40 text-purple-300/80'
-                : isDarkMode
-                ? 'border-zinc-800 bg-zinc-900/90 text-zinc-400'
-                : 'border-zinc-200/90 hover:bg-zinc-100/80 text-zinc-600 bg-white/90 shadow-2xs'
-            }`}
-          >
-            <svg className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-            </svg>
-            <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-zinc-700 dark:bg-zinc-800 text-zinc-300 border border-zinc-600 dark:border-zinc-700 shadow-2xs">
-              <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-              </svg>
-            </span>
-          </button>
+          {activeAppTab === 'suchi' && (
+            <button
+              type="button"
+              onClick={handleChatSwitchOrNew}
+              title={
+                slot1Messages.length > 0 && slot2Messages.length > 0
+                  ? `Switch between active chats (Currently Chat ${activeSlot})`
+                  : 'New Chat'
+              }
+              className={`h-9 w-9 rounded-xl border text-xs font-semibold transition-all flex items-center justify-center hover:scale-105 active:scale-95 ${
+                isIncognito
+                  ? 'border-purple-800/60 bg-purple-950/60 text-purple-200'
+                  : isDarkMode
+                  ? 'border-zinc-800 bg-zinc-900 text-zinc-200'
+                  : 'border-zinc-200 bg-white text-zinc-700 shadow-2xs hover:bg-zinc-50'
+              }`}
+            >
+              {slot1Messages.length > 0 && slot2Messages.length > 0 ? (
+                /* Switch icon: 2 arrows going in different directions ⇄ */
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                </svg>
+              ) : (
+                /* Only + icon */
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                </svg>
+              )}
+            </button>
+          )}
 
-          {/* Locked Bell Button (Shows Actions Page / Deck) */}
-          <button
-            type="button"
-            onClick={() => triggerToast('Actions Feed is locked')}
-            title="Actions & Work Feed (Locked)"
-            className={`relative w-10 h-10 rounded-xl border text-xs font-medium transition-all flex items-center justify-center hover:opacity-90 active:scale-95 ${
-              isIncognito
-                ? 'border-purple-800/40 bg-purple-950/40 text-purple-300/80'
-                : isDarkMode
-                ? 'border-zinc-800 bg-zinc-900/90 text-zinc-400'
-                : 'border-zinc-200/90 hover:bg-zinc-100/80 text-zinc-600 bg-white/90 shadow-2xs'
-            }`}
-          >
-            <svg className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-            </svg>
-            <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-zinc-700 dark:bg-zinc-800 text-zinc-300 border border-zinc-600 dark:border-zinc-700 shadow-2xs">
-              <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-              </svg>
-            </span>
-          </button>
 
           {/* Settings Trigger with Click-Outside Ref */}
           <div ref={settingsRef} className="relative">
@@ -1311,473 +1738,579 @@ export default function Home() {
 
       </header>
 
-      {/* MESSAGES SCROLL AREA */}
-      <main ref={scrollContainerRef} onScroll={handleMessagesScroll} className="flex-1 overflow-y-auto px-4 py-6">
-        <div className="max-w-3xl mx-auto space-y-6">
-          {messages.length === 0 && (
-            <div className="flex flex-col items-center justify-center min-h-[50vh] text-center px-4">
-              <span className="w-12 h-12 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-center p-2 shadow-md mb-4">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="28" height="28">
-                  <circle cx="16" cy="16" r="13" fill="none" stroke="#334155" strokeWidth="1.5"/>
-                  <polygon points="16,5 19.5,16 16,14" fill="#3b82f6"/>
-                  <polygon points="16,5 12.5,16 16,14" fill="#60a5fa"/>
-                  <polygon points="16,27 19.5,16 16,18" fill="#64748b"/>
-                  <polygon points="16,27 12.5,16 16,18" fill="#94a3b8"/>
-                  <circle cx="16" cy="16" r="2.5" fill="#ffffff" stroke="#0f172a" strokeWidth="1"/>
-                </svg>
-              </span>
-              <h2 className="text-xl sm:text-2xl font-bold tracking-tight mb-2">
-                What can Suchi take off your plate today?
-              </h2>
-              <p className="text-xs text-gray-400 mb-6 max-w-md">
-                Your autonomous Chief of Staff & Life OS. Minimum time & attention spent, maximum clarity & benefit received.
-              </p>
-              <div className="flex flex-wrap justify-center gap-2 max-w-lg">
-                {[
-                  'Find best health insurance policy for my parents',
-                  'Audit recurring monthly subscriptions & cut costs',
-                  'Draft a 6-month emergency fund & debt payoff roadmap',
-                  'Organize family medical checkups and records in Drive',
-                  'Draft a 5-slide career growth & salary review deck',
-                ].map((s, i) => (
-                  <button
-                    key={i}
-                    onClick={() => sendMessage(s)}
-                    className={`px-3.5 py-2 rounded-full border text-xs shadow-sm transition-all text-left hover:scale-[1.02] active:scale-[0.98] ${
-                      isIncognito
-                        ? 'border-purple-800/60 bg-[#1a142e] hover:bg-purple-900/40 text-purple-200 hover:border-purple-600'
-                        : isDarkMode
-                        ? 'border-slate-800 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:border-slate-700'
-                        : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700 hover:border-slate-300 shadow-xs'
-                    }`}
-                  >
-                    ✦ {s}
-                  </button>
-                ))}
+      {/* 1. MY DAY TAB VIEW (Calendar, Tasks, Routines, Goals - Add/Edit/Delete enabled) */}
+      {activeAppTab === 'my_day' && (
+        <MyDayView
+          tasks={hubTasks}
+          routines={hubRoutines}
+          goals={hubGoals}
+          events={hubEvents}
+          onToggleTask={async (id, completed) => handleToggleHubTask(id, completed ? 'completed' : 'needsAction')}
+          onAddTask={handleAddHubTask}
+          onEditTask={handleEditHubTask}
+          onDeleteTask={handleDeleteHubTask}
+          onToggleRoutineStep={handleToggleRoutineStep}
+          onAddRoutine={handleAddHubRoutine}
+          onEditRoutine={handleEditHubRoutine}
+          onDeleteRoutine={handleDeleteHubRoutine}
+          onAddEvent={handleAddHubEvent}
+          onEditEvent={handleEditHubEvent}
+          onDeleteEvent={handleDeleteHubEvent}
+          onAddGoal={handleAddHubGoal}
+          onEditGoal={handleEditHubGoal}
+          onDeleteGoal={handleDeleteHubGoal}
+          onRefresh={loadHubData}
+          isLoading={isHubLoading}
+          isDarkMode={isDarkMode}
+        />
+      )}
+
+      {/* 2. ACTIONS TAB VIEW (1 card per viewport, no scroll, auto swipe-up/in) */}
+      {activeAppTab === 'actions' && (
+        <ActionsDeckView
+          items={deckActions}
+          onApproveDraft={handleApproveDraft}
+          onRejectDraft={handleRejectDraft}
+          onOpenDraftInChat={(draftInfo) => {
+            setInput(`Review draft to ${draftInfo.to}: "${draftInfo.subject}"`);
+            setActiveAppTab('suchi');
+          }}
+          onRequestRevision={(item) => {
+            setInput(`Revise draft "${item.title}": `);
+            setActiveAppTab('suchi');
+          }}
+          onCompleteTask={async (taskId) => {
+            await handleToggleHubTask(taskId, 'needsAction');
+          }}
+          isDarkMode={isDarkMode}
+        />
+      )}
+
+      {/* 3. SUCHI CHAT TAB VIEW (MESSAGES SCROLL AREA) */}
+      {activeAppTab === 'suchi' && (
+        <div className="flex-1 flex flex-col overflow-hidden relative">
+          {/* Pinned Meaningful Outcome right below header in chatbox itself */}
+          {meaningfulOutcome && (
+            <div className={`px-4 py-2 border-b backdrop-blur-md flex items-center justify-between z-10 transition-all ${
+              outcomeStatus === 'PROPOSED'
+                ? 'bg-amber-500/15 border-amber-500/30 text-amber-900 dark:text-amber-200'
+                : outcomeStatus === 'LOCKED'
+                ? 'bg-slate-100/90 dark:bg-slate-900/90 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400'
+                : isIncognito
+                ? 'bg-purple-950/80 border-purple-800/40 text-purple-200'
+                : isDarkMode
+                ? 'bg-slate-900/90 border-slate-800 text-blue-300'
+                : 'bg-blue-50/90 border-blue-200 text-blue-900'
+            }`}>
+              <div className="flex items-center gap-2 max-w-[75%] sm:max-w-[85%] truncate">
+                <span className="text-sm flex-shrink-0">🎯</span>
+                <div className="truncate">
+                  <span className="text-[10px] uppercase font-bold tracking-wider opacity-70 block">Target Outcome</span>
+                  <span className="text-xs font-semibold truncate block">{meaningfulOutcome}</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5 flex-shrink-0">
+                {!isChatLocked && outcomeStatus === 'PROPOSED' && (
+                  <>
+                    <button
+                      onClick={handleConfirmOutcome}
+                      title="Confirm outcome achieved & lock chat"
+                      className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold shadow-xs transition-colors flex items-center gap-1"
+                    >
+                      <span>✓ Complete</span>
+                    </button>
+                    <button
+                      onClick={handleContinueChat}
+                      title="Continue conversation"
+                      className="px-2 py-1 rounded-lg bg-black/10 dark:bg-white/10 hover:bg-black/20 text-xs font-semibold"
+                    >
+                      →
+                    </button>
+                  </>
+                )}
+                {isChatLocked && (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                    Locked
+                  </span>
+                )}
               </div>
             </div>
           )}
 
-          {(() => {
-            const userIndices = messages
-              .map((m, idx) => (m.role === 'user' ? idx : -1))
-              .filter(idx => idx !== -1);
-            const last5Indices = new Set(userIndices.slice(-5));
-
-            return messages.map((msg, index) => {
-              const isAssistant = msg.role === 'assistant';
-              const isUser = msg.role === 'user';
-              const isEditable = isUser && last5Indices.has(index);
-              const options = isAssistant ? extractOptions(msg.content) : [];
-              const isImageProposal = isAssistant && (
-                msg.content.toLowerCase().includes('improved prompt') ||
-                msg.content.toLowerCase().includes('aspect ratio') ||
-                options.some(o => o.text.toLowerCase().includes('improved prompt') || o.text.toLowerCase().includes('original prompt'))
-              );
-
-              return (
-                <div
-                  key={msg.id}
-                  className={`group flex flex-col ${isUser ? 'items-end' : 'items-start'} relative`}
-                >
-                  {/* Editing Message State */}
-                  {editingMessageId === msg.id ? (
-                    <div className="w-full max-w-lg p-3 rounded-2xl bg-white dark:bg-gray-800 border-2 border-blue-500 shadow-md">
-                      <div className="text-xs font-semibold text-blue-600 dark:text-blue-400 mb-1.5 flex items-center justify-between">
-                        <span>Edit Message (updates context from here)</span>
-                        <span className="text-[10px] text-gray-400">Esc to cancel</span>
-                      </div>
-                      <textarea
-                        value={editingText}
-                        onChange={(e) => setEditingText(e.target.value)}
-                        className="w-full p-2.5 text-sm rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none"
-                        rows={3}
-                        autoFocus
-                      />
-                      <div className="mt-2 flex items-center justify-end gap-2">
-                        <button
-                          onClick={handleCancelEditMessage}
-                          className="px-3 py-1.5 rounded-lg text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          onClick={() => handleSaveEditMessage(msg.id)}
-                          disabled={!editingText.trim() || isLoading}
-                          className="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white transition-colors disabled:opacity-50 shadow-xs"
-                        >
-                          Save & Update
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    /* Message Bubble */
-                    <div
-                      className={`max-w-[88%] sm:max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed relative ${
-                        isUser
-                          ? isIncognito
-                            ? 'bg-gradient-to-r from-purple-600 via-indigo-600 to-indigo-700 text-white rounded-br-xs shadow-md shadow-purple-950/40'
-                            : 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-br-xs shadow-sm shadow-blue-900/10'
-                          : isIncognito
-                          ? 'bg-[#181428] border border-purple-800/40 text-purple-100 rounded-bl-xs shadow-xs'
-                          : isDarkMode
-                          ? 'bg-[#151e2e] border border-slate-800 text-slate-100 rounded-bl-xs shadow-xs'
-                          : 'bg-white border border-slate-200/90 text-slate-800 rounded-bl-xs shadow-xs'
-                      }`}
-                    >
-                      <ReactMarkdown
-                        remarkPlugins={[remarkGfm]}
-                        components={{
-                          code({ node, inline, className, children, ...props }: any) {
-                            if (!inline) {
-                              return <CodeBlock className={className}>{children}</CodeBlock>;
-                            }
-                            return (
-                              <code className={className} {...props}>
-                                {children}
-                              </code>
-                            );
-                          },
-                          table({ children, ...props }: any) {
-                            return (
-                              <div className="overflow-x-auto my-3 rounded-xl border border-zinc-200 dark:border-zinc-800">
-                                <table className="min-w-full divide-y divide-zinc-200 dark:divide-zinc-800 text-xs" {...props}>
-                                  {children}
-                                </table>
-                              </div>
-                            );
-                          },
-                        }}
-                      >
-                        {msg.content}
-                      </ReactMarkdown>
-
-                      {/* Floating Message Action Buttons (Copy, Edit, TTS, Retry, Report) */}
-                      <div className={`mt-2 pt-1.5 flex items-center gap-1 border-t ${
-                        isUser
-                          ? 'border-white/20 text-white/80'
-                          : isIncognito
-                          ? 'border-purple-800/30 text-purple-400'
-                          : 'border-gray-100 dark:border-gray-800 text-gray-400'
-                      }`}>
-                        {/* Copy Button */}
-                        <button
-                          onClick={() => handleCopyMessage(msg.id, msg.content)}
-                          title="Copy message"
-                          className="p-1 rounded hover:bg-black/10 dark:hover:bg-white/10 transition-colors inline-flex items-center gap-1 text-[11px]"
-                        >
-                          {copiedMessageId === msg.id ? (
-                            <>
-                              <svg className="w-3.5 h-3.5 text-emerald-400 dark:text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                              </svg>
-                              <span className="text-[10px] text-emerald-400 dark:text-emerald-400 font-medium">Copied</span>
-                            </>
-                          ) : (
-                            <svg className="w-3.5 h-3.5 opacity-80 hover:opacity-100" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                            </svg>
-                          )}
-                        </button>
-
-                        {/* Edit Button (Only for last 5 user messages) */}
-                        {isEditable && (
-                          <button
-                            onClick={() => handleStartEditMessage(msg)}
-                            title="Edit message (updates chat context from here)"
-                            className="p-1 rounded hover:bg-black/10 dark:hover:bg-white/10 transition-colors inline-flex items-center gap-1 text-[11px] opacity-80 hover:opacity-100"
-                          >
-                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                            </svg>
-                            <span className="text-[10px]">Edit</span>
-                          </button>
-                        )}
-
-                        {/* Listen/Speak Button (For assistant messages) */}
-                        {isAssistant && (
-                          <button
-                            onClick={() => handleToggleSpeech(msg.id, msg.content)}
-                            title={speakingMessageId === msg.id ? 'Stop audio playback' : 'Play voice response'}
-                            className="p-1 rounded hover:bg-black/10 dark:hover:bg-white/10 transition-colors inline-flex items-center gap-1 text-[11px]"
-                          >
-                            {speakingMessageId === msg.id ? (
-                              <>
-                                <svg className="w-3.5 h-3.5 text-blue-500 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
-                                </svg>
-                                <span className="text-[10px] text-blue-500 font-medium">Playing...</span>
-                              </>
-                            ) : (
-                              <svg className="w-3.5 h-3.5 opacity-80 hover:opacity-100" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-                              </svg>
-                            )}
-                          </button>
-                        )}
-
-                        {/* Retry / Regenerate Button (For assistant messages) */}
-                        {isAssistant && !isChatLocked && (
-                          <button
-                            onClick={() => handleRegenerateResponse(msg.id)}
-                            disabled={isLoading}
-                            title="Regenerate response"
-                            className="p-1 rounded hover:bg-black/10 dark:hover:bg-white/10 transition-colors inline-flex items-center gap-1 text-[11px] opacity-80 hover:opacity-100 disabled:opacity-40"
-                          >
-                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                            </svg>
-                            <span className="text-[10px]">Retry</span>
-                          </button>
-                        )}
-
-                        {/* Report Bug / Issue Button */}
-                        {isAssistant && (
-                          <button
-                            onClick={() => handleOpenBugModal(msg)}
-                            title="Report bug or incomplete work to Suchi engineering"
-                            className="p-1 rounded hover:bg-rose-50 dark:hover:bg-rose-950/40 text-gray-400 hover:text-rose-500 transition-colors inline-flex items-center gap-1 text-[11px] ml-auto"
-                          >
-                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                            </svg>
-                            <span className="text-[10px]">Report</span>
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Incomplete Work / Tool Failure High-Visibility Banner */}
-                  {isAssistant && (msg.actions?.some(a => !a.success) || (msg.content && msg.content.includes('Sorry, something went wrong'))) && (
-                    <div className="mt-2.5 max-w-[88%] sm:max-w-[80%] p-3 rounded-2xl bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-900/60 flex items-center justify-between gap-3 text-xs shadow-xs">
-                      <div className="flex items-center gap-2 text-rose-800 dark:text-rose-200">
-                        <span className="text-base">⚠️</span>
-                        <div className="text-left">
-                          <span className="font-semibold block">Work could not be completed properly</span>
-                          <span className="text-[11px] text-rose-600 dark:text-rose-300">Suchi encountered a tool or permission failure</span>
-                        </div>
-                      </div>
+          <main ref={scrollContainerRef} onScroll={handleMessagesScroll} className="flex-1 overflow-y-auto px-4 py-6">
+            <div className="max-w-3xl mx-auto space-y-6">
+              {messages.length === 0 && (
+                <div className="flex flex-col items-center justify-center min-h-[50vh] text-center px-4">
+                  <span className="w-12 h-12 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-center p-2 shadow-md mb-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="28" height="28">
+                      <circle cx="16" cy="16" r="13" fill="none" stroke="#334155" strokeWidth="1.5"/>
+                      <polygon points="16,5 19.5,16 16,14" fill="#3b82f6"/>
+                      <polygon points="16,5 12.5,16 16,14" fill="#60a5fa"/>
+                      <polygon points="16,27 19.5,16 16,18" fill="#64748b"/>
+                      <polygon points="16,27 12.5,16 16,18" fill="#94a3b8"/>
+                      <circle cx="16" cy="16" r="2.5" fill="#ffffff" stroke="#0f172a" strokeWidth="1"/>
+                    </svg>
+                  </span>
+                  <h2 className="text-xl sm:text-2xl font-bold tracking-tight mb-3">
+                    Hey {user?.name ? user.name.split(' ')[0] : 'User'}, what can I do for you?
+                  </h2>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mb-6 max-w-md">
+                    Your autonomous Chief of Staff & Life OS. Minimum time & attention spent, maximum clarity & benefit received.
+                  </p>
+                  <div className="flex flex-wrap justify-center gap-2 max-w-lg">
+                    {welcomeCapabilities.map((cap, i) => (
                       <button
-                        onClick={() => handleOpenBugModal(msg)}
-                        className="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs shadow-sm flex items-center gap-1.5 transition-transform active:scale-95 flex-shrink-0"
+                        key={i}
+                        onClick={() => sendMessage(cap)}
+                        className={`px-3.5 py-2 rounded-2xl border text-xs shadow-xs transition-all text-left hover:scale-[1.02] active:scale-[0.98] ${
+                          isIncognito
+                            ? 'border-purple-800/60 bg-[#1a142e] hover:bg-purple-900/40 text-purple-200 hover:border-purple-600'
+                            : isDarkMode
+                            ? 'border-slate-800 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:border-slate-700'
+                            : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700 hover:border-slate-300 shadow-2xs'
+                        }`}
                       >
-                        <span>Send Bug Report</span>
-                        <span>→</span>
+                        ✦ {cap}
                       </button>
-                    </div>
-                  )}
+                    ))}
+                  </div>
+                </div>
+              )}
 
-                  {/* Aspect Ratio Selector for Image Proposals */}
-                  {isImageProposal && (
-                    <div className="mt-2.5 flex items-center gap-1.5 flex-wrap max-w-[85%] px-1">
-                      <span className="text-[10px] uppercase font-bold tracking-wider text-gray-400 dark:text-gray-500">
-                        Aspect Ratio:
-                      </span>
-                      {['1:1', '16:9', '9:16', '4:3', '3:4'].map(ratio => (
-                        <button
-                          key={ratio}
-                          type="button"
-                          onClick={() => setSelectedImageAspectRatio(ratio)}
-                          className={`px-2 py-0.5 rounded-md text-[11px] font-semibold border transition-all ${
-                            selectedImageAspectRatio === ratio
-                              ? 'bg-blue-600 text-white border-blue-600 shadow-xs scale-105'
-                              : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:border-gray-400'
-                          }`}
-                        >
-                          {ratio}
-                        </button>
-                      ))}
-                    </div>
-                  )}
+              {(() => {
+                const userIndices = messages
+                  .map((m, idx) => (m.role === 'user' ? idx : -1))
+                  .filter(idx => idx !== -1);
+                const last5Indices = new Set(userIndices.slice(-5));
 
-                  {/* Interactive MCQ Option Buttons */}
-                  {options.length > 0 && (
-                    <div className="mt-2 flex flex-wrap gap-2 max-w-[85%]">
-                      {options.map((opt, i) => (
-                        <button
-                          key={i}
-                          disabled={isLoading || isChatLocked || isGeneratingImage}
-                          onClick={() => {
-                            if (isImageProposal) {
-                              sendMessage(`[${opt.label}] ${opt.text} (Aspect ratio: ${selectedImageAspectRatio})`);
-                            } else {
-                              sendMessage(`[${opt.label}] ${opt.text}`);
-                            }
-                          }}
-                          className="px-3 py-1.5 rounded-xl border border-blue-200 dark:border-blue-900/60 bg-blue-50/90 dark:bg-blue-950/40 hover:bg-blue-100 dark:hover:bg-blue-900/60 text-xs font-medium text-blue-900 dark:text-blue-300 transition-all shadow-xs flex items-center gap-2 hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50"
-                        >
-                          <span className="w-5 h-5 rounded-md bg-blue-600 text-white flex items-center justify-center font-bold text-[10px] shadow-xs">
-                            {opt.label}
-                          </span>
-                          <span className="text-left">{opt.text}</span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                return messages.map((msg, index) => {
+                  const isAssistant = msg.role === 'assistant';
+                  const isUser = msg.role === 'user';
+                  const isEditable = isUser && last5Indices.has(index);
+                  const options = isAssistant ? extractOptions(msg.content) : [];
+                  const isImageProposal = isAssistant && (
+                    msg.content.toLowerCase().includes('improved prompt') ||
+                    msg.content.toLowerCase().includes('aspect ratio') ||
+                    options.some(o => o.text.toLowerCase().includes('improved prompt') || o.text.toLowerCase().includes('original prompt'))
+                  );
 
-                  {/* Actions & Generated Images Badges / Cards */}
-                  {msg.actions && msg.actions.length > 0 && (
-                    <div className="mt-2 flex flex-col gap-2 max-w-[88%] sm:max-w-[80%]">
-                      {msg.actions.map((action, idx) => (
-                        <div key={idx} className="flex flex-col gap-2">
-                          {/* Image preview card if tool is generate_image or imageUrl is present */}
-                          {(action.imageUrl || action.tool === 'generate_image') && action.imageUrl && (
-                            <div className="rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 bg-black/5 max-w-md shadow-sm">
-                              <img
-                                src={action.imageUrl}
-                                alt="Generated by Suchi"
-                                className="w-full h-auto object-cover max-h-96"
-                                loading="lazy"
-                              />
-                              <div className="p-2.5 flex items-center justify-between text-xs bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700">
-                                <span className="text-gray-500 dark:text-gray-400 font-medium truncate max-w-[200px]">
-                                  {action.summary}
-                                </span>
-                                <div className="flex items-center gap-2 flex-shrink-0">
-                                  <a
-                                    href={action.imageUrl}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="text-blue-600 dark:text-blue-400 hover:underline font-semibold"
-                                  >
-                                    Full Size ↗
-                                  </a>
-                                  <a
-                                    href={action.imageUrl}
-                                    download="suchi-image.jpg"
-                                    className="px-2.5 py-1 rounded bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-medium"
-                                  >
-                                    Download ↓
-                                  </a>
-                                </div>
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Normal action badge */}
-                          <div className="flex items-center gap-1.5 py-1 px-2.5 rounded-full border bg-gray-50 dark:bg-gray-800/80 border-gray-200 dark:border-gray-700 text-[11px] text-gray-600 dark:text-gray-300 w-fit">
-                            <span className={`w-1.5 h-1.5 rounded-full ${action.success ? 'bg-emerald-500' : 'bg-red-500'}`}></span>
-                            <span className="font-semibold uppercase tracking-wider text-[9px] text-gray-400 dark:text-gray-500">
-                              {action.tool.replace(/_/g, ' ')}:
-                            </span>
-                            <span>{action.summary}</span>
-                            {action.link && !action.imageUrl && (
-                              <a
-                                href={action.link}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="text-blue-600 dark:text-blue-400 hover:underline font-semibold ml-1 inline-flex items-center gap-0.5"
-                              >
-                                Open ↗
-                              </a>
-                            )}
+                  return (
+                    <div
+                      key={msg.id}
+                      className={`group flex flex-col ${isUser ? 'items-end' : 'items-start'} relative`}
+                    >
+                      {/* Editing Message State */}
+                      {editingMessageId === msg.id ? (
+                        <div className="w-full max-w-lg p-3 rounded-2xl bg-white dark:bg-gray-800 border-2 border-blue-500 shadow-md">
+                          <div className="text-xs font-semibold text-blue-600 dark:text-blue-400 mb-1.5 flex items-center justify-between">
+                            <span>Edit Message (updates context from here)</span>
+                            <span className="text-[10px] text-gray-400">Esc to cancel</span>
+                          </div>
+                          <textarea
+                            value={editingText}
+                            onChange={(e) => setEditingText(e.target.value)}
+                            className="w-full p-2.5 text-sm rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none"
+                            rows={3}
+                            autoFocus
+                          />
+                          <div className="mt-2 flex items-center justify-end gap-2">
+                            <button
+                              onClick={handleCancelEditMessage}
+                              className="px-3 py-1.5 rounded-lg text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              onClick={() => handleSaveEditMessage(msg.id)}
+                              disabled={!editingText.trim() || isLoading}
+                              className="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white transition-colors disabled:opacity-50 shadow-xs"
+                            >
+                              Save & Update
+                            </button>
                           </div>
                         </div>
-                      ))}
-                    </div>
-                  )}
+                      ) : (
+                        <>
+                          {/* Message Bubble (Content Only) */}
+                          <div
+                            className={`max-w-[88%] sm:max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed relative ${
+                              isUser
+                                ? isIncognito
+                                  ? 'bg-gradient-to-r from-purple-600 via-indigo-600 to-indigo-700 text-white rounded-br-xs shadow-md shadow-purple-950/40'
+                                  : 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-br-xs shadow-sm shadow-blue-900/10'
+                                : isIncognito
+                                ? 'bg-[#181428] border border-purple-800/40 text-purple-100 rounded-bl-xs shadow-xs'
+                                : isDarkMode
+                                ? 'bg-[#151e2e] border border-slate-800 text-slate-100 rounded-bl-xs shadow-xs'
+                                : 'bg-white border border-slate-200/90 text-slate-800 rounded-bl-xs shadow-xs'
+                            }`}
+                          >
+                            <ReactMarkdown
+                              remarkPlugins={[remarkGfm]}
+                              components={{
+                                code({ node, inline, className, children, ...props }: any) {
+                                  if (!inline) {
+                                    return <CodeBlock className={className}>{children}</CodeBlock>;
+                                  }
+                                  return (
+                                    <code className={className} {...props}>
+                                      {children}
+                                    </code>
+                                  );
+                                },
+                                table({ children, ...props }: any) {
+                                  return (
+                                    <div className="overflow-x-auto my-3 rounded-xl border border-zinc-200 dark:border-zinc-800">
+                                      <table className="min-w-full divide-y divide-zinc-200 dark:divide-zinc-800 text-xs" {...props}>
+                                        {children}
+                                      </table>
+                                    </div>
+                                  );
+                                },
+                              }}
+                            >
+                              {msg.content}
+                            </ReactMarkdown>
+                          </div>
 
-                  {/* Gmail Pending Draft Card */}
-                  {msg.pendingDraft && !draftStatuses.get(msg.pendingDraft.draftId) && (
-                    <div className="mt-3 w-full max-w-md p-4 rounded-xl border border-amber-300 dark:border-amber-700 bg-amber-50/90 dark:bg-amber-950/40 text-amber-950 dark:text-amber-100 shadow-sm">
-                      <div className="flex items-center justify-between text-xs font-bold text-amber-800 dark:text-amber-300 mb-2">
-                        <span className="flex items-center gap-1.5">
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                          </svg>
-                          Gmail Reply Draft (Approval Required)
-                        </span>
-                        <span className="text-[10px] uppercase tracking-wider bg-amber-200 dark:bg-amber-900 text-amber-900 dark:text-amber-200 px-1.5 py-0.5 rounded">Pending</span>
-                      </div>
-                      <div className="text-xs space-y-1 mb-3">
-                        <div><strong className="text-gray-600 dark:text-gray-400">To:</strong> {msg.pendingDraft.to}</div>
-                        <div><strong className="text-gray-600 dark:text-gray-400">Subject:</strong> {msg.pendingDraft.subject}</div>
-                        <div className="p-2 rounded bg-white dark:bg-gray-900 border border-amber-200 dark:border-amber-800 text-gray-800 dark:text-gray-200 whitespace-pre-wrap max-h-36 overflow-y-auto mt-2">
-                          {msg.pendingDraft.body}
+                          {/* Message Actions Row - Rendered strictly BELOW the message box */}
+                          <div className={`mt-1 px-1 flex items-center gap-1.5 text-xs ${
+                            isUser ? 'justify-end text-slate-400' : 'justify-start text-slate-400'
+                          }`}>
+                            {/* Copy Button */}
+                            <button
+                              onClick={() => handleCopyMessage(msg.id, msg.content)}
+                              title="Copy message"
+                              className="p-1 rounded hover:bg-black/10 dark:hover:bg-white/10 transition-colors inline-flex items-center gap-1 text-[11px]"
+                            >
+                              {copiedMessageId === msg.id ? (
+                                <>
+                                  <svg className="w-3.5 h-3.5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                  </svg>
+                                  <span className="text-[10px] text-emerald-400 font-medium">Copied</span>
+                                </>
+                              ) : (
+                                <svg className="w-3.5 h-3.5 opacity-80 hover:opacity-100" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                </svg>
+                              )}
+                            </button>
+
+                            {/* Edit Button (Only for last 5 user messages, NOT allowed when chat is locked) */}
+                            {!isChatLocked && isEditable && (
+                              <button
+                                onClick={() => handleStartEditMessage(msg)}
+                                title="Edit message (updates chat context from here)"
+                                className="p-1 rounded hover:bg-black/10 dark:hover:bg-white/10 transition-colors inline-flex items-center gap-1 text-[11px] opacity-80 hover:opacity-100"
+                              >
+                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                                <span className="text-[10px]">Edit</span>
+                              </button>
+                            )}
+
+                            {/* Listen/Speak Button (For assistant messages) */}
+                            {isAssistant && (
+                              <button
+                                onClick={() => handleToggleSpeech(msg.id, msg.content)}
+                                title={speakingMessageId === msg.id ? 'Stop audio playback' : 'Play voice response'}
+                                className="p-1 rounded hover:bg-black/10 dark:hover:bg-white/10 transition-colors inline-flex items-center gap-1 text-[11px]"
+                              >
+                                {speakingMessageId === msg.id ? (
+                                  <>
+                                    <svg className="w-3.5 h-3.5 text-blue-500 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
+                                    </svg>
+                                    <span className="text-[10px] text-blue-500 font-medium">Playing...</span>
+                                  </>
+                                ) : (
+                                  <svg className="w-3.5 h-3.5 opacity-80 hover:opacity-100" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                                  </svg>
+                                )}
+                              </button>
+                            )}
+
+                            {/* Retry / Regenerate Button (For assistant messages, only when NOT locked) */}
+                            {isAssistant && !isChatLocked && (
+                              <button
+                                onClick={() => handleRegenerateResponse(msg.id)}
+                                disabled={isLoading}
+                                title="Regenerate response"
+                                className="p-1 rounded hover:bg-black/10 dark:hover:bg-white/10 transition-colors inline-flex items-center gap-1 text-[11px] opacity-80 hover:opacity-100 disabled:opacity-40"
+                              >
+                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                </svg>
+                                <span className="text-[10px]">Retry</span>
+                              </button>
+                            )}
+
+                            {/* Report Bug / Issue Button */}
+                            {isAssistant && (
+                              <button
+                                onClick={() => handleOpenBugModal(msg)}
+                                title="Report bug or incomplete work to Suchi engineering"
+                                className="p-1 rounded hover:bg-rose-50 dark:hover:bg-rose-950/40 text-gray-400 hover:text-rose-500 transition-colors inline-flex items-center gap-1 text-[11px] ml-auto"
+                              >
+                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                </svg>
+                                <span className="text-[10px]">Report</span>
+                              </button>
+                            )}
+                          </div>
+                        </>
+                      )}
+
+                      {/* Incomplete Work / Tool Failure High-Visibility Banner */}
+                      {isAssistant && (msg.actions?.some(a => !a.success) || (msg.content && msg.content.includes('Sorry, something went wrong'))) && (
+                        <div className="mt-2.5 max-w-[88%] sm:max-w-[80%] p-3 rounded-2xl bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-900/60 flex items-center justify-between gap-3 text-xs shadow-xs">
+                          <div className="flex items-center gap-2 text-rose-800 dark:text-rose-200">
+                            <span className="text-base">⚠️</span>
+                            <div className="text-left">
+                              <span className="font-semibold block">Work could not be completed properly</span>
+                              <span className="text-[11px] text-rose-600 dark:text-rose-300">Suchi encountered a tool or permission failure</span>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => handleOpenBugModal(msg)}
+                            className="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs shadow-sm flex items-center gap-1.5 transition-transform active:scale-95 flex-shrink-0"
+                          >
+                            <span>Send Bug Report</span>
+                            <span>→</span>
+                          </button>
                         </div>
-                      </div>
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => handleRejectDraft(msg.pendingDraft!.draftId)}
-                          className="px-3 py-1.5 rounded-lg text-xs font-medium text-red-700 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-950/60 border border-red-200 dark:border-red-900 transition-colors"
-                        >
-                          Discard Draft
-                        </button>
-                        <button
-                          onClick={() => handleApproveDraft(msg.pendingDraft!.draftId)}
-                          className="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition-colors"
-                        >
-                          Approve & Send
-                        </button>
-                      </div>
-                    </div>
-                  )}
+                      )}
 
-                  {msg.pendingDraft && draftStatuses.get(msg.pendingDraft.draftId) === 'approved' && (
-                    <div className="mt-2 text-xs text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-lg px-3 py-1.5 flex items-center gap-1.5">
-                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
-                      Email successfully sent via Gmail.
-                    </div>
-                  )}
+                      {/* Aspect Ratio Selector for Image Proposals */}
+                      {isImageProposal && (
+                        <div className="mt-2.5 flex items-center gap-1.5 flex-wrap max-w-[85%] px-1">
+                          <span className="text-[10px] uppercase font-bold tracking-wider text-gray-400 dark:text-gray-500">
+                            Aspect Ratio:
+                          </span>
+                          {['1:1', '16:9', '9:16', '4:3', '3:4'].map(ratio => (
+                            <button
+                              key={ratio}
+                              type="button"
+                              onClick={() => setSelectedImageAspectRatio(ratio)}
+                              className={`px-2 py-0.5 rounded-md text-[11px] font-semibold border transition-all ${
+                                selectedImageAspectRatio === ratio
+                                  ? 'bg-blue-600 text-white border-blue-600 shadow-xs scale-105'
+                                  : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:border-gray-400'
+                              }`}
+                            >
+                              {ratio}
+                            </button>
+                          ))}
+                        </div>
+                      )}
 
-                  {msg.pendingDraft && draftStatuses.get(msg.pendingDraft.draftId) === 'rejected' && (
-                    <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5">
-                      Draft discarded.
+                      {/* Interactive MCQ Option Buttons */}
+                      {options.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-2 max-w-[85%]">
+                          {options.map((opt, i) => (
+                            <button
+                              key={i}
+                              disabled={isLoading || isChatLocked || isGeneratingImage}
+                              onClick={() => {
+                                if (isImageProposal) {
+                                  sendMessage(`[${opt.label}] ${opt.text} (Aspect ratio: ${selectedImageAspectRatio})`);
+                                } else {
+                                  sendMessage(`[${opt.label}] ${opt.text}`);
+                                }
+                              }}
+                              className="px-3 py-1.5 rounded-xl border border-blue-200 dark:border-blue-900/60 bg-blue-50/90 dark:bg-blue-950/40 hover:bg-blue-100 dark:hover:bg-blue-900/60 text-xs font-medium text-blue-900 dark:text-blue-300 transition-all shadow-xs flex items-center gap-2 hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50"
+                            >
+                              <span className="w-5 h-5 rounded-md bg-blue-600 text-white flex items-center justify-center font-bold text-[10px] shadow-xs">
+                                {opt.label}
+                              </span>
+                              <span className="text-left">{opt.text}</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Actions & Generated Images Badges / Cards */}
+                      {msg.actions && msg.actions.length > 0 && (
+                        <div className="mt-2 flex flex-col gap-2 max-w-[88%] sm:max-w-[80%]">
+                          {msg.actions.map((action, idx) => (
+                            <div key={idx} className="flex flex-col gap-2">
+                              {(action.imageUrl || action.tool === 'generate_image') && action.imageUrl && (
+                                <div className="rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 bg-black/5 max-w-md shadow-sm">
+                                  <img
+                                    src={action.imageUrl}
+                                    alt="Generated by Suchi"
+                                    className="w-full h-auto object-cover max-h-96"
+                                    loading="lazy"
+                                  />
+                                  <div className="p-2.5 flex items-center justify-between text-xs bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700">
+                                    <span className="text-gray-500 dark:text-gray-400 font-medium truncate max-w-[200px]">
+                                      {action.summary}
+                                    </span>
+                                    <div className="flex items-center gap-2 flex-shrink-0">
+                                      <a
+                                        href={action.imageUrl}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="text-blue-600 dark:text-blue-400 hover:underline font-semibold"
+                                      >
+                                        Full Size ↗
+                                      </a>
+                                      <a
+                                        href={action.imageUrl}
+                                        download="suchi-image.jpg"
+                                        className="px-2.5 py-1 rounded bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-medium"
+                                      >
+                                        Download ↓
+                                      </a>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Normal action badge */}
+                              <div className="flex items-center gap-1.5 py-1 px-2.5 rounded-full border bg-gray-50 dark:bg-gray-800/80 border-gray-200 dark:border-gray-700 text-[11px] text-gray-600 dark:text-gray-300 w-fit">
+                                <span className={`w-1.5 h-1.5 rounded-full ${action.success ? 'bg-emerald-500' : 'bg-red-500'}`}></span>
+                                <span className="font-semibold uppercase tracking-wider text-[9px] text-gray-400 dark:text-gray-500">
+                                  {action.tool.replace(/_/g, ' ')}:
+                                </span>
+                                <span>{action.summary}</span>
+                                {action.link && !action.imageUrl && (
+                                  <a
+                                    href={action.link}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="text-blue-600 dark:text-blue-400 hover:underline font-semibold ml-1 inline-flex items-center gap-0.5"
+                                  >
+                                    Open ↗
+                                  </a>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Gmail Pending Draft Card */}
+                      {msg.pendingDraft && !draftStatuses.get(msg.pendingDraft.draftId) && (
+                        <div className="mt-3 w-full max-w-md p-4 rounded-xl border border-amber-300 dark:border-amber-700 bg-amber-50/90 dark:bg-amber-950/40 text-amber-950 dark:text-amber-100 shadow-sm">
+                          <div className="flex items-center justify-between text-xs font-bold text-amber-800 dark:text-amber-300 mb-2">
+                            <span className="flex items-center gap-1.5">
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                              </svg>
+                              Gmail Reply Draft (Approval Required)
+                            </span>
+                            <span className="text-[10px] uppercase tracking-wider bg-amber-200 dark:bg-amber-900 text-amber-900 dark:text-amber-200 px-1.5 py-0.5 rounded">Pending</span>
+                          </div>
+                          <div className="text-xs space-y-1 mb-3">
+                            <div><strong className="text-gray-600 dark:text-gray-400">To:</strong> {msg.pendingDraft.to}</div>
+                            <div><strong className="text-gray-600 dark:text-gray-400">Subject:</strong> {msg.pendingDraft.subject}</div>
+                            <div className="p-2 rounded bg-white dark:bg-gray-900 border border-amber-200 dark:border-amber-800 text-gray-800 dark:text-gray-200 whitespace-pre-wrap max-h-36 overflow-y-auto mt-2">
+                              {msg.pendingDraft.body}
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => handleRejectDraft(msg.pendingDraft!.draftId)}
+                              className="px-3 py-1.5 rounded-lg text-xs font-medium text-red-700 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-950/60 border border-red-200 dark:border-red-900 transition-colors"
+                            >
+                              Discard Draft
+                            </button>
+                            <button
+                              onClick={() => handleApproveDraft(msg.pendingDraft!.draftId)}
+                              className="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition-colors"
+                            >
+                              Approve & Send
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {msg.pendingDraft && draftStatuses.get(msg.pendingDraft.draftId) === 'approved' && (
+                        <div className="mt-2 text-xs text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-lg px-3 py-1.5 flex items-center gap-1.5">
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                          Email successfully sent via Gmail.
+                        </div>
+                      )}
+
+                      {msg.pendingDraft && draftStatuses.get(msg.pendingDraft.draftId) === 'rejected' && (
+                        <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5">
+                          Draft discarded.
+                        </div>
+                      )}
                     </div>
-                  )}
+                  );
+                });
+              })()}
+
+              {/* Long Running Progress Indicator */}
+              {isLoading && (
+                <div className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-100 rounded-xl text-xs text-blue-800 max-w-sm animate-pulse">
+                  <div className="w-2 h-2 rounded-full bg-blue-600 animate-ping"></div>
+                  <span>{PROGRESS_PHRASES[progressIndex]}...</span>
                 </div>
-              );
-            });
-          })()}
+              )}
 
-          {/* Long Running Progress Indicator */}
-          {isLoading && (
-            <div className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-100 rounded-xl text-xs text-blue-800 max-w-sm animate-pulse">
-              <div className="w-2 h-2 rounded-full bg-blue-600 animate-ping"></div>
-              <span>{PROGRESS_PHRASES[progressIndex]}...</span>
+              <div ref={messagesEndRef} />
             </div>
-          )}
 
-          <div ref={messagesEndRef} />
-        </div>
-      </main>
-
-      {/* Floating Jump to Latest Button (System 3) */}
-      {showJumpToBottom && (
-        <div className="fixed bottom-24 right-6 sm:right-10 z-20 transition-all">
-          <button
-            type="button"
-            onClick={handleJumpToBottom}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-zinc-900/95 dark:bg-zinc-100 text-white dark:text-zinc-900 text-xs font-semibold shadow-xl border border-zinc-700/50 dark:border-zinc-300 hover:scale-105 active:scale-95 transition-transform"
-            title="Scroll to latest messages"
-          >
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-            </svg>
-            <span>Jump to latest</span>
-          </button>
+            {/* Floating Jump to Latest Button (System 3) */}
+            {showJumpToBottom && (
+              <div className="fixed bottom-24 right-6 sm:right-10 z-20 transition-all">
+                <button
+                  type="button"
+                  onClick={handleJumpToBottom}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-zinc-900/95 dark:bg-zinc-100 text-white dark:text-zinc-900 text-xs font-semibold shadow-xl border border-zinc-700/50 dark:border-zinc-300 hover:scale-105 active:scale-95 transition-transform"
+                  title="Scroll to latest messages"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                  </svg>
+                  <span>Jump to latest</span>
+                </button>
+              </div>
+            )}
+          </main>
         </div>
       )}
 
-      {/* INPUT BAR */}
-      <footer className={`border-t p-2.5 sm:p-3 relative z-10 transition-colors ${
+      {/* INPUT BAR (LOCKED RIGHT ABOVE FOOTER WHEN IN SUCHI TAB) */}
+      {activeAppTab === 'suchi' && (
+      <footer className={`border-t px-3 py-2 sm:py-2.5 relative z-10 transition-colors ${
         isDarkMode || isIncognito ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'
       }`}>
-        <div className="max-w-3xl mx-auto flex flex-col gap-2">
+        <div className="max-w-3xl mx-auto flex flex-col gap-1.5">
+          {/* Locked Chat Context Migration Pill */}
+          {isChatLocked && (
+            <div className="flex justify-center pb-1">
+              <button
+                type="button"
+                onClick={handleTakeContextToNewChat}
+                className="px-4 py-1.5 rounded-full text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white shadow-md flex items-center gap-2 transition-all hover:scale-105 active:scale-95"
+              >
+                <span>📄 Take context to new chat</span>
+                <span>→</span>
+              </button>
+            </div>
+          )}
+
           {/* Agent Suggests Popup */}
           {activeSuggestion && (
-            <div className={`flex items-center justify-between p-2 rounded-lg border text-xs shadow-sm ${
+            <div className={`flex items-center justify-between p-2 rounded-xl border text-xs shadow-xs ${
               isDarkMode ? 'bg-indigo-950/60 border-indigo-800 text-indigo-300' : 'bg-indigo-50 border-indigo-200 text-indigo-900'
             }`}>
-              <span className="flex items-center gap-1.5">
+              <span className="flex items-center gap-1.5 truncate">
                 <svg className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
                 </svg>
-                {activeSuggestion}
+                <span className="truncate">{activeSuggestion}</span>
               </span>
               <button onClick={() => setActiveSuggestion(null)} className="text-indigo-500 hover:text-indigo-800 text-sm font-bold ml-2">
                 ✕
@@ -1787,28 +2320,25 @@ export default function Home() {
 
           {/* Attached Files Badges */}
           {attachedFiles.length > 0 && (
-            <div className="flex flex-wrap gap-2 pt-1 pb-0.5">
+            <div className="flex flex-wrap gap-1.5 pt-0.5 pb-1 max-h-24 overflow-y-auto">
               {attachedFiles.map((file, i) => {
                 const isImage = file.content?.startsWith('data:image/') || /\.(png|jpe?g|gif|webp|svg)$/i.test(file.name);
                 return (
-                  <div key={i} className={`group flex items-center gap-2 pl-2 pr-1.5 py-1 rounded-xl text-xs border transition-all ${
-                    isDarkMode ? 'bg-zinc-800/90 border-zinc-700 text-zinc-200' : 'bg-zinc-100 border-zinc-200 text-zinc-800'
+                  <div key={i} className={`group flex items-center gap-1.5 pl-2 pr-1.5 py-0.5 rounded-lg text-xs border transition-all ${
+                    isDarkMode ? 'bg-zinc-800 border-zinc-700 text-zinc-200' : 'bg-zinc-100 border-zinc-200 text-zinc-800'
                   }`}>
                     {isImage && file.content ? (
-                      <img src={file.content} alt={file.name} className="w-5 h-5 rounded object-cover flex-shrink-0 border border-zinc-300 dark:border-zinc-700" />
+                      <img src={file.content} alt={file.name} className="w-4 h-4 rounded object-cover flex-shrink-0" />
                     ) : (
                       <svg className="w-3.5 h-3.5 text-zinc-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
                       </svg>
                     )}
-                    <div className="flex flex-col min-w-0 pr-1">
-                      <span className="truncate max-w-[130px] font-medium text-[11px] leading-tight">{file.name}</span>
-                      {file.size && <span className="text-[9px] text-zinc-400 leading-tight">{file.size}</span>}
-                    </div>
+                    <span className="truncate max-w-[120px] font-medium text-[11px]">{file.name}</span>
                     <button
                       type="button"
                       onClick={() => setAttachedFiles(prev => prev.filter((_, idx) => idx !== i))}
-                      className="w-4 h-4 rounded-full flex items-center justify-center text-zinc-400 hover:text-rose-500 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors ml-auto"
+                      className="w-3.5 h-3.5 rounded-full flex items-center justify-center text-zinc-400 hover:text-rose-500 transition-colors ml-0.5"
                       title="Remove attachment"
                     >
                       ✕
@@ -1821,50 +2351,103 @@ export default function Home() {
 
           {/* Recorded Audio Preview */}
           {recordedAudioUrl && (
-            <div className={`flex items-center gap-3 p-2 rounded-lg text-xs border ${
+            <div className={`flex items-center gap-2 p-1.5 rounded-xl text-xs border ${
               isDarkMode ? 'bg-emerald-950/40 border-emerald-800 text-emerald-300' : 'bg-emerald-50 border-emerald-200 text-emerald-900'
             }`}>
-              <span className="flex items-center gap-1 font-medium">
-                <svg className="w-3.5 h-3.5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <span className="flex items-center gap-1 font-medium text-emerald-600 dark:text-emerald-400">
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
                 </svg>
                 Voice Note
               </span>
-              <audio src={recordedAudioUrl} controls className="h-7 w-48" />
-              <button onClick={() => setRecordedAudioUrl(null)} className="text-red-500 hover:underline">
+              <audio src={recordedAudioUrl} controls className="h-6 w-40 sm:w-48" />
+              <button onClick={() => setRecordedAudioUrl(null)} className="text-red-500 hover:underline text-[11px] ml-auto">
                 Discard
               </button>
             </div>
           )}
 
-          {/* Input Controls Row: Left Highlighted Suggestions | Center Embedded Typebar | Right Highlighted Mic/Send */}
-          <div className="flex items-end gap-2 sm:gap-2.5">
-            {/* Extreme Left: Suggestions Button (HIGHLIGHTED & PROPERLY SIZED) */}
-            <button
-              type="button"
-              onClick={handleTriggerSuggest}
-              title="Suchi Suggestions & Strategy Tips"
-              className={`w-11 h-11 sm:w-12 sm:h-12 rounded-2xl border shadow-sm flex-shrink-0 flex items-center justify-center transition-all hover:scale-105 active:scale-95 ${
-                isIncognito
-                  ? 'border-purple-600/70 bg-purple-950/80 text-purple-300 hover:bg-purple-900/80 shadow-purple-950/40'
-                  : isDarkMode
-                  ? 'border-amber-500/50 bg-amber-950/40 text-amber-400 hover:bg-amber-900/40 shadow-amber-950/30'
-                  : 'border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100 shadow-amber-100'
-              }`}
-            >
-              <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-              </svg>
-            </button>
+          {/* UNIFIED SLEEK ROW: SLIM INPUT PILL + DEDICATED MIC OUTSIDE */}
+          <div className="flex items-end gap-2 relative">
+            {/* Attach Popup Menu */}
+            {isAttachMenuOpen && (
+              <div className={`absolute bottom-full left-0 mb-2 p-1.5 rounded-2xl border shadow-xl flex flex-col gap-1 min-w-[175px] z-30 animate-in fade-in slide-in-from-bottom-2 ${
+                isDarkMode ? 'bg-zinc-900 border-zinc-800 text-zinc-200' : 'bg-white border-zinc-200 text-zinc-800 shadow-slate-200'
+              }`}>
+                <button
+                  type="button"
+                  onClick={() => { setIsAttachMenuOpen(false); cameraInputRef.current?.click(); }}
+                  className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium hover:bg-black/5 dark:hover:bg-white/10 transition-colors text-left"
+                >
+                  <svg className="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  <span>Take / Attach Photo</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setIsAttachMenuOpen(false); fileInputRef.current?.click(); }}
+                  className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium hover:bg-black/5 dark:hover:bg-white/10 transition-colors text-left"
+                >
+                  <svg className="w-4 h-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                  </svg>
+                  <span>Upload Files / Docs</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setIsAttachMenuOpen(false); fetchArchiveChats(); setIsAttachFromArchiveOpen(true); }}
+                  className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium hover:bg-black/5 dark:hover:bg-white/10 transition-colors text-left"
+                >
+                  <svg className="w-4 h-4 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                  </svg>
+                  <span>From Chats Archive</span>
+                </button>
+              </div>
+            )}
 
-            {/* Center: Type Bar with Embedded Buttons Inside at Bottom Extreme Right */}
-            <div className={`flex-1 flex flex-col rounded-2xl sm:rounded-3xl border transition-all ${
+            {/* The single-row slim pill container */}
+            <div className={`flex-1 flex items-end gap-1.5 p-1.5 rounded-3xl border transition-all ${
               isIncognito
-                ? 'bg-[#1a152e] border-purple-800/50 focus-within:border-purple-500 focus-within:ring-2 focus-within:ring-purple-500/20'
+                ? 'bg-[#1a152e] border-purple-800/60 focus-within:border-purple-500 focus-within:ring-2 focus-within:ring-purple-500/20'
                 : isDarkMode
-                ? 'bg-[#162032] border-slate-700/80 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/20'
-                : 'bg-white border-slate-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100 shadow-xs'
+                ? 'bg-slate-900 border-slate-700/80 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/20'
+                : 'bg-slate-100 border-slate-200 focus-within:bg-white focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-100'
             }`}>
+              {/* Plus / Attach Action Button */}
+              <button
+                type="button"
+                onClick={() => setIsAttachMenuOpen(!isAttachMenuOpen)}
+                disabled={isChatLocked}
+                title="Attach photo, file, or archive"
+                className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-all disabled:opacity-40 ${
+                  isAttachMenuOpen ? 'rotate-45 bg-slate-300 dark:bg-slate-700 text-slate-800 dark:text-white' : 'hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400'
+                }`}
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                </svg>
+              </button>
+
+              <input
+                ref={cameraInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                onChange={handleFileChange}
+                className="hidden"
+              />
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                onChange={handleFileChange}
+                className="hidden"
+              />
+
+              {/* Textarea - Auto-growing, thin starting line */}
               <textarea
                 ref={textareaRef}
                 rows={1}
@@ -1882,7 +2465,6 @@ export default function Home() {
                   }
                 }}
                 onPaste={(e) => {
-                  // Handle image paste from clipboard
                   const items = e.clipboardData.items;
                   if (items) {
                     for (let i = 0; i < items.length; i++) {
@@ -1916,173 +2498,195 @@ export default function Home() {
                 }}
                 placeholder={
                   isChatLocked
-                    ? 'This chat reached its outcome and is locked. Use context in a new chat.'
+                    ? 'Chat locked. Use context in a new chat.'
                     : 'Suchi suno...'
                 }
-                className={`w-full resize-none px-4 pt-3 pb-1 bg-transparent text-base sm:text-sm min-h-[44px] focus:outline-none transition-colors ${
+                className={`flex-1 resize-none py-1.5 px-2 bg-transparent text-sm leading-relaxed max-h-[120px] focus:outline-none transition-colors ${
                   isIncognito
                     ? 'text-purple-100 placeholder-purple-400/60'
                     : isDarkMode
                     ? 'text-white placeholder-slate-400'
                     : 'text-slate-900 placeholder-slate-400'
                 }`}
+                style={{ height: '32px' }}
               />
 
-              {/* Inside Type Bar Row: Left File count | Extreme Right: 3 Embedded Buttons (Camera, Attach File, Archive) */}
-              <div className="flex items-center justify-between px-3 pb-2 pt-0.5">
-                <div className="flex items-center">
-                  {attachedFiles.length > 0 && (
-                    <span className="text-[11px] text-blue-600 dark:text-blue-400 font-medium px-1">
-                      {attachedFiles.length}/10 files attached
-                    </span>
-                  )}
-                </div>
-
-                {/* Extreme Right Embedded Buttons */}
-                <div className="flex items-center gap-1 sm:gap-1.5 text-gray-500 dark:text-gray-400 ml-auto">
-                  {/* Camera Button */}
-                  <button
-                    type="button"
-                    onClick={() => cameraInputRef.current?.click()}
-                    title="Capture / Attach Photo"
-                    className="w-8 h-8 sm:w-8.5 sm:h-8.5 rounded-lg flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/10 text-gray-500 dark:text-gray-300 transition-colors"
-                  >
-                    <svg className="w-4 h-4 sm:w-4.5 sm:h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                  </button>
-                  <input
-                    ref={cameraInputRef}
-                    type="file"
-                    accept="image/*"
-                    capture="environment"
-                    onChange={handleFileChange}
-                    className="hidden"
-                  />
-
-                  {/* Attach File Button */}
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    title="Attach Files (up to 10)"
-                    className="w-8 h-8 sm:w-8.5 sm:h-8.5 rounded-lg flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/10 text-gray-500 dark:text-gray-300 transition-colors"
-                  >
-                    <svg className="w-4 h-4 sm:w-4.5 sm:h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-                    </svg>
-                  </button>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    multiple
-                    onChange={handleFileChange}
-                    className="hidden"
-                  />
-
-                  {/* Chats Archive Folder Button */}
-                  <button
-                    type="button"
-                    onClick={() => { fetchArchiveChats(); setIsAttachFromArchiveOpen(true); }}
-                    title="Attach context from Chats Archive folder"
-                    className="w-8 h-8 sm:w-8.5 sm:h-8.5 rounded-lg flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/10 text-gray-500 dark:text-gray-300 transition-colors"
-                  >
-                    <svg className="w-4 h-4 sm:w-4.5 sm:h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Extreme Right: Mic / Send / Stop Button (HIGHLIGHTED & PROPERLY SIZED) */}
-            {isLoading ? (
+              {/* Compass Needle Skill Suggestion Button (Replaces Bulb) */}
               <button
                 type="button"
-                onClick={handleStopGeneration}
-                title="Stop generation"
-                className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-zinc-900 dark:bg-zinc-100 hover:bg-zinc-800 dark:hover:bg-white text-white dark:text-zinc-900 shadow-md transition-all flex-shrink-0 flex items-center justify-center hover:scale-105 active:scale-95 group"
-              >
-                <div className="w-3.5 h-3.5 sm:w-4 sm:h-4 bg-current rounded-xs group-hover:scale-90 transition-transform" />
-              </button>
-            ) : input.trim() || attachedFiles.length > 0 || recordedAudioUrl ? (
-              <button
-                type="button"
-                onClick={() => sendMessage()}
+                onClick={handleCompassSuggestion}
                 disabled={isChatLocked}
-                title="Send message"
-                className={`w-11 h-11 sm:w-12 sm:h-12 rounded-2xl shadow-md transition-all flex-shrink-0 flex items-center justify-center disabled:opacity-50 hover:scale-105 active:scale-95 ${
-                  isIncognito
-                    ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-purple-950/50'
-                    : 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-blue-900/20'
-                }`}
+                title="Executive Strategy & Skill Suggestion"
+                className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-blue-500 hover:bg-blue-100 dark:hover:bg-blue-950/40 transition-colors disabled:opacity-40"
               >
-                <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 10l7-7m0 0l7 7m-7-7v18" />
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="w-4 h-4">
+                  <circle cx="12" cy="12" r="9" />
+                  <polygon points="12,6 14.5,12 12,10.5" fill="currentColor" stroke="none" />
+                  <polygon points="12,18 14.5,12 12,13.5" fill="#94a3b8" stroke="none" />
+                  <polygon points="12,6 9.5,12 12,10.5" fill="currentColor" stroke="none" />
+                  <polygon points="12,18 9.5,12 12,13.5" fill="#64748b" stroke="none" />
+                  <circle cx="12" cy="12" r="1.5" fill="#ffffff" stroke="none" />
                 </svg>
               </button>
-            ) : (
-              <button
-                type="button"
-                onClick={toggleAudioRecording}
-                title={isRecording ? 'Stop recording' : 'Record voice note'}
-                className={`w-11 h-11 sm:w-12 sm:h-12 rounded-2xl border shadow-sm flex-shrink-0 flex items-center justify-center transition-all hover:scale-105 active:scale-95 ${
-                  isRecording
-                    ? 'bg-red-600 border-red-600 text-white animate-pulse'
-                    : isIncognito
-                    ? 'border-purple-600/70 bg-purple-950/80 text-purple-300 hover:bg-purple-900/80 shadow-purple-950/40'
-                    : isDarkMode
-                    ? 'border-blue-500/50 bg-blue-950/40 text-blue-400 hover:bg-blue-900/40 shadow-blue-950/30'
-                    : 'border-blue-300 bg-blue-50 text-blue-600 hover:bg-blue-100 shadow-blue-100'
-                }`}
-              >
-                {isRecording ? (
-                  <span className="flex items-center gap-1 text-xs font-bold px-1">
-                    <span className="w-2 h-2 rounded-full bg-white animate-ping"></span>
-                    {recordingSeconds}s
-                  </span>
-                ) : (
-                  <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+
+              {/* Send or Stop Button */}
+              {isLoading ? (
+                <button
+                  type="button"
+                  onClick={handleStopGeneration}
+                  title="Stop generation"
+                  className="w-8 h-8 rounded-full bg-slate-900 dark:bg-white hover:bg-slate-800 dark:hover:bg-slate-100 text-white dark:text-slate-900 shadow-xs transition-transform flex-shrink-0 flex items-center justify-center active:scale-95 group"
+                >
+                  <div className="w-2.5 h-2.5 bg-current rounded-xs" />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => sendMessage()}
+                  disabled={isChatLocked || (!input.trim() && attachedFiles.length === 0 && !recordedAudioUrl)}
+                  title="Send message"
+                  className={`w-8 h-8 rounded-full shadow-xs transition-transform flex-shrink-0 flex items-center justify-center disabled:opacity-40 active:scale-95 ${
+                    isIncognito
+                      ? 'bg-purple-600 hover:bg-purple-500 text-white'
+                      : 'bg-blue-600 hover:bg-blue-500 text-white'
+                  }`}
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 10l7-7m0 0l7 7m-7-7v18" />
                   </svg>
-                )}
-              </button>
-            )}
+                </button>
+              )}
+            </div>
+
+            {/* Mic Button OUTSIDE of the input bar (Gemini Live Mode) */}
+            <button
+              type="button"
+              onClick={() => setIsLiveVoiceOpen(true)}
+              disabled={isChatLocked}
+              title="Talk Live with Suchi (Gemini Live Voice Mode)"
+              className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 transition-all shadow-sm hover:scale-105 active:scale-95 disabled:opacity-40 ${
+                isLiveVoiceOpen
+                  ? 'bg-rose-500 text-white animate-pulse'
+                  : isIncognito
+                  ? 'bg-purple-600 hover:bg-purple-500 text-white'
+                  : 'bg-blue-600 hover:bg-blue-500 text-white'
+              }`}
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+              </svg>
+            </button>
           </div>
         </div>
       </footer>
+      )}
+
+      {/* GEMINI LIVE VOICE MODAL (Strictly female voice, continuous dialogue, auto-saved to chat) */}
+      <SuchiLiveVoiceModal
+        isOpen={isLiveVoiceOpen}
+        onClose={() => setIsLiveVoiceOpen(false)}
+        onUserMessage={handleVoiceUserMessage}
+        isDarkMode={isDarkMode}
+      />
+
+      {/* BOTTOM FOOTER NAVIGATION TABS (From Left to Right: My Day, Suchi, Actions) */}
+      <nav className={`h-14 sm:h-16 border-t px-6 flex items-center justify-around z-20 flex-shrink-0 transition-colors ${
+        isDarkMode || isIncognito
+          ? 'bg-slate-950/95 border-slate-800/80 backdrop-blur text-slate-400'
+          : 'bg-white/95 border-slate-200 backdrop-blur text-slate-600 shadow-xs'
+      }`}>
+        {/* Tab 1: My Day (Left) */}
+        <button
+          type="button"
+          onClick={() => setActiveAppTab('my_day')}
+          className={`flex flex-col items-center justify-center gap-1 flex-1 py-1 transition-all ${
+            activeAppTab === 'my_day'
+              ? 'text-blue-600 dark:text-blue-400 font-bold scale-105'
+              : 'text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 font-medium'
+          }`}
+        >
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={activeAppTab === 'my_day' ? 2.3 : 1.8}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+          <span className="text-[11px] tracking-tight">My Day</span>
+        </button>
+
+        {/* Tab 2: Suchi (Center) */}
+        <button
+          type="button"
+          onClick={() => setActiveAppTab('suchi')}
+          className={`flex flex-col items-center justify-center gap-1 flex-1 py-1 transition-all ${
+            activeAppTab === 'suchi'
+              ? 'text-blue-600 dark:text-blue-400 font-bold scale-105'
+              : 'text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 font-medium'
+          }`}
+        >
+          <div className={`relative ${activeAppTab === 'suchi' ? 'p-1 rounded-full bg-blue-50 dark:bg-blue-950/50' : ''}`}>
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={activeAppTab === 'suchi' ? 2.3 : 1.8}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+            </svg>
+          </div>
+          <span className="text-[11px] tracking-tight">Suchi</span>
+        </button>
+
+        {/* Tab 3: Actions (Right) */}
+        <button
+          type="button"
+          onClick={() => setActiveAppTab('actions')}
+          className={`flex flex-col items-center justify-center gap-1 flex-1 py-1 transition-all relative ${
+            activeAppTab === 'actions'
+              ? 'text-blue-600 dark:text-blue-400 font-bold scale-105'
+              : 'text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 font-medium'
+          }`}
+        >
+          <div className="relative">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={activeAppTab === 'actions' ? 2.3 : 1.8}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+            {pendingApprovalsCount > 0 && (
+              <span className="absolute -top-1 -right-2 px-1.5 py-0.2 min-w-4 text-[9px] font-bold bg-amber-500 text-white rounded-full flex items-center justify-center animate-pulse">
+                {pendingApprovalsCount}
+              </span>
+            )}
+          </div>
+          <span className="text-[11px] tracking-tight">Actions</span>
+        </button>
+      </nav>
+
 
       {/* WHATSAPP-STYLE CHATS ARCHIVE MODAL */}
       {isArchiveOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-2xl w-full h-[80vh] flex flex-col shadow-2xl overflow-hidden">
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl max-w-2xl w-full h-[80vh] flex flex-col shadow-2xl overflow-hidden text-zinc-900 dark:text-zinc-100">
             {/* Archive Header */}
-            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+            <div className="px-6 py-4 border-b border-gray-100 dark:border-zinc-800 flex items-center justify-between">
               <div>
-                <h2 className="text-base font-bold text-gray-900">Chats Archive</h2>
-                <p className="text-xs text-gray-500">Persistent conversation records & portable contexts</p>
+                <h2 className="text-base font-bold text-gray-900 dark:text-zinc-100">Chats Archive</h2>
+                <p className="text-xs text-gray-500 dark:text-zinc-400">Persistent conversation records & portable contexts</p>
               </div>
-              <button onClick={() => setIsArchiveOpen(false)} className="text-gray-400 hover:text-gray-700 text-lg font-bold">
+              <button onClick={() => setIsArchiveOpen(false)} className="text-gray-400 hover:text-gray-700 dark:hover:text-zinc-200 text-lg font-bold">
                 ✕
               </button>
             </div>
 
             {/* Search & Filters */}
-            <div className="px-6 py-3 border-b border-gray-100 flex flex-col sm:flex-row gap-2">
+            <div className="px-6 py-3 border-b border-gray-100 dark:border-zinc-800 flex flex-col sm:flex-row gap-2">
               <input
                 type="text"
                 placeholder="Search archive conversations..."
                 value={archiveSearch}
                 onChange={(e) => setArchiveSearch(e.target.value)}
-                className="flex-1 bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="flex-1 bg-gray-50 dark:bg-zinc-800/80 border border-gray-200 dark:border-zinc-700 rounded-lg px-3 py-1.5 text-xs text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-blue-500"
               />
               <div className="flex gap-1">
                 {(['all', 'starred', 'completed', 'active'] as const).map(tab => (
                   <button
                     key={tab}
                     onClick={() => setArchiveFilter(tab)}
-                    className={`px-3 py-1 rounded-full text-xs font-semibold capitalize ${
-                      archiveFilter === tab ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    className={`px-3 py-1 rounded-full text-xs font-semibold capitalize transition-colors ${
+                      archiveFilter === tab
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-zinc-300 hover:bg-gray-200 dark:hover:bg-zinc-700'
                     }`}
                   >
                     {tab}
@@ -2092,7 +2696,7 @@ export default function Home() {
             </div>
 
             {/* Conversation Tiles List */}
-            <div className="flex-1 overflow-y-auto divide-y divide-gray-100">
+            <div className="flex-1 overflow-y-auto divide-y divide-gray-100 dark:divide-zinc-800">
               {archiveChats
                 .filter(c => {
                   if (archiveFilter === 'starred' && !c.is_starred) return false;
@@ -2109,26 +2713,26 @@ export default function Home() {
                   <div
                     key={chat.id}
                     onClick={() => handleOpenPastChat(chat)}
-                    className="p-4 hover:bg-gray-50 cursor-pointer flex items-center justify-between group transition-colors"
+                    className="p-4 hover:bg-gray-50 dark:hover:bg-zinc-800/50 cursor-pointer flex items-center justify-between group transition-colors"
                   >
                     <div className="flex-1 min-w-0 pr-4">
                       <div className="flex items-center gap-2">
                         <button
                           onClick={(e) => handleToggleStar(chat.id, e)}
                           title="Star mark chat (pin to top)"
-                          className={`text-base ${chat.is_starred ? 'text-amber-500' : 'text-gray-300 hover:text-amber-500'}`}
+                          className={`text-base ${chat.is_starred ? 'text-amber-500' : 'text-gray-300 dark:text-zinc-600 hover:text-amber-500'}`}
                         >
                           ★
                         </button>
-                        <h3 className="font-semibold text-sm text-gray-900 truncate">{chat.title}</h3>
+                        <h3 className="font-semibold text-sm text-gray-900 dark:text-zinc-100 truncate">{chat.title}</h3>
                         {chat.is_locked && (
-                          <span className="text-[10px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded border">
+                          <span className="text-[10px] bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-zinc-400 px-1.5 py-0.5 rounded border border-gray-200 dark:border-zinc-700">
                             Locked
                           </span>
                         )}
                       </div>
                       {chat.meaningful_outcome && (
-                        <p className="text-xs text-blue-700 truncate mt-1">🎯 {chat.meaningful_outcome}</p>
+                        <p className="text-xs text-blue-600 dark:text-blue-400 truncate mt-1">🎯 {chat.meaningful_outcome}</p>
                       )}
                     </div>
 
@@ -2138,7 +2742,7 @@ export default function Home() {
                           e.stopPropagation();
                           handleUseContextInNewChat(chat);
                         }}
-                        className="px-2.5 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded text-xs font-semibold"
+                        className="px-2.5 py-1 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/60 rounded text-xs font-semibold transition-colors"
                       >
                         Use in New Chat
                       </button>
@@ -2152,7 +2756,7 @@ export default function Home() {
                           a.download = `${chat.title.replace(/\s+/g, '_')}.md`;
                           a.click();
                         }}
-                        className="p-1 text-gray-400 hover:text-gray-700 text-xs"
+                        className="p-1 text-gray-400 hover:text-gray-700 dark:hover:text-zinc-200 text-xs"
                         title="Download Markdown"
                       >
                         ⬇ .md
@@ -2168,13 +2772,13 @@ export default function Home() {
       {/* ATTACH FROM ARCHIVE MODAL */}
       {isAttachFromArchiveOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full max-h-[70vh] flex flex-col shadow-2xl p-6">
-            <h2 className="text-base font-bold text-gray-900 mb-1">Attach Chats from Archive</h2>
-            <p className="text-xs text-gray-500 mb-4">Select one or multiple chats to attach their Markdown transcripts as context</p>
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl max-w-lg w-full max-h-[70vh] flex flex-col shadow-2xl p-6 text-zinc-900 dark:text-zinc-100">
+            <h2 className="text-base font-bold text-gray-900 dark:text-zinc-100 mb-1">Attach Chats from Archive</h2>
+            <p className="text-xs text-gray-500 dark:text-zinc-400 mb-4">Select one or multiple chats to attach their Markdown transcripts as context</p>
 
-            <div className="flex-1 overflow-y-auto divide-y divide-gray-100 border rounded-xl mb-4 max-h-60">
+            <div className="flex-1 overflow-y-auto divide-y divide-gray-100 dark:divide-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-xl mb-4 max-h-60">
               {archiveChats.slice().sort((a, b) => (b.is_starred ? 1 : 0) - (a.is_starred ? 1 : 0)).map(c => (
-                <label key={c.id} className="p-3 flex items-center gap-3 hover:bg-gray-50 cursor-pointer text-xs">
+                <label key={c.id} className="p-3 flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-zinc-800/50 cursor-pointer text-xs transition-colors">
                   <input
                     type="checkbox"
                     checked={selectedArchiveAttachments.includes(c.id)}
@@ -2187,8 +2791,8 @@ export default function Home() {
                     }}
                   />
                   <div className="flex-1 truncate">
-                    <span className="font-semibold text-gray-800">{c.title}</span>
-                    {c.meaningful_outcome && <p className="text-gray-400 truncate">{c.meaningful_outcome}</p>}
+                    <span className="font-semibold text-gray-800 dark:text-zinc-200">{c.title}</span>
+                    {c.meaningful_outcome && <p className="text-gray-400 dark:text-zinc-500 truncate">{c.meaningful_outcome}</p>}
                   </div>
                 </label>
               ))}
@@ -2197,7 +2801,7 @@ export default function Home() {
             <div className="flex justify-end gap-2">
               <button
                 onClick={() => { setSelectedArchiveAttachments([]); setIsAttachFromArchiveOpen(false); }}
-                className="px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-100 rounded-lg"
+                className="px-3 py-1.5 text-xs text-gray-600 dark:text-zinc-400 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
               >
                 Cancel
               </button>
@@ -2217,7 +2821,7 @@ export default function Home() {
                   setSelectedArchiveAttachments([]);
                   setIsAttachFromArchiveOpen(false);
                 }}
-                className="px-4 py-1.5 text-xs font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                className="px-4 py-1.5 text-xs font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-sm"
               >
                 Attach Selected ({selectedArchiveAttachments.length})
               </button>

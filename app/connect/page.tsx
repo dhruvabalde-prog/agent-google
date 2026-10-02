@@ -92,10 +92,10 @@ export default function ConnectPage() {
   };
 
   return (
-    <div className="min-h-[100dvh] bg-slate-950 text-gray-100 flex items-center justify-center p-4">
-      <div className="max-w-md w-full bg-slate-900 rounded-3xl border border-slate-800 shadow-2xl p-8 flex flex-col items-center text-center">
+    <div className="min-h-[100dvh] bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-gray-100 flex items-center justify-center p-4 transition-colors">
+      <div className="max-w-md w-full bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl p-8 flex flex-col items-center text-center">
         {/* Compass Needle Logo */}
-        <div className="w-16 h-16 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-center shadow-inner mb-5">
+        <div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex items-center justify-center shadow-inner mb-5">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="38" height="38">
             <circle cx="16" cy="16" r="13" fill="none" stroke="#334155" strokeWidth="1.5"/>
             <polygon points="16,5 19.5,16 16,14" fill="#3b82f6"/>
@@ -106,11 +106,11 @@ export default function ConnectPage() {
           </svg>
         </div>
 
-        <div className="inline-block px-2.5 py-0.5 mb-2 rounded-full bg-indigo-950/80 border border-indigo-700/50 text-[10px] font-bold text-indigo-300 uppercase tracking-widest">
+        <div className="inline-block px-2.5 py-0.5 mb-2 rounded-full bg-indigo-50 dark:bg-indigo-950/80 border border-indigo-200 dark:border-indigo-700/50 text-[10px] font-bold text-indigo-600 dark:text-indigo-300 uppercase tracking-widest">
           LIFE OPERATING SYSTEM
         </div>
-        <h1 className="text-2xl font-bold text-white mb-2">Welcome to Suchi</h1>
-        <p className="text-xs text-slate-400 mb-6 max-w-xs">
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Welcome to Suchi</h1>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mb-6 max-w-xs">
           Your autonomous Chief of Staff. Directing your attention to what matters, automating the rest.
         </p>
 
@@ -122,7 +122,7 @@ export default function ConnectPage() {
               <span>Google Cloud Access Restricted</span>
             </div>
             <p className="text-[11px] text-amber-200/90 leading-relaxed">
-              While our Google Cloud OAuth screen is in <strong>Testing</strong> mode, only registered Test Users can sign in. Please contact the administrator (<span className="text-amber-100 font-mono underline">dhruvabalde@gmail.com</span>) to whitelist your Gmail address in Google Cloud Console.
+              While our Google Cloud OAuth screen is in <strong>Testing</strong> mode, only registered Test Users can sign in. Please contact your workspace administrator (<span className="text-amber-100 font-mono underline">admin@suchi.ai</span>) to whitelist your Gmail address in Google Cloud Console.
             </p>
           </div>
         )}
@@ -170,7 +170,7 @@ export default function ConnectPage() {
         ) : (
           <div className="w-full space-y-4 text-left">
             <div>
-              <label htmlFor="name-input" className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">
+              <label htmlFor="name-input" className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-2">
                 Your Preferred Name
               </label>
               <input
@@ -178,63 +178,63 @@ export default function ConnectPage() {
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. Dhruva"
-                className="w-full px-4 py-2.5 rounded-xl bg-slate-800/80 border border-slate-700 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                placeholder="e.g. Alex"
+                className="w-full px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
               />
             </div>
 
             {/* Granular Permission Controls Accordion */}
-            <div className="border border-slate-800 rounded-xl bg-slate-950/60 p-3 text-xs">
+            <div className="border border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50 dark:bg-slate-950/60 p-3 text-xs">
               <button
                 type="button"
                 onClick={() => setShowAdvancedPermissions(!showAdvancedPermissions)}
-                className="w-full flex items-center justify-between text-slate-300 font-semibold"
+                className="w-full flex items-center justify-between text-slate-700 dark:text-slate-300 font-semibold"
               >
                 <span className="flex items-center gap-1.5">
                   <span>🛡️</span>
                   <span>Customize Permissions & Tools</span>
                 </span>
-                <span className="text-[10px] text-blue-400">{showAdvancedPermissions ? 'Hide ▲' : 'Edit ▼'}</span>
+                <span className="text-[10px] text-blue-600 dark:text-blue-400">{showAdvancedPermissions ? 'Hide ▲' : 'Edit ▼'}</span>
               </button>
 
               {showAdvancedPermissions && (
-                <div className="mt-3 pt-3 border-t border-slate-800 space-y-2.5 text-[11px] text-slate-400">
+                <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-800 space-y-2.5 text-[11px] text-slate-600 dark:text-slate-400">
                   <p className="text-[10px] text-slate-500">
                     Select strictly the tools you wish Suchi to access. Admin & cloud infrastructure APIs are never requested from you.
                   </p>
-                  <label className="flex items-center gap-2 cursor-pointer hover:text-slate-200">
+                  <label className="flex items-center gap-2 cursor-pointer hover:text-slate-900 dark:hover:text-slate-200">
                     <input
                       type="checkbox"
                       checked={includeDocsSheets}
                       onChange={(e) => setIncludeDocsSheets(e.target.checked)}
-                      className="rounded bg-slate-800 border-slate-700 text-blue-600 focus:ring-blue-500"
+                      className="rounded bg-slate-200 dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-blue-500"
                     />
                     <span>Google Docs & Sheets (Documents, spreadsheets & analysis)</span>
                   </label>
-                  <label className="flex items-center gap-2 cursor-pointer hover:text-slate-200">
+                  <label className="flex items-center gap-2 cursor-pointer hover:text-slate-900 dark:hover:text-slate-200">
                     <input
                       type="checkbox"
                       checked={includeSlides}
                       onChange={(e) => setIncludeSlides(e.target.checked)}
-                      className="rounded bg-slate-800 border-slate-700 text-blue-600 focus:ring-blue-500"
+                      className="rounded bg-slate-200 dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-blue-500"
                     />
                     <span>Google Slides (Presentations & executive decks)</span>
                   </label>
-                  <label className="flex items-center gap-2 cursor-pointer hover:text-slate-200">
+                  <label className="flex items-center gap-2 cursor-pointer hover:text-slate-900 dark:hover:text-slate-200">
                     <input
                       type="checkbox"
                       checked={includeCalendarTasks}
                       onChange={(e) => setIncludeCalendarTasks(e.target.checked)}
-                      className="rounded bg-slate-800 border-slate-700 text-blue-600 focus:ring-blue-500"
+                      className="rounded bg-slate-200 dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-blue-500"
                     />
                     <span>Google Calendar & Tasks (Schedules & reminders)</span>
                   </label>
-                  <label className="flex items-center gap-2 cursor-pointer hover:text-slate-200">
+                  <label className="flex items-center gap-2 cursor-pointer hover:text-slate-900 dark:hover:text-slate-200">
                     <input
                       type="checkbox"
                       checked={includeGmail}
                       onChange={(e) => setIncludeGmail(e.target.checked)}
-                      className="rounded bg-slate-800 border-slate-700 text-blue-600 focus:ring-blue-500"
+                      className="rounded bg-slate-200 dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-blue-500"
                     />
                     <span>Gmail (Read & draft replies with mandatory approval)</span>
                   </label>
@@ -243,7 +243,7 @@ export default function ConnectPage() {
             </div>
 
             {/* Help Suchi Get Better (Optional Tick Mark) */}
-            <label className="flex items-start gap-2.5 p-3 rounded-xl bg-slate-950/60 border border-slate-800 hover:border-slate-700 cursor-pointer transition-colors text-left">
+            <label className="flex items-start gap-2.5 p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 cursor-pointer transition-colors text-left">
               <input
                 type="checkbox"
                 checked={helpSuchiImprove}
@@ -269,7 +269,7 @@ export default function ConnectPage() {
             <button
               onClick={handleConnect}
               disabled={isConnecting}
-              className="w-full py-3.5 px-4 bg-white hover:bg-slate-100 rounded-xl shadow text-sm font-semibold text-slate-900 flex items-center justify-center gap-3 transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50"
+              className="w-full py-3.5 px-4 bg-slate-900 dark:bg-white hover:bg-slate-800 dark:hover:bg-slate-100 rounded-xl shadow text-sm font-semibold text-white dark:text-slate-900 flex items-center justify-center gap-3 transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50"
             >
               <svg viewBox="0 0 24 24" width="20" height="20">
                 <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
@@ -283,9 +283,9 @@ export default function ConnectPage() {
             {/* Install App Button */}
             <button
               onClick={handleInstallApp}
-              className="w-full py-2.5 px-4 bg-slate-800 hover:bg-slate-700/80 border border-slate-700 rounded-xl text-xs font-medium text-slate-300 flex items-center justify-center gap-2 transition-colors"
+              className="w-full py-2.5 px-4 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700/80 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-medium text-slate-700 dark:text-slate-300 flex items-center justify-center gap-2 transition-colors"
             >
-              <svg className="w-4 h-4 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="w-4 h-4 text-blue-500 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
               </svg>
               <span>Install Suchi App (PWA)</span>
@@ -294,11 +294,11 @@ export default function ConnectPage() {
           </div>
         )}
 
-        <div className="mt-8 border-t border-slate-800 pt-5 w-full flex items-center justify-between text-xs text-slate-400">
-          <Link href="/privacy" className="text-slate-400 hover:text-white transition-colors underline">
+        <div className="mt-8 border-t border-slate-200 dark:border-slate-800 pt-5 w-full flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+          <Link href="/privacy" className="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors underline">
             Privacy & Security Policy
           </Link>
-          <span className="flex items-center gap-1 text-[11px] text-emerald-400 font-medium">
+          <span className="flex items-center gap-1 text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
             🔒 AES-256 Sovereign
           </span>
         </div>

@@ -89,9 +89,40 @@ export default function AdminPage() {
   const [loginError, setLoginError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
+  // Admin Theme (independent from user theme)
+  const [adminTheme, setAdminTheme] = useState<'dark' | 'light'>('dark');
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('admin_theme');
+      if (saved === 'light' || saved === 'dark') {
+        setAdminTheme(saved);
+        if (saved === 'dark') {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+      }
+    } catch (e) {}
+  }, []);
+
+  function toggleAdminTheme() {
+    const next = adminTheme === 'dark' ? 'light' : 'dark';
+    setAdminTheme(next);
+    try {
+      localStorage.setItem('admin_theme', next);
+      if (next === 'dark') {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    } catch (e) {}
+  }
+
   // Tabs: dashboard, users, apps, tiers, skills, bulk-import, credentials, mcp, logs, notes, bugs
   const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'apps' | 'tiers' | 'skills' | 'bulk-import' | 'credentials' | 'mcp' | 'logs' | 'notes' | 'bugs'>('dashboard');
   const [adminData, setAdminData] = useState<any>(null);
+
 
   // Bug Reports & Telemetry State
   const [bugReports, setBugReports] = useState<any[]>([]);
@@ -309,13 +340,13 @@ export default function AdminPage() {
           if (sData.authenticated && sData.user?.email) {
             setLoginEmail(prev => prev || sData.user.email);
           } else {
-            setLoginEmail(prev => prev || 'dhruvabalde@gmail.com');
+            setLoginEmail(prev => prev || 'admin@suchi.ai');
           }
         } else {
-          setLoginEmail(prev => prev || 'dhruvabalde@gmail.com');
+          setLoginEmail(prev => prev || 'admin@suchi.ai');
         }
       } catch (e) {
-        setLoginEmail(prev => prev || 'dhruvabalde@gmail.com');
+        setLoginEmail(prev => prev || 'admin@suchi.ai');
       }
     }
     checkCurrentSession();
@@ -615,7 +646,7 @@ export default function AdminPage() {
                 required
                 value={loginEmail}
                 onChange={(e) => setLoginEmail(e.target.value)}
-                placeholder="ddhruva21balde@gmail.com"
+                placeholder="admin@suchi.ai"
                 className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-gray-500"
               />
             </div>
@@ -714,6 +745,15 @@ export default function AdminPage() {
         </div>
 
         <div className="flex items-center gap-2 self-end sm:self-auto">
+          {/* Admin Independent Theme Toggle */}
+          <button
+            onClick={toggleAdminTheme}
+            className="text-xs bg-slate-700/90 hover:bg-slate-700 text-slate-200 border border-slate-600 px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors"
+            title={`Switch to ${adminTheme === 'dark' ? 'Light' : 'Dark'} Mode`}
+          >
+            <span>{adminTheme === 'dark' ? '☀️ Light' : '🌙 Dark'}</span>
+          </button>
+
           <button
             onClick={handleInstallAdminApp}
             className="text-xs bg-slate-700/90 hover:bg-slate-700 text-indigo-300 border border-slate-600 px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors"
@@ -729,7 +769,7 @@ export default function AdminPage() {
           <Link
             href="/admin/sparring"
             className="text-xs bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-semibold px-3 py-1.5 rounded-lg flex items-center gap-1.5 shadow-sm border border-purple-400/30 transition-all"
-            title="Launch Voice Sparring Lab to Grill Navia"
+            title="Launch Voice Sparring Lab to Grill Suchi"
           >
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
             🎙️ Voice Sparring Lab

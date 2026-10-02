@@ -5,8 +5,8 @@ import { INITIAL_53_SKILLS, INITIAL_SUBSCRIPTION_TIERS, SubscriptionTier, SkillD
 
 // Super Admin seed configuration
 export const SUPER_ADMIN_EMAILS = [
-  (process.env.SUPER_ADMIN_EMAIL || 'dhruvabalde@gmail.com').toLowerCase(),
-  'ddhruva21balde@gmail.com',
+  (process.env.SUPER_ADMIN_EMAIL || 'admin@suchi.ai').toLowerCase(),
+  'admin@suchi.ai',
 ];
 export const SUPER_ADMIN_EMAIL = SUPER_ADMIN_EMAILS[0];
 export const SUPER_ADMIN_PINS = [
@@ -32,9 +32,12 @@ export function isValidAdminPin(pin?: string): boolean {
 let pool: Pool | null = null;
 let isPgAvailable = false;
 
-// Check if database URL is valid and does not have the placeholder
-const rawDbUrl = process.env.DATABASE_URL || '';
-const hasPlaceholder = rawDbUrl.includes('[YOUR-PASSWORD]') || rawDbUrl.includes('YOUR-PASSWORD');
+// Format & sanitize database URL if present
+let rawDbUrl = process.env.DATABASE_URL || '';
+if (rawDbUrl.includes('[') && rawDbUrl.includes(']')) {
+  rawDbUrl = rawDbUrl.replace(/\[([^\]]+)\]/, (_, p1) => encodeURIComponent(p1));
+}
+const hasPlaceholder = rawDbUrl.includes('YOUR-PASSWORD');
 
 if (rawDbUrl && !hasPlaceholder) {
   try {
@@ -63,7 +66,7 @@ interface MemoryStore {
   auditLogs: any[];
 }
 
-const memoryStore: MemoryStore = {
+const globalStore: MemoryStore = (globalThis as any).__suchi_memoryStore || {
   users: new Map(),
   chats: new Map(),
   messages: new Map(),
@@ -73,6 +76,13 @@ const memoryStore: MemoryStore = {
   apiKeys: new Map(),
   auditLogs: [],
 };
+
+if (!(globalThis as any).__suchi_memoryStore) {
+  (globalThis as any).__suchi_memoryStore = globalStore;
+}
+
+const memoryStore: MemoryStore = globalStore;
+
 
 export interface CloudAppIntegration {
   id: string;

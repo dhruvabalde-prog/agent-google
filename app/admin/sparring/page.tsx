@@ -58,6 +58,36 @@ export default function VoiceSparringPage() {
   const [autoSpeak, setAutoSpeak] = useState(true);
   const [showPresets, setShowPresets] = useState(true);
 
+  // Admin Theme
+  const [adminTheme, setAdminTheme] = useState<'dark' | 'light'>('dark');
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('admin_theme');
+      if (saved === 'light' || saved === 'dark') {
+        setAdminTheme(saved);
+        if (saved === 'dark') {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+      }
+    } catch (e) {}
+  }, []);
+
+  function toggleAdminTheme() {
+    const next = adminTheme === 'dark' ? 'light' : 'dark';
+    setAdminTheme(next);
+    try {
+      localStorage.setItem('admin_theme', next);
+      if (next === 'dark') {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    } catch (e) {}
+  }
+
   const recognitionRef = useRef<any>(null);
   const isListeningRef = useRef(false);
   const accumulatedTextRef = useRef('');
@@ -133,20 +163,17 @@ export default function VoiceSparringPage() {
         };
 
         recognition.onend = () => {
-          // If browser ends speech recognition prematurely while user still wants to record, restart it immediately!
+          // If browser ends speech recognition prematurely while user still wants to record, restart with brief delay
           if (isListeningRef.current) {
-            try {
-              recognition.start();
-            } catch (err) {
-              // Retry with brief delay if immediate restart throws
-              setTimeout(() => {
-                if (isListeningRef.current) {
-                  try {
-                    recognition.start();
-                  } catch (e) {}
+            setTimeout(() => {
+              if (isListeningRef.current) {
+                try {
+                  recognition.start();
+                } catch (e) {
+                  console.warn('Speech recognition restart caught:', e);
                 }
-              }, 250);
-            }
+              }
+            }, 150);
           } else {
             setIsListening(false);
           }
@@ -165,10 +192,11 @@ export default function VoiceSparringPage() {
       {
         id: 'msg-0',
         role: 'agent',
-        content: `I am ready. I am Navia, the Sovereign Life & Work Operating System.\n\nGrill me on my defensibility, my unit economics, my security architecture, or why Google and Apple won't kill me. Speak freely into your mic or choose a challenge below.`,
+        content: `I am ready. I am Suchi, your Sovereign Life & Work Operating System.\n\nGrill me on my defensibility, my unit economics, my security architecture, or why Google and Apple won't kill me. Speak freely into your mic or choose a challenge below.`,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       }
     ]);
+
 
     return () => {
       if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
@@ -387,34 +415,43 @@ export default function VoiceSparringPage() {
   }
 
   return (
-    <div className="h-[100dvh] bg-gray-950 text-gray-100 flex flex-col font-sans overflow-hidden">
+    <div className="h-[100dvh] bg-slate-50 dark:bg-gray-950 text-slate-900 dark:text-gray-100 flex flex-col font-sans overflow-hidden">
       {/* 1. Sleek Chat Header */}
-      <header className="h-14 border-b border-gray-800 bg-gray-900/90 backdrop-blur px-4 flex items-center justify-between shrink-0 z-20">
+      <header className="h-14 border-b border-slate-200 dark:border-gray-800 bg-white/90 dark:bg-gray-900/90 backdrop-blur px-4 flex items-center justify-between shrink-0 z-20">
         <div className="flex items-center gap-2.5">
           <Link
             href="/admin"
-            className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-white px-2.5 py-1.5 rounded-lg bg-gray-800/80 hover:bg-gray-800 border border-gray-700/60 transition-colors"
+            className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-gray-800/80 hover:bg-slate-200 dark:hover:bg-gray-800 border border-slate-300 dark:border-gray-700/60 transition-colors"
           >
             ← Admin
           </Link>
-          <div className="h-4 w-px bg-gray-800"></div>
+          <div className="h-4 w-px bg-slate-200 dark:bg-gray-800"></div>
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-purple-500 animate-pulse"></span>
             <div>
-              <h1 className="font-semibold text-sm text-white leading-tight">Navia Voice Sparring</h1>
-              <p className="text-[10px] text-gray-400 hidden sm:block">Executive Life & Work OS Defensibility Arena</p>
+              <h1 className="font-semibold text-sm text-slate-900 dark:text-white leading-tight">Suchi Voice Sparring</h1>
+              <p className="text-[10px] text-slate-500 dark:text-gray-400 hidden sm:block">Executive Life & Work OS Defensibility Arena</p>
             </div>
           </div>
         </div>
 
         <div className="flex items-center gap-1.5 sm:gap-2">
+          {/* Admin Theme Toggle Button */}
+          <button
+            onClick={toggleAdminTheme}
+            className="text-xs px-2.5 py-1.5 rounded-lg border bg-slate-100 dark:bg-gray-800 text-slate-700 dark:text-gray-300 border-slate-300 dark:border-gray-700 hover:bg-slate-200 dark:hover:bg-gray-700 transition-colors"
+            title={`Switch to ${adminTheme === 'dark' ? 'Light' : 'Dark'} Mode`}
+          >
+            {adminTheme === 'dark' ? '☀️ Light' : '🌙 Dark'}
+          </button>
+
           {/* Quick Challenges Toggle */}
           <button
             onClick={() => setShowPresets(!showPresets)}
             className={`text-xs px-2.5 py-1.5 rounded-lg border transition-all flex items-center gap-1.5 ${
               showPresets
-                ? 'bg-purple-950/60 text-purple-300 border-purple-800/80'
-                : 'bg-gray-800 text-gray-400 border-gray-700 hover:text-gray-200'
+                ? 'bg-purple-100 text-purple-700 border-purple-300 dark:bg-purple-950/60 dark:text-purple-300 dark:border-purple-800/80'
+                : 'bg-slate-100 text-slate-600 border-slate-300 hover:text-slate-900 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700 dark:hover:text-gray-200'
             }`}
             title="Toggle Challenge Prompts"
           >
@@ -430,8 +467,8 @@ export default function VoiceSparringPage() {
             }}
             className={`text-xs px-2.5 py-1.5 rounded-lg border transition-all flex items-center gap-1.5 ${
               autoSpeak
-                ? 'bg-emerald-950/40 text-emerald-300 border-emerald-800/60'
-                : 'bg-gray-800 text-gray-400 border-gray-700'
+                ? 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800/60'
+                : 'bg-slate-100 text-slate-600 border-slate-300 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700'
             }`}
             title={autoSpeak ? 'Audio playback enabled' : 'Muted (Text only)'}
           >
@@ -452,7 +489,7 @@ export default function VoiceSparringPage() {
                 }
               ]);
             }}
-            className="text-xs text-gray-400 hover:text-rose-400 p-2 rounded-lg bg-gray-800/60 hover:bg-gray-800 border border-gray-700/60 transition-colors"
+            className="text-xs text-slate-500 hover:text-rose-600 dark:text-gray-400 dark:hover:text-rose-400 p-2 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-gray-800/60 dark:hover:bg-gray-800 border border-slate-300 dark:border-gray-700/60 transition-colors"
             title="Clear Chat History"
           >
             🗑️
@@ -467,24 +504,24 @@ export default function VoiceSparringPage() {
             key={msg.id}
             className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}
           >
-            <div className="flex items-center gap-1.5 mb-1 px-1 text-[11px] text-gray-400 font-medium">
-              <span>{msg.role === 'user' ? '🥊 You' : '🛡️ Navia (Chief of Staff)'}</span>
+            <div className="flex items-center gap-1.5 mb-1 px-1 text-[11px] text-slate-500 dark:text-gray-400 font-medium">
+              <span>{msg.role === 'user' ? '🥊 You' : '🛡️ Suchi (Chief of Staff)'}</span>
               <span>•</span>
-              <span className="text-[10px] text-gray-400">{msg.timestamp}</span>
+              <span className="text-[10px] text-slate-400 dark:text-gray-500">{msg.timestamp}</span>
             </div>
 
             <div
               className={`p-3.5 sm:p-4 rounded-2xl max-w-[90%] sm:max-w-[80%] text-sm leading-relaxed whitespace-pre-wrap ${
                 msg.role === 'user'
                   ? 'bg-purple-600 text-white rounded-br-sm shadow-md'
-                  : 'bg-gray-900 border border-gray-800 text-gray-100 rounded-bl-sm shadow-sm'
+                  : 'bg-white dark:bg-gray-900 border border-slate-200 dark:border-gray-800 text-slate-800 dark:text-gray-100 rounded-bl-sm shadow-sm'
               }`}
             >
               {msg.content}
 
               {msg.role === 'agent' && (
-                <div className="mt-2.5 pt-2 border-t border-gray-800/80 flex items-center justify-between gap-2">
-                  <span className="text-[10px] text-gray-400">Autonomous Executive OS</span>
+                <div className="mt-2.5 pt-2 border-t border-slate-100 dark:border-gray-800/80 flex items-center justify-between gap-2">
+                  <span className="text-[10px] text-slate-400 dark:text-gray-400">Autonomous Executive OS</span>
                   <button
                     onClick={() => {
                       if (speakingMessageId === msg.id && isSpeaking) {
@@ -495,8 +532,8 @@ export default function VoiceSparringPage() {
                     }}
                     className={`text-xs px-2 py-1 rounded flex items-center gap-1 transition-colors ${
                       speakingMessageId === msg.id && isSpeaking
-                        ? 'bg-rose-950/80 text-rose-300 border border-rose-800/60'
-                        : 'text-purple-400 hover:text-purple-300 hover:bg-gray-800/80'
+                        ? 'bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-800/60'
+                        : 'text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 hover:bg-purple-50 dark:hover:bg-gray-800/80'
                     }`}
                   >
                     <span>{speakingMessageId === msg.id && isSpeaking ? '⏹ Stop' : '🔊 Listen'}</span>
@@ -509,14 +546,14 @@ export default function VoiceSparringPage() {
 
         {isProcessing && (
           <div className="flex flex-col items-start">
-            <div className="flex items-center gap-1.5 mb-1 px-1 text-[11px] text-gray-400">
-              <span>🛡️ Navia</span>
+            <div className="flex items-center gap-1.5 mb-1 px-1 text-[11px] text-slate-500 dark:text-gray-400">
+              <span>🛡️ Suchi</span>
             </div>
-            <div className="p-3.5 rounded-2xl bg-gray-900 border border-gray-800 rounded-bl-sm flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-purple-400 animate-bounce" style={{ animationDelay: '0ms' }} />
-              <div className="w-2 h-2 rounded-full bg-purple-400 animate-bounce" style={{ animationDelay: '150ms' }} />
-              <div className="w-2 h-2 rounded-full bg-purple-400 animate-bounce" style={{ animationDelay: '300ms' }} />
-              <span className="text-xs text-gray-400 ml-1">Formulating defense...</span>
+            <div className="p-3.5 rounded-2xl bg-white dark:bg-gray-900 border border-slate-200 dark:border-gray-800 rounded-bl-sm flex items-center gap-2 shadow-sm">
+              <div className="w-2 h-2 rounded-full bg-purple-500 dark:bg-purple-400 animate-bounce" style={{ animationDelay: '0ms' }} />
+              <div className="w-2 h-2 rounded-full bg-purple-500 dark:bg-purple-400 animate-bounce" style={{ animationDelay: '150ms' }} />
+              <div className="w-2 h-2 rounded-full bg-purple-500 dark:bg-purple-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+              <span className="text-xs text-slate-500 dark:text-gray-400 ml-1">Formulating defense...</span>
             </div>
           </div>
         )}
@@ -524,11 +561,11 @@ export default function VoiceSparringPage() {
       </div>
 
       {/* 3. Bottom Area: Quick Prompts Drawer + Dedicated Chat Input */}
-      <div className="border-t border-gray-800 bg-gray-900/95 backdrop-blur shrink-0 z-20 pb-safe">
+      <div className="border-t border-slate-200 dark:border-gray-800 bg-white/95 dark:bg-gray-900/95 backdrop-blur shrink-0 z-20 pb-safe">
         {/* Horizontal Chips: Preset Challenges */}
         {showPresets && (
-          <div className="px-4 py-2 border-b border-gray-800/60 overflow-x-auto no-scrollbar flex items-center gap-2 max-w-3xl mx-auto">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-purple-400/80 shrink-0">
+          <div className="px-4 py-2 border-b border-slate-100 dark:border-gray-800/60 overflow-x-auto no-scrollbar flex items-center gap-2 max-w-3xl mx-auto">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-purple-600 dark:text-purple-400/80 shrink-0">
               Grill:
             </span>
             {PRESET_CHALLENGES.map((item, idx) => (
@@ -536,7 +573,7 @@ export default function VoiceSparringPage() {
                 key={idx}
                 onClick={() => handleSendMessage(item.prompt)}
                 disabled={isProcessing || isListening}
-                className="shrink-0 text-xs px-2.5 py-1 rounded-full bg-gray-800/80 hover:bg-purple-900/40 text-gray-300 hover:text-purple-200 border border-gray-700/60 hover:border-purple-600/50 transition-all text-left"
+                className="shrink-0 text-xs px-2.5 py-1 rounded-full bg-slate-100 hover:bg-purple-100 dark:bg-gray-800/80 dark:hover:bg-purple-900/40 text-slate-700 hover:text-purple-700 dark:text-gray-300 dark:hover:text-purple-200 border border-slate-200 hover:border-purple-300 dark:border-gray-700/60 dark:hover:border-purple-600/50 transition-all text-left"
               >
                 {item.title}
               </button>
@@ -547,22 +584,22 @@ export default function VoiceSparringPage() {
         <div className="max-w-3xl mx-auto p-3 sm:p-4">
           {/* Active Voice Recording Banner (When recording continuously) */}
           {isListening && (
-            <div className="mb-2.5 px-3 py-2 rounded-xl bg-purple-950/40 border border-purple-800/60 flex items-center justify-between animate-fadeIn">
-              <div className="flex items-center gap-2 text-xs text-purple-300">
+            <div className="mb-2.5 px-3 py-2 rounded-xl bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800/60 flex items-center justify-between animate-fadeIn">
+              <div className="flex items-center gap-2 text-xs text-purple-800 dark:text-purple-300">
                 <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping"></span>
-                <span className="font-semibold text-rose-400">Recording</span>
-                <span className="font-mono bg-purple-900/50 px-1.5 py-0.5 rounded text-[11px] text-purple-200">
+                <span className="font-semibold text-rose-600 dark:text-rose-400">Recording</span>
+                <span className="font-mono bg-purple-100 dark:bg-purple-900/50 px-1.5 py-0.5 rounded text-[11px] text-purple-800 dark:text-purple-200">
                   {formatDuration(recordingSeconds)}
                 </span>
-                <span className="text-[11px] text-gray-400 hidden sm:inline">
-                  (Speak as long as you want. Tap Stop or Send when done)
+                <span className="text-[11px] text-slate-500 dark:text-gray-400 hidden sm:inline">
+                  (Speak as long as you want. Tap Done or Send when finished)
                 </span>
               </div>
               <div className="flex items-center gap-1.5">
                 <button
                   type="button"
                   onClick={cancelRecording}
-                  className="text-[11px] text-gray-400 hover:text-rose-400 px-2 py-1 rounded hover:bg-gray-800 transition-colors"
+                  className="text-[11px] text-slate-500 dark:text-gray-400 hover:text-rose-600 dark:hover:text-rose-400 px-2 py-1 rounded hover:bg-slate-100 dark:hover:bg-gray-800 transition-colors"
                 >
                   Cancel
                 </button>
@@ -590,7 +627,7 @@ export default function VoiceSparringPage() {
             className="flex items-end gap-2"
           >
             {/* Input Box with live transcript or typed text */}
-            <div className="flex-1 relative bg-gray-900 border border-gray-700 rounded-2xl focus-within:border-purple-500 transition-colors shadow-inner flex items-center">
+            <div className="flex-1 relative bg-slate-50 dark:bg-gray-900 border border-slate-300 dark:border-gray-700 rounded-2xl focus-within:border-purple-500 transition-colors shadow-inner flex items-center">
               <textarea
                 ref={textareaRef}
                 value={inputText}
@@ -611,7 +648,7 @@ export default function VoiceSparringPage() {
                     ? 'Listening continuously... Speak your argument...'
                     : 'Type a tough counter-argument or tap mic to speak...'
                 }
-                className="w-full bg-transparent px-3.5 py-2.5 text-xs sm:text-sm text-white placeholder-gray-400 resize-none focus:outline-none max-h-28 leading-relaxed"
+                className="w-full bg-transparent px-3.5 py-2.5 text-xs sm:text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-gray-500 resize-none focus:outline-none max-h-28 leading-relaxed"
                 disabled={isProcessing}
               />
             </div>
@@ -629,7 +666,7 @@ export default function VoiceSparringPage() {
               className={`h-10 w-10 sm:h-11 sm:w-11 rounded-2xl flex items-center justify-center shrink-0 transition-all shadow-md ${
                 isListening
                   ? 'bg-rose-600 hover:bg-rose-500 text-white scale-105 animate-pulse shadow-rose-600/30'
-                  : 'bg-gray-800 hover:bg-gray-700 text-purple-400 hover:text-purple-300 border border-gray-700/80'
+                  : 'bg-slate-100 hover:bg-slate-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-purple-600 dark:text-purple-400 border border-slate-300 dark:border-gray-700/80'
               }`}
             >
               {isListening ? (

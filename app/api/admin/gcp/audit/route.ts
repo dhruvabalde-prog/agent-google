@@ -69,8 +69,8 @@ export async function GET(request: NextRequest) {
 
   // 6. Database Connection Status
   const rawDbUrl = process.env.DATABASE_URL || '';
-  const isPostgresConfigured = Boolean(rawDbUrl && !rawDbUrl.includes('[YOUR-PASSWORD]') && !rawDbUrl.includes('YOUR-PASSWORD'));
-  const dbStatus = isPostgresConfigured ? 'POSTGRES / SUPABASE CONNECTED' : 'IN-MEMORY RESILIENT FALLBACK (Password needed)';
+  const isPostgresConfigured = Boolean(rawDbUrl && !rawDbUrl.includes('YOUR-PASSWORD'));
+  const dbStatus = isPostgresConfigured ? 'POSTGRES / SUPABASE CONNECTED' : 'IN-MEMORY RESILIENT FALLBACK';
 
   // 7. Workspace APIs Inventory
   const apps = await getAllApps();
