@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
-import { UserProfile, UserType, StudentSubType, WorkingProfessionalCategory, WorkingProfessionalSubCategory, FamilyMember, TeamMember } from '@/lib/types';
+import React, { useState, useMemo, useEffect } from 'react';
+import { UserProfile, UserType, WorkingProfessionalCategory } from '@/lib/types';
 
 interface OnboardingFlowModalProps {
   isOpen: boolean;
@@ -11,6 +11,87 @@ interface OnboardingFlowModalProps {
   isDarkMode?: boolean;
 }
 
+const SUB_CATEGORIES_MAP: { [key: string]: string[] } = {
+  salaried: [
+    'Software Engineer / Tech Lead',
+    'Product / Project Manager',
+    'Growth & Marketing Specialist',
+    'Financial Analyst / Controller',
+    'HR & Talent Operations',
+  ],
+  self_employed: [
+    'Stock Trader / Market Analyst',
+    'Chartered Accountant (CA) & Tax Consultant',
+    'Advocate / Legal Practitioner',
+    'Doctor / Medical Practitioner',
+    'Architect & Spatial Designer',
+  ],
+  entrepreneur: [
+    'Pre-School & Academy Owner',
+    'D2C / E-Commerce Brand Founder',
+    'Tech Startup Founder',
+    'Retail & Franchise Store Owner',
+    'Manufacturing & Agency Director',
+  ],
+  freelancer: [
+    'Content Creator & Influencer',
+    'UI/UX & Brand Designer',
+    'Independent Strategic Consultant',
+    'Copywriter & Technical Writer',
+    'Full-Stack Developer & Contractor',
+  ],
+  student: [
+    'High School / Board Exams',
+    'Undergraduate Degree',
+    'Post-graduate / Masters',
+    'Competitive Exam Prep (UPSC, JEE, etc.)'
+  ],
+  seniors: [
+    'Retired Professional',
+    'Homemaker',
+    'Part-time Consultant'
+  ]
+};
+
+function getQuestions(userType: UserType, category?: WorkingProfessionalCategory) {
+  const common = [
+    { id: 'q_goal', title: 'What is your primary goal for joining Life OS?', options: ['Automating daily repetitive tasks', 'Organizing my chaotic schedule', 'Accelerating career/business growth', 'Delegating work to an AI team'] },
+    { id: 'q_comm', title: 'How do you prefer to interact with your AI?', options: ['Text & Chat mostly', 'Voice Commands & Calls', 'Background Automation', 'Mix of all approaches'] },
+  ];
+  let specific: { id: string, title: string, options: string[] }[] = [];
+  
+  if (userType === 'working_professional' || userType === 'WORKING_PROFESSIONAL') {
+    const c = category?.toLowerCase();
+    if (c === 'entrepreneur') {
+      specific = [
+        { id: 'q_e1', title: 'What is the biggest operational challenge in your business?', options: ['Client Acquisition & Sales', 'Vendor & Supply Chain Management', 'Financial Tracking & Cashflow', 'Team Delegation & Hiring'] },
+        { id: 'q_e2', title: 'How big is your current team?', options: ['Just me (Solopreneur)', '1 - 10 employees', '11 - 50 employees', '50+ employees'] }
+      ];
+    } else if (c === 'freelancer') {
+      specific = [
+        { id: 'q_f1', title: 'What takes up most of your unbillable time?', options: ['Finding new clients', 'Invoicing & following up on payments', 'Managing projects & deadlines', 'Drafting proposals/emails'] },
+        { id: 'q_f2', title: 'How do you track your projects currently?', options: ['Spreadsheets & Docs', 'Project Management tools (Notion, Trello)', 'Notebooks / Mental tracking', 'Scattered across multiple apps'] }
+      ];
+    } else {
+      specific = [
+        { id: 'q_s1', title: 'What describes your current career phase?', options: ['Pushing for a promotion', 'Managing a new team', 'Work-life balance focus', 'Looking for a switch'] },
+        { id: 'q_s2', title: 'How much of your day is spent in meetings?', options: ['Less than 1 hour', '1-3 hours', '3-5 hours (Too many)', 'Most of my day'] }
+      ];
+    }
+  } else if (userType === 'student' || userType === 'STUDENT') {
+    specific = [
+       { id: 'q_st1', title: 'What is your biggest bottleneck in studying?', options: ['Lack of focus/procrastination', 'Too much material to synthesize', 'Tracking assignments & deadlines', 'Finding good research resources'] },
+       { id: 'q_st2', title: 'How do you prefer to consume study material?', options: ['Reading notes & docs', 'Watching videos & lectures', 'Solving practice questions', 'Group study & discussions'] }
+    ];
+  } else {
+    specific = [
+      { id: 'q_gen1', title: 'What areas of your life need the most organization?', options: ['Health & Wellness tracking', 'Financial planning & bills', 'Travel & Event planning', 'Daily routines & habits'] }
+    ];
+  }
+  
+  return [...common, ...specific];
+}
+
 export default function OnboardingFlowModal({
   isOpen,
   onClose,
@@ -18,773 +99,394 @@ export default function OnboardingFlowModal({
   initialProfile,
   isDarkMode = false,
 }: OnboardingFlowModalProps) {
-  const [step, setStep] = useState<number>(1);
+  // --- Flow State ---
+  // 0: Identity (Name, Phone, OTP)
+  // 1: Primary User Type
+  // 2: Specific Sub-Type
+  // 3 to (3 + questions.length - 1): Questions
+  // N: OAuth Integrations
+  // N+1: Building Dashboard...
+  const [currentStep, setCurrentStep] = useState(0);
+  const [slideDirection, setSlideDirection] = useState<'left' | 'right'>('right');
+
+  // --- Profile State ---
   const [name, setName] = useState(initialProfile?.name || '');
-  const [personalEmail, setPersonalEmail] = useState(initialProfile?.email || '');
-  const [workEmail, setWorkEmail] = useState(initialProfile?.workEmail || '');
+  const [phone, setPhone] = useState('');
+  const [otpSent, setOtpSent] = useState(false);
+  const [otp, setOtp] = useState('');
   const [userType, setUserType] = useState<UserType>(initialProfile?.userType || 'working_professional');
-  
-  // Student fields
-  const [studentSubType, setStudentSubType] = useState<StudentSubType>(initialProfile?.studentSubType || 'competitive_exam');
-  const [studentAccountType, setStudentAccountType] = useState<'personal' | 'institute'>('personal');
-  const [instituteCode, setInstituteCode] = useState('');
-
-  // Working professional fields
   const [workingCategory, setWorkingCategory] = useState<WorkingProfessionalCategory>(initialProfile?.workingCategory || 'salaried');
-  const [workingSubCategory, setWorkingSubCategory] = useState<WorkingProfessionalSubCategory>(initialProfile?.workingSubCategory || 'Software Engineer / Tech Lead');
-  const [orgAccountType, setOrgAccountType] = useState<'personal' | 'organization'>('personal');
-  const [orgCode, setOrgCode] = useState('');
+  const [subCategory, setSubCategory] = useState<string>('');
+  
+  // Answers state
+  const [answers, setAnswers] = useState<Record<string, string>>({});
 
-  // Enterprise industry
-  const [enterpriseIndustry, setEnterpriseIndustry] = useState('Banking & FinTech');
+  // Auth/Integrations State
+  const [perms, setPerms] = useState({ gmail: false, calendar: false, whatsapp: false });
+  const [buildingStage, setBuildingStage] = useState(0);
 
-  // Family Members (up to 5, max 2 seniors, max 2 students)
-  const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>(initialProfile?.familyMembers || []);
-  const [newFamName, setNewFamName] = useState('');
-  const [newFamEmail, setNewFamEmail] = useState('');
-  const [newFamRelation, setNewFamRelation] = useState('Parent');
-  const [newFamPersona, setNewFamPersona] = useState<'student' | 'senior' | 'other'>('senior');
-  const [famError, setFamError] = useState('');
+  // Dynamic questions based on selected type
+  const questions = useMemo(() => getQuestions(userType, workingCategory), [userType, workingCategory]);
 
-  // Team Members (up to 5)
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>(initialProfile?.teamMembers || []);
-  const [newTeamName, setNewTeamName] = useState('');
-  const [newTeamEmail, setNewTeamEmail] = useState('');
-  const [newTeamRole, setNewTeamRole] = useState('Contributor');
-  const [teamError, setTeamError] = useState('');
-
-  // Integrations state
-  const [googleWorkspaceConnected, setGoogleWorkspaceConnected] = useState(true);
-  const [microsoftConnected, setMicrosoftConnected] = useState(false);
-  const [whatsappPersonalConnected, setWhatsappPersonalConnected] = useState(true);
-  const [whatsappBusinessConnected, setWhatsappBusinessConnected] = useState(false);
+  const OAUTH_STEP = 3 + questions.length;
+  const BUILDING_STEP = OAUTH_STEP + 1;
 
   if (!isOpen) return null;
 
-  const seniorCount = familyMembers.filter(f => f.persona === 'senior').length;
-  const studentCount = familyMembers.filter(f => f.persona === 'student').length;
+  const goToNext = () => {
+    setSlideDirection('right');
+    setCurrentStep(prev => prev + 1);
+  };
 
-  function handleAddFamilyMember() {
-    setFamError('');
-    if (!newFamEmail || !newFamEmail.includes('@') || !newFamName.trim()) {
-      setFamError('Please provide a valid name and email address.');
-      return;
+  const goToPrev = () => {
+    if (currentStep > 0) {
+      setSlideDirection('left');
+      setCurrentStep(prev => prev - 1);
     }
-    if (familyMembers.length >= 5) {
-      setFamError('Maximum 5 family members allowed.');
-      return;
-    }
-    if (newFamPersona === 'senior' && seniorCount >= 2) {
-      setFamError('Maximum 2 seniors can be added.');
-      return;
-    }
-    if (newFamPersona === 'student' && studentCount >= 2) {
-      setFamError('Maximum 2 students can be added.');
-      return;
-    }
+  };
 
-    const newMember: FamilyMember = {
-      id: `fam-${Date.now()}`,
-      name: newFamName.trim(),
-      email: newFamEmail.trim().toLowerCase(),
-      relationship: newFamRelation,
-      persona: newFamPersona,
-      inviteStatus: 'invited',
-    };
+  const handleSelectOption = (questionId: string, option: string) => {
+    setAnswers(prev => ({ ...prev, [questionId]: option }));
+    setTimeout(() => {
+      goToNext();
+    }, 350); // Slight delay so user sees selection
+  };
 
-    setFamilyMembers(prev => [...prev, newMember]);
-    setNewFamName('');
-    setNewFamEmail('');
-  }
-
-  function handleAddTeamMember() {
-    setTeamError('');
-    if (!newTeamEmail || !newTeamEmail.includes('@') || !newTeamName.trim()) {
-      setTeamError('Please provide a valid name and email address.');
-      return;
-    }
-    if (teamMembers.length >= 5) {
-      setTeamError('Maximum 5 team members allowed.');
-      return;
-    }
-
-    const newMember: TeamMember = {
-      id: `team-${Date.now()}`,
-      name: newTeamName.trim(),
-      email: newTeamEmail.trim().toLowerCase(),
-      role: newTeamRole.trim(),
-      inviteStatus: 'invited',
-    };
-
-    setTeamMembers(prev => [...prev, newMember]);
-    setNewTeamName('');
-    setNewTeamEmail('');
-  }
-
-  function handleCompleteOnboarding() {
+  const finalizeOnboarding = () => {
     const updated: UserProfile = {
       name: name.trim() || 'Life OS Member',
-      email: personalEmail.trim().toLowerCase(),
-      workEmail: workEmail.trim().toLowerCase(),
       userType,
-      studentSubType: userType === 'student' ? studentSubType : undefined,
-      instituteCode: userType === 'student' && studentAccountType === 'institute' ? instituteCode : undefined,
       workingCategory: userType === 'working_professional' ? workingCategory : undefined,
-      workingSubCategory: userType === 'working_professional' ? workingSubCategory : undefined,
-      organizationCode: userType === 'working_professional' && orgAccountType === 'organization' ? orgCode : undefined,
-      familyMembers,
-      teamMembers,
+      professionalSubCategory: subCategory,
+      familyMembers: [],
+      teamMembers: [],
       onboardingCompleted: true,
       updatedAt: new Date().toISOString(),
     };
-
     onSaveProfile(updated);
     onClose();
-  }
-
-  const SUB_CATEGORIES_MAP: { [key: string]: WorkingProfessionalSubCategory[] } = {
-    salaried: [
-      'Software Engineer / Tech Lead',
-      'Product / Project Manager',
-      'Growth & Marketing Specialist',
-      'Financial Analyst / Controller',
-      'HR & Talent Operations',
-    ],
-    self_employed: [
-      'Stock Trader / Market Analyst',
-      'Chartered Accountant (CA) & Tax Consultant',
-      'Advocate / Legal Practitioner',
-      'Doctor / Medical Practitioner',
-      'Architect & Spatial Designer',
-    ],
-    entrepreneur: [
-      'Pre-School & Academy Owner',
-      'D2C / E-Commerce Brand Founder',
-      'Tech Startup Founder',
-      'Retail & Franchise Store Owner',
-      'Manufacturing & Agency Director',
-    ],
-    freelancer: [
-      'Content Creator & Influencer',
-      'UI/UX & Brand Designer',
-      'Independent Strategic Consultant',
-      'Copywriter & Technical Writer',
-      'Full-Stack Developer & Contractor',
-    ],
   };
 
-  const MAINSTREAM_INDUSTRIES = [
-    'Banking & FinTech', 'Healthcare & Pharma', 'IT & SaaS', 'Retail & E-Commerce', 'Manufacturing & Logistics',
-    'Education & EdTech', 'Real Estate & Infrastructure', 'Telecommunications', 'Automotive & Mobility', 'Media & Entertainment'
-  ];
+  useEffect(() => {
+    if (currentStep === BUILDING_STEP) {
+      const timer1 = setTimeout(() => setBuildingStage(1), 1500);
+      const timer2 = setTimeout(() => setBuildingStage(2), 3000);
+      const timer3 = setTimeout(() => finalizeOnboarding(), 4500);
+      return () => { clearTimeout(timer1); clearTimeout(timer2); clearTimeout(timer3); };
+    }
+  }, [currentStep]);
 
-  const NICHE_INDUSTRIES = [
-    'Aerospace & Defense', 'DeepTech & Quantum', 'Clean Energy & ESG', 'Agritech & Cold Chains', 'BioTech & Genomics',
-    'Maritime Shipping & Ports', 'Cyber Defense & Intelligence', 'Specialty Chemicals', 'Gaming & Metaverse', 'GovTech & Civic Infrastructure'
-  ];
+  // CSS for slide animation
+  const slideClass = slideDirection === 'right' ? 'animate-[slideInRight_0.3s_ease-out]' : 'animate-[slideInLeft_0.3s_ease-out]';
 
   return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
-      <div className={`rounded-3xl max-w-2xl w-full my-auto border shadow-2xl overflow-hidden flex flex-col transition-all ${
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-hidden">
+      <style>{`
+        @keyframes slideInRight {
+          from { transform: translateX(40px); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes slideInLeft {
+          from { transform: translateX(-40px); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
+        }
+      `}</style>
+      
+      <div className={`w-full max-w-xl h-[600px] rounded-3xl border shadow-2xl flex flex-col relative overflow-hidden ${
         isDarkMode ? 'bg-zinc-900 border-zinc-800 text-zinc-100' : 'bg-white border-zinc-200 text-zinc-900'
       }`}>
-        {/* Top Header */}
-        <div className={`p-6 border-b flex items-center justify-between ${
-          isDarkMode ? 'bg-zinc-950/60 border-zinc-800' : 'bg-slate-50 border-zinc-200'
-        }`}>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-blue-600 text-white font-bold flex items-center justify-center text-lg shadow-md shadow-blue-500/30">
-              L
+        
+        {/* Header - Hidden on building step */}
+        {currentStep < BUILDING_STEP && (
+          <div className={`px-6 py-4 border-b flex items-center justify-between z-10 ${
+            isDarkMode ? 'bg-zinc-950/80 border-zinc-800' : 'bg-slate-50 border-zinc-200'
+          }`}>
+            <div className="flex items-center gap-3">
+              {currentStep > 0 && (
+                <button onClick={goToPrev} className="p-1.5 rounded-full hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 18l-6-6 6-6"/></svg>
+                </button>
+              )}
+              <h2 className="text-lg font-bold">Personalize Life OS</h2>
             </div>
-            <div>
-              <h2 className="text-lg font-bold">Personalize Your Life OS</h2>
-              <p className="text-xs text-zinc-400">Step {step} of 4: Setup your sovereign workspace</p>
+            
+            {/* Progress dots */}
+            <div className="flex gap-1">
+              {Array.from({ length: OAUTH_STEP + 1 }).map((_, i) => (
+                <div key={i} className={`h-1.5 rounded-full transition-all ${
+                  i === currentStep ? 'w-4 bg-blue-500' : i < currentStep ? 'w-1.5 bg-blue-300 dark:bg-blue-800' : 'w-1.5 bg-zinc-200 dark:bg-zinc-700'
+                }`} />
+              ))}
             </div>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-zinc-400 hover:text-zinc-600 p-2 text-sm"
-          >
-            ✕
-          </button>
-        </div>
+        )}
 
-        {/* Modal Body */}
-        <div className="p-6 overflow-y-auto max-h-[70vh] space-y-6">
-          {/* STEP 1: Basic Identity & User Persona Selection */}
-          {step === 1 && (
-            <div className="space-y-5">
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-1.5">
-                  Your Full Name
-                </label>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. Arjun Sharma"
-                  className={`w-full px-4 py-2.5 rounded-xl text-sm border focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                    isDarkMode ? 'bg-zinc-800 border-zinc-700 text-white' : 'bg-zinc-50 border-zinc-200 text-zinc-900'
-                  }`}
-                />
+        {/* Dynamic Content Area */}
+        <div key={currentStep} className={`flex-1 overflow-y-auto p-6 flex flex-col ${slideClass}`}>
+          
+          {/* STEP 0: IDENTITY */}
+          {currentStep === 0 && (
+            <div className="flex flex-col h-full justify-center space-y-6 max-w-sm mx-auto w-full">
+              <div className="text-center mb-4">
+                <div className="w-16 h-16 bg-blue-600 rounded-2xl mx-auto flex items-center justify-center text-3xl text-white font-bold mb-4 shadow-lg shadow-blue-500/30">L</div>
+                <h3 className="text-2xl font-bold">Welcome to Life OS</h3>
+                <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-2">Let's set up your sovereign workspace.</p>
               </div>
-
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-2">
-                  Select Your Profile Category
-                </label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {/* Student */}
-                  <div
-                    onClick={() => setUserType('student')}
-                    className={`p-4 rounded-2xl border cursor-pointer transition-all ${
-                      userType === 'student'
-                        ? 'border-blue-500 bg-blue-500/10 ring-2 ring-blue-500/40'
-                        : isDarkMode
-                        ? 'border-zinc-800 bg-zinc-800/40 hover:bg-zinc-800'
-                        : 'border-zinc-200 bg-white hover:bg-zinc-50'
-                    }`}
-                  >
-                    <div className="text-2xl mb-1">🎓</div>
-                    <div className="font-bold text-sm">Student</div>
-                    <div className="text-xs text-zinc-500 mt-1">School, Competitive Exam (UPSC/JEE/NEET), University</div>
-                  </div>
-
-                  {/* Working Professional */}
-                  <div
-                    onClick={() => setUserType('working_professional')}
-                    className={`p-4 rounded-2xl border cursor-pointer transition-all ${
-                      userType === 'working_professional'
-                        ? 'border-blue-500 bg-blue-500/10 ring-2 ring-blue-500/40'
-                        : isDarkMode
-                        ? 'border-zinc-800 bg-zinc-800/40 hover:bg-zinc-800'
-                        : 'border-zinc-200 bg-white hover:bg-zinc-50'
-                    }`}
-                  >
-                    <div className="text-2xl mb-1">💼</div>
-                    <div className="font-bold text-sm">Working Professional</div>
-                    <div className="text-xs text-zinc-500 mt-1">Salaried, Self-Employed, Founder, Freelancer</div>
-                  </div>
-
-                  {/* Seniors */}
-                  <div
-                    onClick={() => setUserType('seniors')}
-                    className={`p-4 rounded-2xl border cursor-pointer transition-all ${
-                      userType === 'seniors'
-                        ? 'border-emerald-500 bg-emerald-500/10 ring-2 ring-emerald-500/40'
-                        : isDarkMode
-                        ? 'border-zinc-800 bg-zinc-800/40 hover:bg-zinc-800'
-                        : 'border-zinc-200 bg-white hover:bg-zinc-50'
-                    }`}
-                  >
-                    <div className="text-2xl mb-1">🌸</div>
-                    <div className="font-bold text-sm">Seniors</div>
-                    <div className="text-xs text-zinc-500 mt-1">Retired citizen — Minimalist, health & family focus</div>
-                  </div>
-
-                  {/* Enterprise (Locked) */}
-                  <div
-                    onClick={() => setUserType('enterprise')}
-                    className={`p-4 rounded-2xl border cursor-pointer transition-all relative ${
-                      userType === 'enterprise'
-                        ? 'border-purple-500 bg-purple-500/10 ring-2 ring-purple-500/40'
-                        : isDarkMode
-                        ? 'border-zinc-800 bg-zinc-800/40 hover:bg-zinc-800'
-                        : 'border-zinc-200 bg-white hover:bg-zinc-50'
-                    }`}
-                  >
-                    <span className="absolute top-2 right-2 px-1.5 py-0.5 rounded text-[10px] font-bold bg-zinc-700 text-white">
-                      🔒 LOCKED
-                    </span>
-                    <div className="text-2xl mb-1">🏢</div>
-                    <div className="font-bold text-sm">Enterprise</div>
-                    <div className="text-xs text-zinc-500 mt-1">Mainstream & niche industries (Invitation only)</div>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-1.5">Your Full Name</label>
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="e.g. Arjun Sharma"
+                    className={`w-full px-4 py-3 rounded-xl text-sm border focus:outline-none focus:ring-2 focus:ring-blue-500 ${isDarkMode ? 'bg-zinc-800 border-zinc-700 text-white' : 'bg-zinc-50 border-zinc-200 text-zinc-900'}`}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-1.5">Phone Number</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="tel"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="+91 9876543210"
+                      className={`flex-1 px-4 py-3 rounded-xl text-sm border focus:outline-none focus:ring-2 focus:ring-blue-500 ${isDarkMode ? 'bg-zinc-800 border-zinc-700 text-white' : 'bg-zinc-50 border-zinc-200 text-zinc-900'}`}
+                    />
+                    {!otpSent ? (
+                      <button 
+                        onClick={() => { if(phone.length > 5) setOtpSent(true) }}
+                        disabled={phone.length < 5}
+                        className="px-4 py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-semibold rounded-xl transition-all whitespace-nowrap"
+                      >
+                        Send OTP
+                      </button>
+                    ) : null}
                   </div>
                 </div>
+                {otpSent && (
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-1.5">Enter OTP</label>
+                    <input
+                      type="text"
+                      value={otp}
+                      onChange={(e) => setOtp(e.target.value)}
+                      placeholder="123456"
+                      className={`w-full px-4 py-3 rounded-xl text-sm border focus:outline-none focus:ring-2 focus:ring-blue-500 ${isDarkMode ? 'bg-zinc-800 border-zinc-700 text-white' : 'bg-zinc-50 border-zinc-200 text-zinc-900'}`}
+                    />
+                  </div>
+                )}
+              </div>
+              <div className="mt-auto pt-8">
+                <button
+                  onClick={goToNext}
+                  disabled={!name.trim() || !otp.trim()}
+                  className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 disabled:bg-zinc-300 dark:disabled:bg-zinc-700 disabled:text-zinc-500 text-white font-bold rounded-xl transition-all shadow-lg"
+                >
+                  Continue
+                </button>
               </div>
             </div>
           )}
 
-          {/* STEP 2: Persona Sub-Category Specialization & Work Mail */}
-          {step === 2 && (
-            <div className="space-y-5">
-              {/* STUDENT DETAILS */}
-              {userType === 'student' && (
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-semibold uppercase text-zinc-400 mb-1.5">Student Level</label>
-                    <div className="grid grid-cols-3 gap-2">
-                      {[
-                        { id: 'school', label: 'School Student' },
-                        { id: 'competitive_exam', label: 'Competitive Exam' },
-                        { id: 'university', label: 'University / College' },
-                      ].map(s => (
-                        <button
-                          key={s.id}
-                          type="button"
-                          onClick={() => setStudentSubType(s.id as any)}
-                          className={`p-3 rounded-xl text-xs font-bold border transition-all text-center ${
-                            studentSubType === s.id
-                              ? 'bg-blue-600 text-white border-blue-600'
-                              : isDarkMode ? 'bg-zinc-800 border-zinc-700 text-zinc-300' : 'bg-zinc-50 border-zinc-200 text-zinc-700'
-                          }`}
-                        >
-                          {s.label}
-                        </button>
-                      ))}
+          {/* STEP 1: PRIMARY USER TYPE */}
+          {currentStep === 1 && (
+            <div className="flex flex-col h-full">
+              <div className="mb-6">
+                <h3 className="text-xl font-bold mb-2">What best describes you?</h3>
+                <p className="text-sm text-zinc-500">Life OS configures distinct skill sets based on your role.</p>
+              </div>
+              <div className="grid grid-cols-1 gap-3">
+                {[
+                  { id: 'working_professional', icon: '💼', title: 'Working Professional', desc: 'Salaried, Entrepreneur, or Freelancer' },
+                  { id: 'student', icon: '🎓', title: 'Student', desc: 'School, University, or Competitive Exams' },
+                  { id: 'seniors', icon: '☕', title: 'Home & Personal', desc: 'Retirees, Homemakers, Personal Tracking' },
+                ].map(type => (
+                  <button
+                    key={type.id}
+                    onClick={() => {
+                      setUserType(type.id as UserType);
+                      setTimeout(goToNext, 300);
+                    }}
+                    className={`flex items-center gap-4 p-4 rounded-2xl border transition-all text-left group ${
+                      userType === type.id
+                        ? 'border-blue-500 bg-blue-500/10 ring-1 ring-blue-500/50'
+                        : isDarkMode ? 'border-zinc-800 bg-zinc-800/40 hover:bg-zinc-800' : 'border-zinc-200 bg-white hover:bg-zinc-50'
+                    }`}
+                  >
+                    <div className="text-3xl bg-zinc-100 dark:bg-zinc-900 w-12 h-12 flex items-center justify-center rounded-xl">{type.icon}</div>
+                    <div>
+                      <h4 className="font-bold text-base">{type.title}</h4>
+                      <p className="text-xs text-zinc-500">{type.desc}</p>
                     </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold uppercase text-zinc-400 mb-1.5">Account Setup</label>
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setStudentAccountType('personal')}
-                        className={`p-3 rounded-xl text-xs font-bold border ${
-                          studentAccountType === 'personal'
-                            ? 'bg-blue-600 text-white border-blue-600'
-                            : 'bg-zinc-800/40 border-zinc-700 text-zinc-400'
-                        }`}
-                      >
-                        Personal Account
-                      </button>
-                      <button
-                        type="button"
-                        disabled
-                        className="p-3 rounded-xl text-xs font-bold border border-zinc-700 bg-zinc-800/20 text-zinc-500 relative cursor-not-allowed"
-                      >
-                        Institute Code 🔒 (Locked)
-                      </button>
+                    <div className={`ml-auto w-5 h-5 rounded-full border-2 flex items-center justify-center ${userType === type.id ? 'border-blue-500' : 'border-zinc-300 dark:border-zinc-600'}`}>
+                      {userType === type.id && <div className="w-2.5 h-2.5 bg-blue-500 rounded-full" />}
                     </div>
-                  </div>
-                </div>
-              )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
-              {/* WORKING PROFESSIONAL DETAILS */}
+          {/* STEP 2: SPECIFIC CATEGORY */}
+          {currentStep === 2 && (
+            <div className="flex flex-col h-full">
+              <div className="mb-6">
+                <h3 className="text-xl font-bold mb-2">Let's get more specific.</h3>
+                <p className="text-sm text-zinc-500">Select your specific category so we can tailor your dashboards.</p>
+              </div>
+              
               {userType === 'working_professional' && (
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-semibold uppercase text-zinc-400 mb-1.5">
-                      Professional Type
-                    </label>
-                    <div className="grid grid-cols-2 gap-2">
-                      {[
-                        { id: 'salaried', label: 'Salaried Employee' },
-                        { id: 'self_employed', label: 'Self-Employed (CA/Doc/Lawyer/Trader)' },
-                        { id: 'entrepreneur', label: 'Entrepreneur / Business Owner' },
-                        { id: 'freelancer', label: 'Freelancer / Gig Worker' },
-                      ].map(c => (
-                        <button
-                          key={c.id}
-                          type="button"
-                          onClick={() => {
-                            setWorkingCategory(c.id as any);
-                            setWorkingSubCategory(SUB_CATEGORIES_MAP[c.id as WorkingProfessionalCategory][0]);
-                          }}
-                          className={`p-3 rounded-xl text-xs font-bold border transition-all text-left ${
-                            workingCategory === c.id
-                              ? 'bg-blue-600 text-white border-blue-600'
-                              : isDarkMode ? 'bg-zinc-800 border-zinc-700 text-zinc-300' : 'bg-zinc-50 border-zinc-200 text-zinc-700'
-                          }`}
-                        >
-                          {c.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold uppercase text-zinc-400 mb-1.5">
-                      Specific Sub-Category (5 Profiles)
-                    </label>
-                    <select
-                      value={workingSubCategory}
-                      onChange={(e) => setWorkingSubCategory(e.target.value as any)}
-                      className={`w-full px-4 py-2.5 rounded-xl text-xs font-semibold border focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                        isDarkMode ? 'bg-zinc-800 border-zinc-700 text-white' : 'bg-zinc-50 border-zinc-200 text-zinc-900'
+                <div className="mb-6 grid grid-cols-2 gap-2">
+                  {['salaried', 'entrepreneur', 'freelancer', 'self_employed'].map(cat => (
+                    <button
+                      key={cat}
+                      onClick={() => { setWorkingCategory(cat as any); setSubCategory(''); }}
+                      className={`p-3 rounded-xl text-sm font-bold capitalize border text-center transition-all ${
+                        workingCategory === cat ? 'bg-blue-600 border-blue-600 text-white' : isDarkMode ? 'bg-zinc-800 border-zinc-700' : 'bg-white border-zinc-200'
                       }`}
                     >
-                      {SUB_CATEGORIES_MAP[workingCategory].map(sub => (
-                        <option key={sub} value={sub}>{sub}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-                    <div>
-                      <label className="block text-xs font-semibold uppercase text-zinc-400 mb-1">
-                        Personal Gmail ID
-                      </label>
-                      <input
-                        type="email"
-                        value={personalEmail}
-                        onChange={(e) => setPersonalEmail(e.target.value)}
-                        placeholder="yourname@gmail.com"
-                        className={`w-full px-3 py-2 rounded-xl text-xs border ${
-                          isDarkMode ? 'bg-zinc-800 border-zinc-700 text-white' : 'bg-zinc-50 border-zinc-200 text-zinc-900'
-                        }`}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold uppercase text-zinc-400 mb-1">
-                        Work Domain Mail (or 2nd Gmail)
-                      </label>
-                      <input
-                        type="email"
-                        value={workEmail}
-                        onChange={(e) => setWorkEmail(e.target.value)}
-                        placeholder="you@company.com"
-                        className={`w-full px-3 py-2 rounded-xl text-xs border ${
-                          isDarkMode ? 'bg-zinc-800 border-zinc-700 text-white' : 'bg-zinc-50 border-zinc-200 text-zinc-900'
-                        }`}
-                      />
-                    </div>
-                  </div>
-
-                  {workingCategory === 'salaried' && (
-                    <div>
-                      <label className="block text-xs font-semibold uppercase text-zinc-400 mb-1.5">Organization Mode</label>
-                      <div className="grid grid-cols-2 gap-2">
-                        <button
-                          type="button"
-                          onClick={() => setOrgAccountType('personal')}
-                          className={`p-2.5 rounded-xl text-xs font-bold border ${
-                            orgAccountType === 'personal'
-                              ? 'bg-blue-600 text-white border-blue-600'
-                              : 'bg-zinc-800/40 border-zinc-700 text-zinc-400'
-                          }`}
-                        >
-                          Personal Account
-                        </button>
-                        <button
-                          type="button"
-                          disabled
-                          className="p-2.5 rounded-xl text-xs font-bold border border-zinc-700 bg-zinc-800/20 text-zinc-500 relative cursor-not-allowed"
-                        >
-                          Organization SSO 🔒 (Locked)
-                        </button>
-                      </div>
-                    </div>
-                  )}
+                      {cat.replace('_', ' ')}
+                    </button>
+                  ))}
                 </div>
               )}
 
-              {/* SENIORS DETAILS */}
-              {userType === 'seniors' && (
-                <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-xs space-y-2">
-                  <div className="font-bold text-sm text-emerald-600 dark:text-emerald-400">
-                    Retired Senior Citizen Experience
-                  </div>
-                  <p className="text-zinc-500 dark:text-zinc-400">
-                    High contrast text, large tap targets, and streamlined tools: medicine schedules, gentle daily walk reminders, and 1-tap WhatsApp check-ins with your children.
-                  </p>
-                </div>
-              )}
-
-              {/* ENTERPRISE DETAILS */}
-              {userType === 'enterprise' && (
-                <div className="space-y-4">
-                  <div className="p-3 rounded-xl bg-purple-500/10 border border-purple-500/30 text-xs">
-                    <span className="font-bold text-purple-400">Enterprise Edition (Locked)</span>: Choose your industry. Enterprise tier includes dedicated tenant air-gapping, Spanner compliance ledgers, and unlimited automation cron heartbeats.
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold uppercase text-zinc-400 mb-1.5">Industry Sector</label>
-                    <select
-                      value={enterpriseIndustry}
-                      onChange={(e) => setEnterpriseIndustry(e.target.value)}
-                      className={`w-full px-3 py-2 rounded-xl text-xs border ${
-                        isDarkMode ? 'bg-zinc-800 border-zinc-700 text-white' : 'bg-zinc-50 border-zinc-200 text-zinc-900'
+              <div className="flex-1 overflow-y-auto pr-2">
+                <div className="space-y-2">
+                  {(SUB_CATEGORIES_MAP[userType === 'working_professional' ? workingCategory : userType] || SUB_CATEGORIES_MAP['student']).map(sub => (
+                    <button
+                      key={sub}
+                      onClick={() => {
+                        setSubCategory(sub);
+                        setTimeout(goToNext, 300);
+                      }}
+                      className={`w-full text-left p-4 rounded-xl border transition-all text-sm font-medium ${
+                        subCategory === sub
+                          ? 'border-blue-500 bg-blue-500/10 text-blue-700 dark:text-blue-300'
+                          : isDarkMode ? 'border-zinc-800 bg-zinc-800/40 hover:bg-zinc-800' : 'border-zinc-200 bg-white hover:bg-zinc-50'
                       }`}
                     >
-                      <optgroup label="Mainstream Industries">
-                        {MAINSTREAM_INDUSTRIES.map(ind => <option key={ind} value={ind}>{ind}</option>)}
-                      </optgroup>
-                      <optgroup label="Niche Industries">
-                        {NICHE_INDUSTRIES.map(ind => <option key={ind} value={ind}>{ind}</option>)}
-                      </optgroup>
-                      <option value="Other">Other Custom Industry</option>
-                    </select>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* STEP 3: Family & Team Collaboration Hub Setup */}
-          {step === 3 && (
-            <div className="space-y-5">
-              {userType !== 'student' ? (
-                <>
-                  {/* Family Members Section */}
-                  <div className="p-4 rounded-2xl border border-inherit space-y-3">
-                    <div className="flex items-center justify-between">
-                      <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-500">
-                        👨‍👩‍👧‍👦 Family Members (Max 5: 2 Seniors, 2 Students)
-                      </h4>
-                      <span className="text-[11px] text-zinc-400">{familyMembers.length}/5 added</span>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
-                      <input
-                        type="text"
-                        value={newFamName}
-                        onChange={(e) => setNewFamName(e.target.value)}
-                        placeholder="Name"
-                        className={`px-3 py-1.5 rounded-lg text-xs border ${
-                          isDarkMode ? 'bg-zinc-800 border-zinc-700 text-white' : 'bg-zinc-50 border-zinc-200 text-zinc-900'
-                        }`}
-                      />
-                      <input
-                        type="email"
-                        value={newFamEmail}
-                        onChange={(e) => setNewFamEmail(e.target.value)}
-                        placeholder="Gmail ID"
-                        className={`px-3 py-1.5 rounded-lg text-xs border ${
-                          isDarkMode ? 'bg-zinc-800 border-zinc-700 text-white' : 'bg-zinc-50 border-zinc-200 text-zinc-900'
-                        }`}
-                      />
-                      <select
-                        value={newFamPersona}
-                        onChange={(e) => setNewFamPersona(e.target.value as any)}
-                        className={`px-2 py-1.5 rounded-lg text-xs border ${
-                          isDarkMode ? 'bg-zinc-800 border-zinc-700 text-white' : 'bg-zinc-50 border-zinc-200 text-zinc-900'
-                        }`}
-                      >
-                        <option value="senior">Senior ({seniorCount}/2)</option>
-                        <option value="student">Student ({studentCount}/2)</option>
-                        <option value="other">Other Relative</option>
-                      </select>
-                      <button
-                        type="button"
-                        onClick={handleAddFamilyMember}
-                        disabled={!newFamEmail.includes('@') || !newFamName.trim() || familyMembers.length >= 5}
-                        className="px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white disabled:opacity-40"
-                      >
-                        Send Invitation
-                      </button>
-                    </div>
-
-                    {famError && <div className="text-[11px] text-red-500 font-semibold">{famError}</div>}
-
-                    {/* Added Family Members Badges */}
-                    {familyMembers.length > 0 && (
-                      <div className="flex flex-wrap gap-2 pt-2">
-                        {familyMembers.map((fm, idx) => (
-                          <div key={idx} className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-xs">
-                            <span className="font-semibold">{fm.name}</span>
-                            <span className="text-[10px] text-zinc-400">({fm.persona})</span>
-                            <span className="text-[9px] px-1.5 rounded-full bg-emerald-600 text-white font-bold">Invited ✓</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Team Members Section */}
-                  <div className="p-4 rounded-2xl border border-inherit space-y-3">
-                    <div className="flex items-center justify-between">
-                      <h4 className="text-xs font-bold uppercase tracking-wider text-indigo-500">
-                        👥 Team Members (Max 5)
-                      </h4>
-                      <span className="text-[11px] text-zinc-400">{teamMembers.length}/5 added</span>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
-                      <input
-                        type="text"
-                        value={newTeamName}
-                        onChange={(e) => setNewTeamName(e.target.value)}
-                        placeholder="Name"
-                        className={`px-3 py-1.5 rounded-lg text-xs border ${
-                          isDarkMode ? 'bg-zinc-800 border-zinc-700 text-white' : 'bg-zinc-50 border-zinc-200 text-zinc-900'
-                        }`}
-                      />
-                      <input
-                        type="email"
-                        value={newTeamEmail}
-                        onChange={(e) => setNewTeamEmail(e.target.value)}
-                        placeholder="Work / Gmail ID"
-                        className={`px-3 py-1.5 rounded-lg text-xs border ${
-                          isDarkMode ? 'bg-zinc-800 border-zinc-700 text-white' : 'bg-zinc-50 border-zinc-200 text-zinc-900'
-                        }`}
-                      />
-                      <input
-                        type="text"
-                        value={newTeamRole}
-                        onChange={(e) => setNewTeamRole(e.target.value)}
-                        placeholder="Role / Dept"
-                        className={`px-3 py-1.5 rounded-lg text-xs border ${
-                          isDarkMode ? 'bg-zinc-800 border-zinc-700 text-white' : 'bg-zinc-50 border-zinc-200 text-zinc-900'
-                        }`}
-                      />
-                      <button
-                        type="button"
-                        onClick={handleAddTeamMember}
-                        disabled={!newTeamEmail.includes('@') || !newTeamName.trim() || teamMembers.length >= 5}
-                        className="px-3 py-1.5 rounded-lg text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white disabled:opacity-40"
-                      >
-                        Send Invite
-                      </button>
-                    </div>
-
-                    {teamError && <div className="text-[11px] text-red-500 font-semibold">{teamError}</div>}
-
-                    {/* Added Team Members Badges */}
-                    {teamMembers.length > 0 && (
-                      <div className="flex flex-wrap gap-2 pt-2">
-                        {teamMembers.map((tm, idx) => (
-                          <div key={idx} className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-xs">
-                            <span className="font-semibold">{tm.name}</span>
-                            <span className="text-[10px] text-zinc-400">({tm.role})</span>
-                            <span className="text-[9px] px-1.5 rounded-full bg-indigo-600 text-white font-bold">Invited ✓</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </>
-              ) : (
-                <div className="p-5 rounded-2xl bg-blue-500/10 border border-blue-500/30 text-xs space-y-2">
-                  <div className="font-bold text-sm text-blue-600 dark:text-blue-400">
-                    Student Individual Focus Mode
-                  </div>
-                  <p className="text-zinc-500 dark:text-zinc-400">
-                    Students focus on personal syllabus tracking, active recall, and mock test analytics. Family & team management unlocks on Working Professional profiles.
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* STEP 4: Tool Permissions & Connectivity */}
-          {step === 4 && (
-            <div className="space-y-4">
-              <div className="text-xs text-zinc-400 mb-2">
-                Connect your work and personal accounts. Life OS keeps credentials isolated between Home & Work.
-              </div>
-
-              <div className="space-y-2.5">
-                <div className={`p-3.5 rounded-2xl border flex items-center justify-between text-xs ${
-                  isDarkMode ? 'bg-zinc-800/60 border-zinc-700' : 'bg-zinc-50 border-zinc-200'
-                }`}>
-                  <div className="flex items-center gap-3">
-                    <span className="text-xl">🌐</span>
-                    <div>
-                      <div className="font-bold">Google Workspace OAuth</div>
-                      <div className="text-[11px] text-zinc-400">Docs, Sheets, Slides, Calendar, Tasks, Keep, Gmail</div>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setGoogleWorkspaceConnected(!googleWorkspaceConnected)}
-                    className={`px-3 py-1 rounded-full text-xs font-bold transition-all ${
-                      googleWorkspaceConnected ? 'bg-emerald-600 text-white' : 'bg-zinc-700 text-zinc-300'
-                    }`}
-                  >
-                    {googleWorkspaceConnected ? 'Connected ✓' : 'Connect'}
-                  </button>
-                </div>
-
-                <div className={`p-3.5 rounded-2xl border flex items-center justify-between text-xs ${
-                  isDarkMode ? 'bg-zinc-800/60 border-zinc-700' : 'bg-zinc-50 border-zinc-200'
-                }`}>
-                  <div className="flex items-center gap-3">
-                    <span className="text-xl">💼</span>
-                    <div>
-                      <div className="font-bold">Microsoft 365 Bridge</div>
-                      <div className="text-[11px] text-zinc-400">Outlook Calendar & Mail, OneDrive, Office Docs</div>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setMicrosoftConnected(!microsoftConnected)}
-                    className={`px-3 py-1 rounded-full text-xs font-bold transition-all ${
-                      microsoftConnected ? 'bg-emerald-600 text-white' : 'bg-zinc-700 text-zinc-300'
-                    }`}
-                  >
-                    {microsoftConnected ? 'Connected ✓' : 'Connect'}
-                  </button>
-                </div>
-
-                <div className={`p-3.5 rounded-2xl border flex items-center justify-between text-xs ${
-                  isDarkMode ? 'bg-zinc-800/60 border-zinc-700' : 'bg-zinc-50 border-zinc-200'
-                }`}>
-                  <div className="flex items-center gap-3">
-                    <span className="text-xl">💬</span>
-                    <div>
-                      <div className="font-bold">WhatsApp Personal (Home Mode)</div>
-                      <div className="text-[11px] text-zinc-400">Family check-ins, medical updates, 1-tap wa.me drafts</div>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setWhatsappPersonalConnected(!whatsappPersonalConnected)}
-                    className={`px-3 py-1 rounded-full text-xs font-bold transition-all ${
-                      whatsappPersonalConnected ? 'bg-emerald-600 text-white' : 'bg-zinc-700 text-zinc-300'
-                    }`}
-                  >
-                    {whatsappPersonalConnected ? 'Active ✓' : 'Connect'}
-                  </button>
-                </div>
-
-                <div className={`p-3.5 rounded-2xl border flex items-center justify-between text-xs ${
-                  isDarkMode ? 'bg-zinc-800/60 border-zinc-700' : 'bg-zinc-50 border-zinc-200'
-                }`}>
-                  <div className="flex items-center gap-3">
-                    <span className="text-xl">🏢</span>
-                    <div>
-                      <div className="font-bold">WhatsApp Business (Work Mode)</div>
-                      <div className="text-[11px] text-zinc-400">Client outreach, RFQ inquiries, fee reminder notices</div>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setWhatsappBusinessConnected(!whatsappBusinessConnected)}
-                    className={`px-3 py-1 rounded-full text-xs font-bold transition-all ${
-                      whatsappBusinessConnected ? 'bg-emerald-600 text-white' : 'bg-zinc-700 text-zinc-300'
-                    }`}
-                  >
-                    {whatsappBusinessConnected ? 'Active ✓' : 'Connect'}
-                  </button>
+                      {sub}
+                    </button>
+                  ))}
                 </div>
               </div>
             </div>
           )}
-        </div>
 
-        {/* Modal Footer Controls */}
-        <div className={`p-4 border-t flex items-center justify-between ${
-          isDarkMode ? 'bg-zinc-950/60 border-zinc-800' : 'bg-slate-50 border-zinc-200'
-        }`}>
-          {step > 1 ? (
-            <button
-              type="button"
-              onClick={() => setStep(step - 1)}
-              className="px-4 py-2 rounded-xl text-xs font-semibold border border-zinc-700 text-zinc-300 hover:bg-zinc-800"
-            >
-              ← Back
-            </button>
-          ) : <div />}
-
-          {step < 4 ? (
-            <button
-              type="button"
-              onClick={() => setStep(step + 1)}
-              className="px-5 py-2 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white shadow-xs"
-            >
-              Next Step →
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={handleCompleteOnboarding}
-              className="px-6 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-600/30"
-            >
-              Launch Life OS ✨
-            </button>
+          {/* STEP 3 to (3 + questions.length - 1): DYNAMIC QUESTIONS */}
+          {currentStep >= 3 && currentStep < OAUTH_STEP && (
+            <div className="flex flex-col h-full justify-center max-w-md mx-auto w-full">
+              <div className="mb-8">
+                <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider mb-2 block">Question {currentStep - 2} of {questions.length}</span>
+                <h3 className="text-2xl font-bold leading-tight">{questions[currentStep - 3].title}</h3>
+              </div>
+              
+              <div className="space-y-3">
+                {questions[currentStep - 3].options.map((opt, idx) => {
+                  const qId = questions[currentStep - 3].id;
+                  const isSelected = answers[qId] === opt;
+                  return (
+                    <button
+                      key={idx}
+                      onClick={() => handleSelectOption(qId, opt)}
+                      className={`w-full text-left p-4 rounded-2xl border-2 transition-all flex items-center justify-between group ${
+                        isSelected
+                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30'
+                          : isDarkMode ? 'border-zinc-800 bg-zinc-900 hover:border-zinc-600' : 'border-zinc-200 bg-white hover:border-zinc-300'
+                      }`}
+                    >
+                      <span className={`font-medium ${isSelected ? 'text-blue-700 dark:text-blue-300' : ''}`}>{opt}</span>
+                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
+                        isSelected ? 'border-blue-500 bg-blue-500' : 'border-zinc-300 dark:border-zinc-700 group-hover:border-zinc-400'
+                      }`}>
+                        {isSelected && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><path d="M20 6L9 17l-5-5"/></svg>}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           )}
+
+          {/* OAUTH INTEGRATIONS */}
+          {currentStep === OAUTH_STEP && (
+            <div className="flex flex-col h-full justify-center max-w-md mx-auto w-full">
+              <div className="text-center mb-8">
+                <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 rounded-full mx-auto flex items-center justify-center text-3xl mb-4">
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                </div>
+                <h3 className="text-2xl font-bold mb-2">Connect Your World</h3>
+                <p className="text-sm text-zinc-500">Life OS needs access to securely automate your workflows. Grant permissions one by one.</p>
+              </div>
+
+              <div className="space-y-4">
+                {/* Gmail & Calendar */}
+                <div className={`p-4 rounded-2xl border flex items-center justify-between ${isDarkMode ? 'bg-zinc-800/40 border-zinc-700' : 'bg-white border-zinc-200'}`}>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-red-100 text-red-600 rounded-xl flex items-center justify-center font-bold">G</div>
+                    <div>
+                      <p className="font-bold text-sm">Google Workspace</p>
+                      <p className="text-[10px] text-zinc-500">Gmail, Calendar, Docs & Drive</p>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => setPerms(p => ({...p, gmail: !p.gmail}))}
+                    className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${perms.gmail ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}
+                  >
+                    {perms.gmail ? 'Connected ✓' : 'Connect'}
+                  </button>
+                </div>
+
+                {/* WhatsApp */}
+                <div className={`p-4 rounded-2xl border flex items-center justify-between ${isDarkMode ? 'bg-zinc-800/40 border-zinc-700' : 'bg-white border-zinc-200'}`}>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-green-100 text-green-600 rounded-xl flex items-center justify-center font-bold">W</div>
+                    <div>
+                      <p className="font-bold text-sm">WhatsApp Business</p>
+                      <p className="text-[10px] text-zinc-500">Cloud API Integration</p>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => setPerms(p => ({...p, whatsapp: !p.whatsapp}))}
+                    className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${perms.whatsapp ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}
+                  >
+                    {perms.whatsapp ? 'Connected ✓' : 'Connect'}
+                  </button>
+                </div>
+              </div>
+
+              <div className="mt-8">
+                <button
+                  onClick={goToNext}
+                  className="w-full py-4 bg-black dark:bg-white dark:text-black hover:scale-[1.02] text-white font-bold rounded-2xl transition-all shadow-lg text-lg flex items-center justify-center gap-2"
+                >
+                  Generate My Life OS <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* BUILDING SCREEN */}
+          {currentStep === BUILDING_STEP && (
+            <div className="flex flex-col h-full justify-center items-center text-center max-w-sm mx-auto animate-pulse">
+              <div className="relative w-24 h-24 mb-8">
+                <div className="absolute inset-0 border-4 border-blue-200 dark:border-blue-900 rounded-full"></div>
+                <div className="absolute inset-0 border-4 border-blue-600 rounded-full border-t-transparent animate-spin"></div>
+                <div className="absolute inset-0 flex items-center justify-center font-bold text-blue-600 text-2xl">L</div>
+              </div>
+              <h3 className="text-2xl font-bold mb-4">Building your Life OS...</h3>
+              
+              <div className="space-y-3 w-full text-sm font-medium text-zinc-500 dark:text-zinc-400">
+                <p className={buildingStage >= 0 ? 'text-blue-600 dark:text-blue-400' : ''}>✓ Analyzing your role and goals</p>
+                <p className={`transition-opacity ${buildingStage >= 1 ? 'opacity-100 text-blue-600 dark:text-blue-400' : 'opacity-30'}`}>✓ Generating custom trackers in Google Sheets</p>
+                <p className={`transition-opacity ${buildingStage >= 2 ? 'opacity-100 text-blue-600 dark:text-blue-400' : 'opacity-30'}`}>✓ Provisioning AI autonomous skill packs</p>
+              </div>
+            </div>
+          )}
+
         </div>
       </div>
     </div>

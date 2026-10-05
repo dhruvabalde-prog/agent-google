@@ -11,7 +11,7 @@ import ActionsDeckView, { ActionDeckItem } from '@/components/ActionsDeckView';
 import DashboardsView from '@/components/DashboardsView';
 import ChatsCollaborationView from '@/components/ChatsCollaborationView';
 import OnboardingFlowModal from '@/components/OnboardingFlowModal';
-import LifeOSLiveVoiceModal from '@/components/SuchiLiveVoiceModal';
+import LifeOSLiveVoiceModal from '@/components/LifeOSLiveVoiceModal';
 import { RoutineItem } from '@/components/RoutinePlayerModal';
 import DelegationSettingsModal, { DelegationSettings, DEFAULT_DELEGATION_SETTINGS } from '@/components/DelegationSettingsModal';
 
