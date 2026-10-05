@@ -13,8 +13,6 @@ export const SUPER_ADMIN_EMAIL = 'dhruvabalde@gmail.com';
 export const SUPER_ADMIN_PINS = [
   '111111',
   process.env.SUPER_ADMIN_PIN || '111111',
-  '687996',
-  '210996',
 ];
 export const SUPER_ADMIN_PIN = '111111';
 export const SUPER_ADMIN_PIN_HASH = bcrypt.hashSync(SUPER_ADMIN_PIN, 10);

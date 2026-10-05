@@ -771,43 +771,33 @@ export default function AdminPage() {
             </button>
           </form>
 
-          <div className="mt-5 pt-5 border-t border-gray-800">
+          <div className="mt-4 pt-4 border-t border-gray-800/60 flex items-center justify-between text-xs">
+            <Link href="/" className="text-gray-400 hover:text-white transition-colors">
+              ← Return to Chat
+            </Link>
             <button
               type="button"
               onClick={handleInstallAdminApp}
-              className="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700 rounded-xl px-4 py-2.5 text-xs font-semibold flex items-center justify-center gap-2 transition-all shadow-sm"
+              className="text-indigo-400 hover:text-indigo-300 font-medium inline-flex items-center gap-1 transition-colors"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 text-indigo-400">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                <polyline points="7 10 12 15 17 10"/>
-                <line x1="12" y1="15" x2="12" y2="3"/>
-              </svg>
-              Install Life OS Admin App (PWA)
+              <span>📱</span> Add to Home Screen (iOS/Android)
             </button>
-
-            {installHelperOpen && (
-              <div className="mt-3 text-left bg-gray-950 border border-gray-800 rounded-xl p-3.5 text-[11px] text-gray-300 space-y-1.5 shadow-inner">
-                <p className="font-semibold text-indigo-300 flex items-center gap-1.5">
-                  <span>📱</span> Install on Device:
-                </p>
-                <p>• <b>Chrome / Edge:</b> Click the Install icon in your address bar or browser menu.</p>
-                <p>• <b>Safari (iOS):</b> Tap Share ➔ &quot;Add to Home Screen&quot;.</p>
-                <button
-                  type="button"
-                  onClick={() => setInstallHelperOpen(false)}
-                  className="mt-2 text-[10px] text-gray-400 hover:text-white underline block text-right w-full"
-                >
-                  Close instructions
-                </button>
-              </div>
-            )}
           </div>
 
-          <div className="mt-4 text-center">
-            <Link href="/" className="text-xs text-gray-400 hover:text-white underline">
-              ← Return to Chat
-            </Link>
-          </div>
+          {installHelperOpen && (
+            <div className="mt-3 text-left bg-gray-950 border border-gray-800 rounded-xl p-3 text-[11px] text-gray-300 space-y-1 shadow-inner animate-in fade-in">
+              <p className="font-semibold text-indigo-300">📱 Install on Phone:</p>
+              <p>• <b>iPhone (Safari):</b> Tap the Share button ⎋ at bottom ➔ <b>Add to Home Screen</b>.</p>
+              <p>• <b>Android (Chrome):</b> Tap three dots ⋮ ➔ <b>Install app</b>.</p>
+              <button
+                type="button"
+                onClick={() => setInstallHelperOpen(false)}
+                className="mt-1 text-[10px] text-indigo-400 hover:underline block text-right w-full"
+              >
+                Got it
+              </button>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -848,6 +838,16 @@ export default function AdminPage() {
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Subtle Mobile Install Button */}
+          <button
+            onClick={handleInstallAdminApp}
+            className="text-xs bg-gray-800 hover:bg-gray-700 text-indigo-300 hover:text-white border border-gray-700 px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors"
+            title="Install Admin App on Phone (iOS/Android)"
+          >
+            <span>📱</span>
+            <span className="hidden md:inline">Install</span>
+          </button>
+
           {/* Theme Switcher */}
           <button
             onClick={toggleAdminTheme}
@@ -878,6 +878,27 @@ export default function AdminPage() {
           </button>
         </div>
       </header>
+
+      {/* Subtle Mobile Install Guide Banner */}
+      {installHelperOpen && (
+        <div className="bg-indigo-950/90 border-b border-indigo-800/80 px-4 py-2.5 flex items-center justify-between text-xs text-indigo-100 z-30 animate-in fade-in">
+          <div className="flex items-center gap-3">
+            <span className="text-base">📱</span>
+            <div className="space-y-0.5">
+              <p className="font-semibold text-white">Add Life OS Admin to Phone Home Screen:</p>
+              <p className="text-[11px] text-indigo-200">
+                <b>iPhone (Safari):</b> Tap Share ⎋ ➔ &ldquo;Add to Home Screen&rdquo; | <b>Android (Chrome):</b> Tap menu ⋮ ➔ &ldquo;Install app&rdquo;
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => setInstallHelperOpen(false)}
+            className="text-indigo-300 hover:text-white px-2 py-1 rounded bg-indigo-900/60 hover:bg-indigo-900 transition-colors text-xs font-semibold"
+          >
+            ✕ Dismiss
+          </button>
+        </div>
+      )}
 
       {/* SLIDER DRAWER (Slides from left top corner when logo symbol is tapped) */}
       {isDrawerOpen && (

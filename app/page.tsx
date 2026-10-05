@@ -398,6 +398,7 @@ export default function Home() {
   const [user, setUser] = useState<{ email: string; name: string; picture: string } | null>(null);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [isInstallable, setIsInstallable] = useState(false);
+  const [isInstallModalOpen, setIsInstallModalOpen] = useState(false);
 
   // Independent AbortControllers per slot
   const slot1AbortControllerRef = useRef<AbortController | null>(null);
@@ -849,19 +850,18 @@ export default function Home() {
 
   const handleInstallApp = async () => {
     if (deferredPrompt) {
-      deferredPrompt.prompt();
-      const choice = await deferredPrompt.userChoice;
-      if (choice?.outcome === 'accepted') {
-        setIsInstallable(false);
-        setDeferredPrompt(null);
+      try {
+        deferredPrompt.prompt();
+        const choice = await deferredPrompt.userChoice;
+        if (choice?.outcome === 'accepted') {
+          setIsInstallable(false);
+          setDeferredPrompt(null);
+        }
+      } catch (e) {
+        setIsInstallModalOpen(true);
       }
     } else {
-      alert(
-        'To install Life OS:\n\n' +
-        '• iPhone/iPad (Safari): Tap the Share icon, then select "Add to Home Screen".\n' +
-        '• Android (Chrome): Tap the three-dot menu ⋮, then select "Install app" or "Add to Home screen".\n' +
-        '• PC/Mac (Chrome/Edge): Click the install icon in the URL bar.'
-      );
+      setIsInstallModalOpen(true);
     }
   };
 
@@ -2028,6 +2028,25 @@ export default function Home() {
             <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
               <circle cx="12" cy="12" r="3" />
+            </svg>
+          </button>
+
+          {/* Subtle Mobile Install Button */}
+          <button
+            type="button"
+            onClick={handleInstallApp}
+            title="Install Life OS on Phone (iPhone / Android)"
+            className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all border ${
+              isIncognito
+                ? 'bg-purple-900/60 border-purple-700/60 text-purple-200 hover:bg-purple-800/80'
+                : isDarkMode
+                ? 'bg-slate-900 border-slate-800 text-indigo-300 hover:text-white hover:bg-slate-800'
+                : 'bg-white border-slate-200 text-indigo-600 hover:bg-slate-50 shadow-xs'
+            }`}
+          >
+            <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect width="14" height="20" x="5" y="2" rx="2" ry="2"/>
+              <path d="M12 18h.01"/>
             </svg>
           </button>
         </div>
@@ -3574,6 +3593,16 @@ export default function Home() {
           </button>
         </div>
         
+        <button
+          onClick={() => {
+            setIsModeDrawerOpen(false);
+            handleInstallApp();
+          }}
+          className="w-full py-2 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/40 border border-indigo-200 dark:border-indigo-800/60 text-indigo-700 dark:text-indigo-300 rounded-lg text-xs font-bold transition-colors flex justify-center items-center gap-2"
+        >
+          <span>📱</span> Add to Home Screen (iOS/Android)
+        </button>
+
         {isAdmin && (
           <button onClick={() => window.location.href = '/admin'} className="w-full mt-2 py-2 bg-slate-800 dark:bg-slate-200 text-white dark:text-slate-800 rounded-lg text-xs font-bold hover:opacity-90 transition-opacity flex justify-center items-center gap-2">
             Admin Portal ↗
@@ -3613,9 +3642,61 @@ export default function Home() {
           triggerToast(`Profile configured for ${profile.name}`);
         }}
       />
+
+      {/* Sleek Mobile Installation Modal (iPhone & Android) */}
+      {isInstallModalOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4" onClick={() => setIsInstallModalOpen(false)}>
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl max-w-sm w-full p-5 shadow-2xl space-y-4 animate-in fade-in zoom-in-95" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">📱</span>
+                <h3 className="font-bold text-sm text-zinc-900 dark:text-white">Install Life OS App</h3>
+              </div>
+              <button
+                onClick={() => setIsInstallModalOpen(false)}
+                className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 p-1 text-sm rounded-lg"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs text-zinc-600 dark:text-zinc-300">
+              <div className="p-3 bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 rounded-xl space-y-1.5">
+                <p className="font-bold text-indigo-600 dark:text-indigo-400 flex items-center gap-1.5">
+                  <span>🍏</span> iPhone & iPad (Safari)
+                </p>
+                <ol className="list-decimal pl-4 space-y-1 text-[11px] leading-relaxed">
+                  <li>Tap the <b>Share</b> button <span className="font-mono bg-zinc-200 dark:bg-zinc-700 px-1 rounded">⎋</span> at bottom of Safari.</li>
+                  <li>Scroll down and tap <b>&ldquo;Add to Home Screen&rdquo;</b>.</li>
+                  <li>Tap <b>Add</b> in the top-right corner.</li>
+                </ol>
+              </div>
+
+              <div className="p-3 bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 rounded-xl space-y-1.5">
+                <p className="font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+                  <span>🤖</span> Android (Chrome)
+                </p>
+                <ol className="list-decimal pl-4 space-y-1 text-[11px] leading-relaxed">
+                  <li>Tap the <b>3 dots menu</b> <span className="font-mono bg-zinc-200 dark:bg-zinc-700 px-1 rounded">⋮</span> at top right.</li>
+                  <li>Tap <b>&ldquo;Install app&rdquo;</b> or <b>&ldquo;Add to Home screen&rdquo;</b>.</li>
+                  <li>Confirm by tapping <b>Install</b>.</li>
+                </ol>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setIsInstallModalOpen(false)}
+              className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl transition-all"
+            >
+              Done
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
 
 
 

@@ -112,8 +112,6 @@ export default function OnboardingFlowModal({
   // --- Profile State ---
   const [name, setName] = useState(initialProfile?.name || '');
   const [phone, setPhone] = useState(initialProfile?.phoneNumber || '');
-  const [otpSent, setOtpSent] = useState(false);
-  const [otp, setOtp] = useState('');
   const [gender, setGender] = useState<'female' | 'male' | 'non_binary' | 'prefer_not_to_say'>(initialProfile?.gender || 'prefer_not_to_say');
   const [userType, setUserType] = useState<UserType>(initialProfile?.userType || 'working_professional');
   const [workingCategory, setWorkingCategory] = useState<WorkingProfessionalCategory>(initialProfile?.workingCategory || 'salaried');
@@ -255,38 +253,18 @@ export default function OnboardingFlowModal({
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-1.5">Phone Number</label>
-                  <div className="flex gap-2">
-                    <input
-                      type="tel"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      placeholder="+91 9876543210"
-                      className={`flex-1 px-4 py-3 rounded-xl text-sm border focus:outline-none focus:ring-2 focus:ring-blue-500 ${isDarkMode ? 'bg-zinc-800 border-zinc-700 text-white' : 'bg-zinc-50 border-zinc-200 text-zinc-900'}`}
-                    />
-                    {!otpSent ? (
-                      <button 
-                        onClick={() => { if(phone.length > 5) setOtpSent(true) }}
-                        disabled={phone.length < 5}
-                        className="px-4 py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-semibold rounded-xl transition-all whitespace-nowrap"
-                      >
-                        Send OTP
-                      </button>
-                    ) : null}
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-500">Phone Number (Optional)</label>
+                    <span className="text-[11px] text-zinc-400">For WhatsApp & Direct Calls</span>
                   </div>
+                  <input
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="+91 98765 43210"
+                    className={`w-full px-4 py-3 rounded-xl text-sm border focus:outline-none focus:ring-2 focus:ring-blue-500 ${isDarkMode ? 'bg-zinc-800 border-zinc-700 text-white' : 'bg-zinc-50 border-zinc-200 text-zinc-900'}`}
+                  />
                 </div>
-                {otpSent && (
-                  <div>
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-1.5">Enter OTP</label>
-                    <input
-                      type="text"
-                      value={otp}
-                      onChange={(e) => setOtp(e.target.value)}
-                      placeholder="123456"
-                      className={`w-full px-4 py-3 rounded-xl text-sm border focus:outline-none focus:ring-2 focus:ring-blue-500 ${isDarkMode ? 'bg-zinc-800 border-zinc-700 text-white' : 'bg-zinc-50 border-zinc-200 text-zinc-900'}`}
-                    />
-                  </div>
-                )}
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-1.5">Gender (Tailors health, biometric & routine skills)</label>
                   <div className="grid grid-cols-3 gap-2">
@@ -314,7 +292,7 @@ export default function OnboardingFlowModal({
               <div className="mt-auto pt-8">
                 <button
                   onClick={goToNext}
-                  disabled={!name.trim() || (otpSent && !otp.trim())}
+                  disabled={!name.trim()}
                   className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 disabled:bg-zinc-300 dark:disabled:bg-zinc-700 disabled:text-zinc-500 text-white font-bold rounded-xl transition-all shadow-lg"
                 >
                   Continue
@@ -336,7 +314,7 @@ export default function OnboardingFlowModal({
                   { id: 'entrepreneur', icon: '🚀', title: 'Entrepreneur & Founder', desc: 'Startups, Agency Owners & Growth Leaders' },
                   { id: 'student', icon: '🎓', title: 'Student', desc: 'School, University & Competitive Exams' },
                   { id: 'seniors', icon: '☕', title: 'Home & Personal', desc: 'Retirees, Homemakers & Family Managers' },
-                  { id: 'admin', icon: '🛡️', title: 'Admin / System Commander', desc: 'Master credentials verification (PIN 111111)' },
+                  { id: 'admin', icon: '🛡️', title: 'Admin / System Commander', desc: 'Master credentials verification & sovereign unlock' },
                 ].map(type => (
                   <button
                     key={type.id}
@@ -388,7 +366,7 @@ export default function OnboardingFlowModal({
                   />
                   <input
                     type="password"
-                    placeholder="Enter 6-Digit PIN (111111)"
+                    placeholder="Enter 6-Digit PIN"
                     maxLength={6}
                     value={adminPin}
                     onChange={(e) => setAdminPin(e.target.value)}
@@ -398,10 +376,12 @@ export default function OnboardingFlowModal({
                   <button
                     type="button"
                     onClick={() => {
-                      if (adminPin === '111111' && (adminEmail === 'dhruvabalde@gmail.com' || adminEmail === 'ddhruva21balde@gmail.com' || adminEmail.includes('admin'))) {
+                      const normEmail = (adminEmail || '').trim().toLowerCase();
+                      const cleanPin = (adminPin || '').trim();
+                      if (cleanPin === '111111' && (normEmail.includes('dhruva') || normEmail.includes('admin') || normEmail === 'dhruvabalde@gmail.com' || normEmail === 'ddhruva21balde@gmail.com')) {
                         finalizeOnboarding({
-                          name: adminEmail.split('@')[0],
-                          email: adminEmail,
+                          name: normEmail.split('@')[0],
+                          email: normEmail,
                           userType: 'admin' as any,
                         });
                       } else {
