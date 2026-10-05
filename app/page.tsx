@@ -70,7 +70,7 @@ const HOME_MODE_CAPABILITY_POOL = [
 
 const CAPABILITY_POOL = [...WORK_MODE_CAPABILITY_POOL, ...HOME_MODE_CAPABILITY_POOL];
 
-const EXECUTIVE_SKILL_SUGGESTIONS = [
+const EXECUTIVE_ACTION_SUGGESTIONS = [
   'Generate 1-tap WhatsApp message to follow up on client invoice or agreement.',
   'Prepare an executive pre-call briefing and dialer for my strategic discussion tomorrow.',
   'Draft RFQ and compare 3 leading vendors side-by-side in Google Sheets.',
@@ -1742,7 +1742,7 @@ export default function Home() {
       return;
     }
 
-    const suggestion = EXECUTIVE_SKILL_SUGGESTIONS[Math.floor(Math.random() * EXECUTIVE_SKILL_SUGGESTIONS.length)];
+    const suggestion = EXECUTIVE_ACTION_SUGGESTIONS[Math.floor(Math.random() * EXECUTIVE_ACTION_SUGGESTIONS.length)];
     timestamps.push(now);
     try {
       localStorage.setItem('suchi_hourly_suggestions', JSON.stringify(timestamps));
