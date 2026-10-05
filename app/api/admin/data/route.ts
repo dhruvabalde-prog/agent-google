@@ -20,10 +20,13 @@ export async function GET(request: NextRequest) {
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://agent-google-green.vercel.app';
   const oauthTestUsers = users.filter((u: any) => u.is_oauth_tester);
+  const realAdmins = users.filter((u: any) => u.role === 'ADMIN' || u.role === 'SUPER_ADMIN');
 
   return NextResponse.json({
     admin: session,
+    admins: realAdmins,
     users,
+    testUsers: oauthTestUsers,
     skills,
     skillPacks: GENERAL_PURPOSE_SKILL_PACKS,
     tiers,

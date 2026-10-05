@@ -24,40 +24,18 @@ export interface BugReport {
   status: 'OPEN' | 'INVESTIGATING' | 'RESOLVED';
 }
 
-const memoryBugReports: BugReport[] = [
-  {
-    id: 'bug-sample-01',
-    createdAt: new Date(Date.now() - 3600000).toISOString(),
-    userEmail: 'user@example.com',
-    userName: 'Tester User',
-    issueType: 'tool_failure',
-    summary: 'Google Slides batchUpdate returned permission error during slide insertion',
-    userDescription: 'I asked Suchi to create a 5 slide presentation, but it got stuck at slide 2.',
-    lastUserMessage: 'Draft a 5-slide pitch deck for my organic honey brand',
-    lastAssistantResponse: 'Creating presentation and generating slides...',
-    failedAction: { tool: 'add_slide', error: 'Insufficient permission or quota exceeded' },
-    diagnostics: {
-      userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15',
-      platform: 'iOS Mobile',
-      screenSize: '390x844',
-      url: 'https://agent-google-green.vercel.app/',
-      helpOptIn: true,
-      systemStatus: 'Google Slides API Scope Active',
-    },
-    status: 'OPEN',
-  },
-];
+const memoryBugReports: BugReport[] = [];
 
 export async function GET(request: NextRequest) {
   try {
     const dbReports = await getAllBugReports();
-    const combined = dbReports.length > 0 ? dbReports : memoryBugReports;
+    const reports = dbReports.length > 0 ? dbReports : memoryBugReports;
 
     return NextResponse.json({
       success: true,
-      reports: combined,
-      totalCount: combined.length,
-      openCount: combined.filter((r: any) => r.status === 'OPEN').length,
+      reports: reports,
+      totalCount: reports.length,
+      openCount: reports.filter((r: any) => r.status === 'OPEN').length,
     });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });

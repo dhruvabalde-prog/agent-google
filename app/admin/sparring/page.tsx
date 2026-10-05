@@ -643,12 +643,12 @@ export default function VoiceSparringPage() {
                   }
                 }}
                 rows={1}
-                placeholder={
+                aria-label={
                   isListening
                     ? 'Listening continuously... Speak your argument...'
                     : 'Type a tough counter-argument or tap mic to speak...'
                 }
-                className="w-full bg-transparent px-3.5 py-2.5 text-xs sm:text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-gray-500 resize-none focus:outline-none max-h-28 leading-relaxed"
+                className="w-full bg-transparent px-3.5 py-2.5 text-xs sm:text-sm text-slate-900 dark:text-white resize-none focus:outline-none max-h-28 leading-relaxed"
                 disabled={isProcessing}
               />
             </div>

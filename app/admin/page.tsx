@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { GENERAL_PURPOSE_SKILL_PACKS } from '@/lib/skills-packs';
+import { GENERAL_PURPOSE_SKILL_PACKS, SkillPack } from '@/lib/skills-packs';
 
 export interface AdminNoteItem {
   id: string;
@@ -83,6 +83,16 @@ const DEFAULT_ADMIN_NOTES: AdminNoteItem[] = [
   }
 ];
 
+export type DrawerCategory = 
+  | 'overview'
+  | 'users'
+  | 'skills'
+  | 'apikeys'
+  | 'apps'
+  | 'diagnostics'
+  | 'system'
+  | 'roadmap';
+
 export default function AdminPage() {
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
   const [loginEmail, setLoginEmail] = useState('');
@@ -93,18 +103,97 @@ export default function AdminPage() {
   // Admin Theme (independent from user theme)
   const [adminTheme, setAdminTheme] = useState<'dark' | 'light'>('dark');
 
+  // Slider Drawer State
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isDrawerPinned, setIsDrawerPinned] = useState(false);
+  const [activeCategory, setActiveCategory] = useState<DrawerCategory>('overview');
+
+  // Category-specific pill sub-filters
+  const [overviewSubFilter, setOverviewSubFilter] = useState<'all' | 'security' | 'arena' | 'telemetry'>('all');
+  const [usersSubFilter, setUsersSubFilter] = useState<'all' | 'testers' | 'admins' | 'add'>('all');
+  const [skillsSubFilter, setSkillsSubFilter] = useState<string>('all');
+  const [apiKeysSubFilter, setApiKeysSubFilter] = useState<'all' | 'gemini' | 'openai' | 'anthropic' | 'add'>('all');
+  const [appsSubFilter, setAppsSubFilter] = useState<string>('all');
+  const [bugsSubFilter, setBugsSubFilter] = useState<'all' | 'OPEN' | 'INVESTIGATING' | 'RESOLVED'>('all');
+  const [systemSubFilter, setSystemSubFilter] = useState<'tiers' | 'logs' | 'add_tier'>('tiers');
+  const [roadmapSubFilter, setRoadmapSubFilter] = useState<string>('all');
+
+  const [adminData, setAdminData] = useState<any>(null);
+
+  // Expanded skills per user
+  const [expandedUserSkills, setExpandedUserSkills] = useState<Record<string, boolean>>({});
+
+  // Real Bug Reports & Telemetry State
+  const [bugReports, setBugReports] = useState<any[]>([]);
+  const [selectedBugPayload, setSelectedBugPayload] = useState<string | null>(null);
+
+  // Forms & State
+  const [newUserEmail, setNewUserEmail] = useState('');
+  const [newUserName, setNewUserName] = useState('');
+  const [newUserRole, setNewUserRole] = useState('USER');
+  const [newUserTier, setNewUserTier] = useState('BEGINNER');
+  const [newUserIsTester, setNewUserIsTester] = useState(true);
+  const [newUserProfile, setNewUserProfile] = useState('');
+  const [userFormMessage, setUserFormMessage] = useState('');
+  const [copyToast, setCopyToast] = useState('');
+
+  // API Key Form
+  const [newKeyProvider, setNewKeyProvider] = useState<'gemini' | 'openai' | 'anthropic'>('gemini');
+  const [newKeyValue, setNewKeyValue] = useState('');
+  const [newKeyTier, setNewKeyTier] = useState('ALL');
+  const [keyFormMessage, setKeyFormMessage] = useState('');
+  const [isSubmittingKey, setIsSubmittingKey] = useState(false);
+
+  // Custom Skill Form
+  const [skillId, setSkillId] = useState('');
+  const [skillName, setSkillName] = useState('');
+  const [skillDept, setSkillDept] = useState('Workspace & Productivity');
+  const [skillDesc, setSkillDesc] = useState('');
+  const [skillFormMessage, setSkillFormMessage] = useState('');
+
+  // Tier Form
+  const [tierId, setTierId] = useState('');
+  const [tierName, setTierName] = useState('');
+  const [tierDesc, setTierDesc] = useState('');
+  const [tierLimit, setTierLimit] = useState(50000);
+
+  // Roadmap Notes State
+  const [adminNotes, setAdminNotes] = useState<AdminNoteItem[]>(DEFAULT_ADMIN_NOTES);
+  const [noteTitle, setNoteTitle] = useState('');
+  const [noteCategory, setNoteCategory] = useState<'Integration' | 'Home Automation' | 'Voice Assistant' | 'Roadmap'>('Integration');
+  const [notePriority, setNotePriority] = useState<'CRITICAL' | 'HIGH' | 'STRATEGIC'>('HIGH');
+  const [noteDetails, setNoteDetails] = useState('');
+  const [noteSpecs, setNoteSpecs] = useState('');
+  const [notesCopyToast, setNotesCopyToast] = useState('');
+
+  // GCP Audit State
+  const [gcpAudit, setGcpAudit] = useState<any>(null);
+  const [isAuditingGcp, setIsAuditingGcp] = useState(false);
+
+  // PWA Install Prompt for Admin App
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [installHelperOpen, setInstallHelperOpen] = useState(false);
+
   useEffect(() => {
     try {
-      const saved = localStorage.getItem('admin_theme');
-      if (saved === 'light' || saved === 'dark') {
-        setAdminTheme(saved);
-        if (saved === 'dark') {
+      const savedTheme = localStorage.getItem('admin_theme');
+      if (savedTheme === 'light' || savedTheme === 'dark') {
+        setAdminTheme(savedTheme);
+        if (savedTheme === 'dark') {
           document.documentElement.classList.add('dark');
         } else {
           document.documentElement.classList.remove('dark');
         }
       }
-    } catch (e) {}
+
+      const savedNotes = localStorage.getItem('suchi_admin_strategic_notes');
+      if (savedNotes) {
+        const parsed = JSON.parse(savedNotes);
+        if (Array.isArray(parsed)) {
+          setAdminNotes(parsed);
+        }
+      }
+    } catch {}
   }, []);
 
   function toggleAdminTheme() {
@@ -117,18 +206,87 @@ export default function AdminPage() {
       } else {
         document.documentElement.classList.remove('dark');
       }
-    } catch (e) {}
+    } catch {}
   }
 
-  // Tabs: dashboard, users, packs, apps, tiers, skills, bulk-import, credentials, logs, notes, bugs
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'packs' | 'apps' | 'tiers' | 'skills' | 'bulk-import' | 'credentials' | 'logs' | 'notes' | 'bugs'>('dashboard');
-  const [adminData, setAdminData] = useState<any>(null);
+  function saveNotes(notes: AdminNoteItem[]) {
+    setAdminNotes(notes);
+    try {
+      localStorage.setItem('suchi_admin_strategic_notes', JSON.stringify(notes));
+    } catch {}
+  }
 
+  useEffect(() => {
+    fetchAdminData();
+    document.title = 'Life OS Admin Console';
 
-  // Bug Reports & Telemetry State
-  const [bugReports, setBugReports] = useState<any[]>([]);
-  const [bugFilter, setBugFilter] = useState<'all' | 'OPEN' | 'INVESTIGATING' | 'RESOLVED'>('all');
-  const [selectedBugPayload, setSelectedBugPayload] = useState<string | null>(null);
+    try {
+      let manifestEl = document.querySelector('link[rel="manifest"]') as HTMLLinkElement | null;
+      if (manifestEl) {
+        manifestEl.href = '/manifest-admin.json';
+      } else {
+        manifestEl = document.createElement('link');
+        manifestEl.rel = 'manifest';
+        manifestEl.href = '/manifest-admin.json';
+        document.head.appendChild(manifestEl);
+      }
+    } catch {}
+
+    async function checkCurrentSession() {
+      try {
+        const sRes = await fetch('/api/auth/session');
+        if (sRes.ok) {
+          const sData = await sRes.json();
+          if (sData.authenticated && sData.user?.email) {
+            setLoginEmail(prev => prev || sData.user.email);
+          } else {
+            setLoginEmail(prev => prev || 'admin@suchi.ai');
+          }
+        } else {
+          setLoginEmail(prev => prev || 'admin@suchi.ai');
+        }
+      } catch {
+        setLoginEmail(prev => prev || 'admin@suchi.ai');
+      }
+    }
+    checkCurrentSession();
+
+    const handler = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+    window.addEventListener('beforeinstallprompt', handler);
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
+
+  const handleInstallAdminApp = async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        setDeferredPrompt(null);
+      }
+    } else {
+      setInstallHelperOpen(true);
+    }
+  };
+
+  async function fetchAdminData() {
+    try {
+      const res = await fetch('/api/admin/data');
+      if (res.ok) {
+        const data = await res.json();
+        setAdminData(data);
+        setIsAdminLoggedIn(true);
+        handleRunGcpAudit();
+        fetchBugReports();
+      } else {
+        setIsAdminLoggedIn(false);
+      }
+    } catch {
+      setIsAdminLoggedIn(false);
+    }
+  }
 
   async function fetchBugReports() {
     try {
@@ -157,17 +315,6 @@ export default function AdminPage() {
     }
   }
 
-  // User & OAuth Tester form
-  const [newUserEmail, setNewUserEmail] = useState('');
-  const [newUserName, setNewUserName] = useState('');
-  const [newUserRole, setNewUserRole] = useState('USER');
-  const [newUserTier, setNewUserTier] = useState('BEGINNER');
-  const [newUserIsTester, setNewUserIsTester] = useState(true);
-  const [userFormMessage, setUserFormMessage] = useState('');
-  const [copyToast, setCopyToast] = useState('');
-  const [gcpAudit, setGcpAudit] = useState<any>(null);
-  const [isAuditingGcp, setIsAuditingGcp] = useState(false);
-
   async function handleRunGcpAudit() {
     setIsAuditingGcp(true);
     try {
@@ -180,215 +327,6 @@ export default function AdminPage() {
       console.error('GCP audit failed:', e);
     } finally {
       setIsAuditingGcp(false);
-    }
-  }
-
-  function handleDownloadTestersCsv() {
-    const testers = (adminData?.users || []).filter((u: any) => u.is_oauth_tester).map((u: any) => u.email);
-    const csvContent = 'data:text/csv;charset=utf-8,Email Address\n' + testers.join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `suchi-gcp-test-users-${Date.now()}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  }
-
-  // Forms
-  const [newKeyProvider, setNewKeyProvider] = useState('gemini');
-  const [newKeyValue, setNewKeyValue] = useState('');
-  const [newKeyTier, setNewKeyTier] = useState('ALL');
-
-  // Tier form
-  const [tierId, setTierId] = useState('');
-  const [tierName, setTierName] = useState('');
-  const [tierDesc, setTierDesc] = useState('');
-  const [tierLimit, setTierLimit] = useState(50000);
-
-  // Skill form
-  const [skillId, setSkillId] = useState('');
-  const [skillName, setSkillName] = useState('');
-  const [skillDept, setSkillDept] = useState('Sales, Business Development & Revenue Architecture');
-  const [skillDesc, setSkillDesc] = useState('');
-
-  // Bulk Markdown form
-  const [bulkMarkdown, setBulkMarkdown] = useState('');
-  const [bulkMode, setBulkMode] = useState<'merge' | 'replace'>('merge');
-  const [bulkStatus, setBulkStatus] = useState('');
-
-  // Notes / Strategic Roadmap State
-  const [adminNotes, setAdminNotes] = useState<AdminNoteItem[]>(DEFAULT_ADMIN_NOTES);
-  const [noteTitle, setNoteTitle] = useState('');
-  const [noteCategory, setNoteCategory] = useState<'Integration' | 'Home Automation' | 'Voice Assistant' | 'Roadmap'>('Integration');
-  const [notePriority, setNotePriority] = useState<'CRITICAL' | 'HIGH' | 'STRATEGIC'>('HIGH');
-  const [noteDetails, setNoteDetails] = useState('');
-  const [noteSpecs, setNoteSpecs] = useState('');
-  const [notesCopyToast, setNotesCopyToast] = useState('');
-
-  // Load and save notes from/to localStorage
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem('suchi_admin_strategic_notes');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          setAdminNotes(parsed);
-        }
-      }
-    } catch (e) {}
-  }, []);
-
-  function saveNotes(notes: AdminNoteItem[]) {
-    setAdminNotes(notes);
-    try {
-      localStorage.setItem('suchi_admin_strategic_notes', JSON.stringify(notes));
-    } catch (e) {}
-  }
-
-  function handleAddNote(e: React.FormEvent) {
-    e.preventDefault();
-    if (!noteTitle.trim()) return;
-    const newNote: AdminNoteItem = {
-      id: `note-${Date.now()}`,
-      category: noteCategory,
-      title: noteTitle.trim(),
-      details: noteDetails.trim() || 'No description provided.',
-      specs: noteSpecs.split('\n').map(s => s.trim()).filter(Boolean),
-      status: 'Planned',
-      priority: notePriority,
-      updatedAt: new Date().toISOString().split('T')[0],
-    };
-    saveNotes([newNote, ...adminNotes]);
-    setNoteTitle('');
-    setNoteDetails('');
-    setNoteSpecs('');
-  }
-
-  function handleDeleteNote(id: string) {
-    if (confirm('Delete this strategic roadmap note?')) {
-      saveNotes(adminNotes.filter(n => n.id !== id));
-    }
-  }
-
-  function handleToggleNoteStatus(id: string) {
-    const statuses: Array<AdminNoteItem['status']> = ['Planned', 'In Progress', 'Architecture Ready'];
-    const updated = adminNotes.map(n => {
-      if (n.id === id) {
-        const nextIdx = (statuses.indexOf(n.status) + 1) % statuses.length;
-        return { ...n, status: statuses[nextIdx], updatedAt: new Date().toISOString().split('T')[0] };
-      }
-      return n;
-    });
-    saveNotes(updated);
-  }
-
-  function handleResetNotesToDefault() {
-    if (confirm('Reset roadmap notes to default core specifications?')) {
-      saveNotes(DEFAULT_ADMIN_NOTES);
-    }
-  }
-
-  function handleCopyNotesMarkdown() {
-    let md = '# Suchi Life OS — Executive Architecture & Roadmap Notes\n\n';
-    adminNotes.forEach(note => {
-      md += `## [${note.priority}] ${note.title} (${note.status})\n`;
-      md += `**Category**: ${note.category} | **Last Updated**: ${note.updatedAt}\n\n`;
-      md += `${note.details}\n\n`;
-      if (note.specs.length > 0) {
-        md += '### Implementation Specifications:\n';
-        note.specs.forEach(spec => {
-          md += `- ${spec}\n`;
-        });
-      }
-      md += '\n---\n\n';
-    });
-    navigator.clipboard.writeText(md);
-    setNotesCopyToast('All roadmap notes copied to clipboard as Markdown!');
-    setTimeout(() => setNotesCopyToast(''), 3000);
-  }
-
-  // PWA Install Prompt for Admin App
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-  const [isInstallable, setIsInstallable] = useState(false);
-  const [installHelperOpen, setInstallHelperOpen] = useState(false);
-
-  useEffect(() => {
-    fetchAdminData();
-
-    // Set page title for Admin Console PWA
-    document.title = 'Suchi Admin Console';
-
-    // Switch manifest link to /manifest-admin.json for Admin PWA standalone installation
-    try {
-      let manifestEl = document.querySelector('link[rel="manifest"]') as HTMLLinkElement | null;
-      if (manifestEl) {
-        manifestEl.href = '/manifest-admin.json';
-      } else {
-        manifestEl = document.createElement('link');
-        manifestEl.rel = 'manifest';
-        manifestEl.href = '/manifest-admin.json';
-        document.head.appendChild(manifestEl);
-      }
-    } catch (e) {}
-
-    // Auto-detect currently connected Google session email
-    async function checkCurrentSession() {
-      try {
-        const sRes = await fetch('/api/auth/session');
-        if (sRes.ok) {
-          const sData = await sRes.json();
-          if (sData.authenticated && sData.user?.email) {
-            setLoginEmail(prev => prev || sData.user.email);
-          } else {
-            setLoginEmail(prev => prev || 'admin@suchi.ai');
-          }
-        } else {
-          setLoginEmail(prev => prev || 'admin@suchi.ai');
-        }
-      } catch (e) {
-        setLoginEmail(prev => prev || 'admin@suchi.ai');
-      }
-    }
-    checkCurrentSession();
-
-    const handler = (e: Event) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-      setIsInstallable(true);
-    };
-    window.addEventListener('beforeinstallprompt', handler);
-    return () => window.removeEventListener('beforeinstallprompt', handler);
-  }, []);
-
-  const handleInstallAdminApp = async () => {
-    if (deferredPrompt) {
-      deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      if (outcome === 'accepted') {
-        setIsInstallable(false);
-        setDeferredPrompt(null);
-      }
-    } else {
-      setInstallHelperOpen(true);
-    }
-  };
-
-  async function fetchAdminData() {
-    try {
-      const res = await fetch('/api/admin/data');
-      if (res.ok) {
-        const data = await res.json();
-        setAdminData(data);
-        setIsAdminLoggedIn(true);
-        // Automatically run live GCP Console tracking diagnostics & fetch bug reports
-        handleRunGcpAudit();
-        fetchBugReports();
-      } else {
-        setIsAdminLoggedIn(false);
-      }
-    } catch {
-      setIsAdminLoggedIn(false);
     }
   }
 
@@ -441,6 +379,9 @@ export default function AdminPage() {
             role: newUserRole,
             subscription_tier: newUserTier,
             is_oauth_tester: newUserIsTester,
+            onboarding_profile: newUserProfile.trim(),
+            assigned_packs: ['pack-chief-of-staff', 'pack-personal-productivity'],
+            assigned_skills: ['workspace-calendar-strategist', 'workspace-tasks-commander'],
           },
         }),
       });
@@ -448,8 +389,9 @@ export default function AdminPage() {
         setUserFormMessage(`✓ Added user ${newUserEmail.trim()} successfully.`);
         setNewUserEmail('');
         setNewUserName('');
+        setNewUserProfile('');
         fetchAdminData();
-        setTimeout(() => setUserFormMessage(''), 3000);
+        setUsersSubFilter('all');
       }
     } catch {
       setUserFormMessage('Failed to add user.');
@@ -465,19 +407,62 @@ export default function AdminPage() {
     fetchAdminData();
   }
 
-  function handleCopyAllTesters() {
-    const testers = (adminData?.users || []).filter((u: any) => u.is_oauth_tester).map((u: any) => u.email);
-    const text = testers.join(', ');
-    navigator.clipboard.writeText(text);
-    setCopyToast(`Copied ${testers.length} test user emails to clipboard!`);
-    setTimeout(() => setCopyToast(''), 3500);
-  }
+  async function handleToggleUserPack(email: string, packId: string, enabled: boolean) {
+    // Optimistic local update
+    setAdminData((prev: any) => {
+      if (!prev?.users) return prev;
+      return {
+        ...prev,
+        users: prev.users.map((u: any) => {
+          if (u.email.toLowerCase() !== email.toLowerCase()) return u;
+          let currentPacks = u.assigned_packs || [];
+          if (enabled) {
+            if (!currentPacks.includes(packId)) currentPacks = [...currentPacks, packId];
+          } else {
+            currentPacks = currentPacks.filter((p: string) => p !== packId);
+          }
+          return { ...u, assigned_packs: currentPacks };
+        }),
+      };
+    });
 
-  async function handleToggleApp(appId: string, enabled: boolean) {
     await fetch('/api/admin/actions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'TOGGLE_APP', payload: { appId, enabled } }),
+      body: JSON.stringify({
+        action: 'TOGGLE_USER_PACK',
+        payload: { email, packId, enabled },
+      }),
+    });
+    fetchAdminData();
+  }
+
+  async function handleToggleUserSkill(email: string, skillId: string, enabled: boolean) {
+    // Optimistic local update
+    setAdminData((prev: any) => {
+      if (!prev?.users) return prev;
+      return {
+        ...prev,
+        users: prev.users.map((u: any) => {
+          if (u.email.toLowerCase() !== email.toLowerCase()) return u;
+          let currentSkills = u.assigned_skills || [];
+          if (enabled) {
+            if (!currentSkills.includes(skillId)) currentSkills = [...currentSkills, skillId];
+          } else {
+            currentSkills = currentSkills.filter((s: string) => s !== skillId);
+          }
+          return { ...u, assigned_skills: currentSkills };
+        }),
+      };
+    });
+
+    await fetch('/api/admin/actions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'TOGGLE_USER_SKILL',
+        payload: { email, skillId, enabled },
+      }),
     });
     fetchAdminData();
   }
@@ -491,32 +476,8 @@ export default function AdminPage() {
     fetchAdminData();
   }
 
-  async function handleToggleUserPack(email: string, currentPacks: string[] = [], packId: string) {
-    const list = Array.isArray(currentPacks) ? currentPacks : [];
-    const hasPack = list.includes(packId);
-    const updated = hasPack ? list.filter(p => p !== packId) : [...list, packId];
-    try {
-      const res = await fetch('/api/admin/actions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'UPDATE_USER_PACKS',
-          payload: { email, packs: updated },
-        }),
-      });
-      if (res.ok) {
-        setAdminData((prev: any) => ({
-          ...prev,
-          users: (prev.users || []).map((u: any) => u.email === email ? { ...u, assigned_packs: updated } : u),
-        }));
-      }
-    } catch (e) {
-      console.error('Failed to update user packs:', e);
-    }
-  }
-
   async function handleDeleteUser(email: string) {
-    if (!confirm(`Delete user ${email}?`)) return;
+    if (!confirm(`Permanently delete account and data for ${email}?`)) return;
     await fetch('/api/admin/actions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -525,32 +486,73 @@ export default function AdminPage() {
     fetchAdminData();
   }
 
-  // Tier Actions
-  async function handleSaveTier(e: React.FormEvent) {
-    e.preventDefault();
-    if (!tierName.trim() || !tierId.trim()) return;
+  function handleCopyAllTesters() {
+    const testers = (adminData?.users || []).filter((u: any) => u.is_oauth_tester).map((u: any) => u.email).join(', ');
+    navigator.clipboard.writeText(testers);
+    setCopyToast('Copied whitelisted Google Cloud test emails to clipboard!');
+    setTimeout(() => setCopyToast(''), 3000);
+  }
 
+  function handleDownloadTestersCsv() {
+    const testers = (adminData?.users || []).filter((u: any) => u.is_oauth_tester).map((u: any) => u.email);
+    const csvContent = 'data:text/csv;charset=utf-8,Email Address\n' + testers.join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `life-os-cloud-testers-${Date.now()}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
+  // API Key Actions (10 Keys per LLM)
+  async function handleAddKey(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newKeyValue.trim()) return;
+    setKeyFormMessage('');
+    setIsSubmittingKey(true);
+
+    try {
+      const res = await fetch('/api/admin/actions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'ADD_API_KEY',
+          payload: { provider: newKeyProvider, key: newKeyValue.trim(), tier: newKeyTier },
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        setKeyFormMessage(`⚠️ ${data.error || 'Failed to add key'}`);
+      } else {
+        setKeyFormMessage(`✓ Added key to ${newKeyProvider.toUpperCase()} pool.`);
+        setNewKeyValue('');
+        await fetchAdminData();
+      }
+    } catch {
+      setKeyFormMessage('⚠️ Failed to add API key.');
+    } finally {
+      setIsSubmittingKey(false);
+    }
+  }
+
+  async function handleDeleteKey(keyId: string) {
+    if (!confirm('Remove this key from pool?')) return;
     await fetch('/api/admin/actions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'SAVE_TIER',
-        payload: { id: tierId.trim().toUpperCase(), name: tierName.trim(), description: tierDesc, dailyTokenLimit: tierLimit },
-      }),
+      body: JSON.stringify({ action: 'DELETE_API_KEY', payload: { keyId } }),
     });
-
-    setTierId('');
-    setTierName('');
-    setTierDesc('');
     fetchAdminData();
   }
 
-  async function handleDeleteTier(id: string) {
-    if (!confirm(`Delete tier ${id}?`)) return;
+  // Apps & Integrations Actions
+  async function handleToggleApp(appId: string, enabled: boolean) {
     await fetch('/api/admin/actions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'DELETE_TIER', payload: { tierId: id } }),
+      body: JSON.stringify({ action: 'TOGGLE_APP', payload: { appId, enabled } }),
     });
     fetchAdminData();
   }
@@ -559,6 +561,7 @@ export default function AdminPage() {
   async function handleSaveSkill(e: React.FormEvent) {
     e.preventDefault();
     if (!skillName.trim() || !skillId.trim()) return;
+    setSkillFormMessage('');
 
     await fetch('/api/admin/actions', {
       method: 'POST',
@@ -578,6 +581,7 @@ export default function AdminPage() {
     setSkillId('');
     setSkillName('');
     setSkillDesc('');
+    setSkillFormMessage('✓ Saved skill successfully.');
     fetchAdminData();
   }
 
@@ -600,69 +604,129 @@ export default function AdminPage() {
     fetchAdminData();
   }
 
-  async function handleBulkImport() {
-    if (!bulkMarkdown.trim()) return;
-    setBulkStatus('Importing skills...');
-    try {
-      const res = await fetch('/api/admin/actions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'BULK_IMPORT_SKILLS',
-          payload: { markdownContent: bulkMarkdown, mode: bulkMode },
-        }),
-      });
-      const data = await res.json();
-      if (data.count > 0) {
-        setBulkStatus(`✅ Successfully imported ${data.count} skills!`);
-        setBulkMarkdown('');
-      } else {
-        setBulkStatus(`⚠️ ${data.error || 'No skills found. Use headings like "## 1. Skill Name" or "### Skill Name" with description content below each heading.'}`);
-      }
-      fetchAdminData();
-    } catch {
-      setBulkStatus('❌ Bulk import failed. Check markdown format.');
-    }
-  }
-
-  // API Key Actions
-  async function handleAddKey(e: React.FormEvent) {
+  // Tier Actions
+  async function handleSaveTier(e: React.FormEvent) {
     e.preventDefault();
-    if (!newKeyValue.trim()) return;
+    if (!tierId.trim() || !tierName.trim()) return;
 
     await fetch('/api/admin/actions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        action: 'ADD_API_KEY',
-        payload: { provider: newKeyProvider, key: newKeyValue.trim(), tier: newKeyTier },
+        action: 'SAVE_TIER',
+        payload: {
+          id: tierId.trim().toUpperCase(),
+          name: tierName.trim(),
+          description: tierDesc,
+          dailyTokenLimit: tierLimit,
+        },
       }),
     });
-    setNewKeyValue('');
+
+    setTierId('');
+    setTierName('');
+    setTierDesc('');
+    setSystemSubFilter('tiers');
     fetchAdminData();
   }
 
-  async function handleDeleteKey(keyId: string) {
-    if (!confirm('Remove this key from pool?')) return;
+  async function handleDeleteTier(id: string) {
+    if (!confirm(`Delete tier ${id}?`)) return;
     await fetch('/api/admin/actions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'DELETE_API_KEY', payload: { keyId } }),
+      body: JSON.stringify({ action: 'DELETE_TIER', payload: { tierId: id } }),
     });
     fetchAdminData();
   }
 
+  // Notes Actions
+  function handleAddNote(e: React.FormEvent) {
+    e.preventDefault();
+    if (!noteTitle.trim()) return;
+    const newNote: AdminNoteItem = {
+      id: `note-${Date.now()}`,
+      category: noteCategory,
+      title: noteTitle.trim(),
+      details: noteDetails.trim() || 'No description provided.',
+      specs: noteSpecs.split('\n').map(s => s.trim()).filter(Boolean),
+      status: 'Planned',
+      priority: notePriority,
+      updatedAt: new Date().toISOString().split('T')[0],
+    };
+    saveNotes([newNote, ...adminNotes]);
+    setNoteTitle('');
+    setNoteDetails('');
+    setNoteSpecs('');
+    setRoadmapSubFilter('all');
+  }
+
+  function handleDeleteNote(id: string) {
+    if (confirm('Delete this strategic roadmap note?')) {
+      saveNotes(adminNotes.filter(n => n.id !== id));
+    }
+  }
+
+  function handleToggleNoteStatus(id: string) {
+    const statuses: Array<AdminNoteItem['status']> = ['Planned', 'In Progress', 'Architecture Ready'];
+    const updated = adminNotes.map(n => {
+      if (n.id === id) {
+        const nextIdx = (statuses.indexOf(n.status) + 1) % statuses.length;
+        return { ...n, status: statuses[nextIdx], updatedAt: new Date().toISOString().split('T')[0] };
+      }
+      return n;
+    });
+    saveNotes(updated);
+  }
+
+  function handleResetNotesToDefault() {
+    if (confirm('Reset roadmap notes to default core specifications?')) {
+      saveNotes(DEFAULT_ADMIN_NOTES);
+    }
+  }
+
+  function handleCopyNotesMarkdown() {
+    let md = '# Life OS — Executive Architecture & Roadmap Notes\n\n';
+    adminNotes.forEach(note => {
+      md += `## [${note.priority}] ${note.title} (${note.status})\n`;
+      md += `**Category**: ${note.category} | **Last Updated**: ${note.updatedAt}\n\n`;
+      md += `${note.details}\n\n`;
+      if (note.specs.length > 0) {
+        md += '### Implementation Specifications:\n';
+        note.specs.forEach(spec => {
+          md += `- ${spec}\n`;
+        });
+      }
+      md += '\n---\n\n';
+    });
+    navigator.clipboard.writeText(md);
+    setNotesCopyToast('All roadmap notes copied to clipboard as Markdown!');
+    setTimeout(() => setNotesCopyToast(''), 3000);
+  }
+
+  // Drawer Categories Configuration
+  const DRAWER_CATEGORIES: { id: DrawerCategory; title: string; subtitle: string; icon: string; badge?: string }[] = [
+    { id: 'overview', title: 'Overview', subtitle: 'Platform Health & Telemetry', icon: '🧭' },
+    { id: 'users', title: 'Users & Onboarding', subtitle: 'Real Test Accounts & Skill Toggles', icon: '👥', badge: `${adminData?.users?.length || 0}` },
+    { id: 'skills', title: 'Skills', subtitle: 'Life OS Categories & Items', icon: '✨', badge: `${adminData?.skills?.length || 0}` },
+    { id: 'apikeys', title: 'API Key Pool', subtitle: '10 Keys / LLM Multi-Provider', icon: '🔑', badge: `${adminData?.apiKeys?.length || 0}/30` },
+    { id: 'apps', title: 'Cloud Apps & APIs', subtitle: 'Workspace Integrations & GCP Audit', icon: '☁️', badge: `${adminData?.apps?.length || 0}` },
+    { id: 'diagnostics', title: 'Bug Reports', subtitle: 'Real Diagnostic Telemetry', icon: '🛡️', badge: `${bugReports.filter(b => b.status === 'OPEN').length}` },
+    { id: 'system', title: 'System & Subscriptions', subtitle: 'Tiers & Security Audit Trail', icon: '⚙️' },
+    { id: 'roadmap', title: 'Roadmap & Architecture', subtitle: 'Strategic IoT & Assistant Specs', icon: '📋' },
+  ];
+
   if (!isAdminLoggedIn) {
     return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
-        <div className="bg-gray-800 border border-gray-700 rounded-2xl p-6 sm:p-8 max-w-md w-full shadow-2xl">
+      <div className="min-h-screen bg-gray-950 flex items-center justify-center p-4">
+        <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 sm:p-8 max-w-md w-full shadow-2xl">
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-bold text-lg">
-              A
+            <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-bold text-lg shadow-md shadow-indigo-600/30">
+              L
             </div>
             <div>
-              <h1 className="text-xl font-bold text-white">Administrator Access</h1>
-              <p className="text-xs text-gray-400">Direct restricted system management</p>
+              <h1 className="text-xl font-bold text-white">Life OS Admin Access</h1>
+              <p className="text-xs text-gray-400">Direct sovereign system governance</p>
             </div>
           </div>
 
@@ -675,7 +739,7 @@ export default function AdminPage() {
                 value={loginEmail}
                 onChange={(e) => setLoginEmail(e.target.value)}
                 aria-label="Administrator Gmail"
-                className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>
 
@@ -691,12 +755,12 @@ export default function AdminPage() {
                 aria-label="Security PIN"
                 value={loginPin}
                 onChange={(e) => setLoginPin(e.target.value)}
-                className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 tracking-widest text-center font-mono"
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 tracking-widest text-center font-mono"
               />
             </div>
 
             {loginError && (
-              <div className="text-red-400 text-xs bg-red-900/30 border border-red-800 rounded p-2">
+              <div className="text-red-400 text-xs bg-red-950/40 border border-red-800 rounded p-2">
                 {loginError}
               </div>
             )}
@@ -710,28 +774,27 @@ export default function AdminPage() {
             </button>
           </form>
 
-          {/* Download Admin App PWA Button */}
-          <div className="mt-5 pt-5 border-t border-gray-700/60">
+          <div className="mt-5 pt-5 border-t border-gray-800">
             <button
               type="button"
               onClick={handleInstallAdminApp}
-              className="w-full bg-slate-700/80 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-600 rounded-xl px-4 py-2.5 text-xs font-semibold flex items-center justify-center gap-2 transition-all shadow-sm"
+              className="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700 rounded-xl px-4 py-2.5 text-xs font-semibold flex items-center justify-center gap-2 transition-all shadow-sm"
             >
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 text-indigo-400">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
                 <polyline points="7 10 12 15 17 10"/>
                 <line x1="12" y1="15" x2="12" y2="3"/>
               </svg>
-              Download Suchi Admin App (PWA)
+              Install Life OS Admin App (PWA)
             </button>
 
             {installHelperOpen && (
-              <div className="mt-3 text-left bg-gray-900/90 border border-gray-700 rounded-xl p-3.5 text-[11px] text-gray-300 space-y-1.5 shadow-inner">
+              <div className="mt-3 text-left bg-gray-950 border border-gray-800 rounded-xl p-3.5 text-[11px] text-gray-300 space-y-1.5 shadow-inner">
                 <p className="font-semibold text-indigo-300 flex items-center gap-1.5">
-                  <span>📱</span> Install Suchi Admin App on Device:
+                  <span>📱</span> Install on Device:
                 </p>
-                <p>• <b>Chrome / Edge (Desktop & Android):</b> Click the Install icon in your browser address bar or menu ➔ &quot;Install Suchi Admin Console&quot;.</p>
-                <p>• <b>Safari (iPhone / iPad):</b> Tap Share <span className="text-blue-400 font-bold">⎋</span> ➔ &quot;Add to Home Screen&quot;.</p>
+                <p>• <b>Chrome / Edge:</b> Click the Install icon in your address bar or browser menu.</p>
+                <p>• <b>Safari (iOS):</b> Tap Share ➔ &quot;Add to Home Screen&quot;.</p>
                 <button
                   type="button"
                   onClick={() => setInstallHelperOpen(false)}
@@ -754,349 +817,376 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 text-gray-100 flex flex-col">
-      {/* Admin Header */}
-      <header className="bg-gray-800 border-b border-gray-700 px-4 sm:px-6 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+    <div className="min-h-screen bg-gray-950 text-gray-100 flex flex-col antialiased">
+      {/* HEADER WITH LOGO THAT TRIGGERS DRAWER */}
+      <header className="bg-gray-900 border-b border-gray-800 px-4 sm:px-6 py-3.5 flex items-center justify-between sticky top-0 z-30 shadow-md">
         <div className="flex items-center gap-3">
-          <span className="w-8 h-8 rounded-lg bg-slate-950 border border-slate-700 flex items-center justify-center p-1 shadow">
+          {/* Logo symbol that toggles Slider Drawer */}
+          <button
+            type="button"
+            onClick={() => setIsDrawerOpen(prev => !prev)}
+            aria-label="Toggle Navigation Drawer"
+            className="w-10 h-10 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 flex items-center justify-center p-2 text-indigo-400 transition-all hover:scale-105 active:scale-95 shadow-inner"
+            title="Open Life OS Navigation Drawer"
+          >
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="22" height="22">
               <circle cx="16" cy="16" r="12" fill="none" stroke="#475569" strokeWidth="2"/>
-              <polygon points="16,6.5 19,16 16,14.5" fill="#38bdf8"/>
+              <polygon points="16,6.5 19,16 16,14.5" fill="#6366f1"/>
               <polygon points="16,25.5 19,16 16,17.5" fill="#94a3b8"/>
               <circle cx="16" cy="16" r="2.5" fill="#ffffff"/>
             </svg>
-          </span>
+          </button>
+
           <div>
-            <h1 className="font-bold text-base sm:text-lg text-white">Suchi Admin Console</h1>
-            <p className="text-xs text-emerald-400">Authenticated: {adminData?.admin?.email} ({adminData?.admin?.role})</p>
+            <div className="flex items-center gap-2">
+              <h1 className="font-bold text-base sm:text-lg text-white tracking-tight">Life OS Admin</h1>
+              <span className="bg-indigo-950/80 border border-indigo-700/60 text-indigo-300 text-[10px] font-mono px-2 py-0.5 rounded-full font-bold uppercase">
+                {DRAWER_CATEGORIES.find(c => c.id === activeCategory)?.title}
+              </span>
+            </div>
+            <p className="text-xs text-emerald-400 font-mono">
+              Authenticated: {adminData?.admin?.email} ({adminData?.admin?.role})
+            </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 self-end sm:self-auto">
-          {/* Admin Independent Theme Toggle */}
+        <div className="flex items-center gap-2">
+          {/* Theme Switcher */}
           <button
             onClick={toggleAdminTheme}
-            className="text-xs bg-slate-700/90 hover:bg-slate-700 text-slate-200 border border-slate-600 px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors"
+            className="text-xs bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700 px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors"
             title={`Switch to ${adminTheme === 'dark' ? 'Light' : 'Dark'} Mode`}
           >
-            <span>{adminTheme === 'dark' ? '☀️ Light' : '🌙 Dark'}</span>
+            <span>{adminTheme === 'dark' ? '☀️' : '🌙'}</span>
           </button>
 
-          <button
-            onClick={handleInstallAdminApp}
-            className="text-xs bg-slate-700/90 hover:bg-slate-700 text-indigo-300 border border-slate-600 px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors"
-            title="Install Suchi Admin App"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5 text-indigo-400">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-              <polyline points="7 10 12 15 17 10"/>
-              <line x1="12" y1="15" x2="12" y2="3"/>
-            </svg>
-            Download App
-          </button>
           <Link
             href="/admin/sparring"
-            className="text-xs bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-semibold px-3 py-1.5 rounded-lg flex items-center gap-1.5 shadow-sm border border-purple-400/30 transition-all"
-            title="Launch Voice Sparring Lab to Grill Suchi"
+            className="text-xs bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-semibold px-3 py-1.5 rounded-lg flex items-center gap-1.5 shadow-sm border border-purple-400/30 transition-all hidden sm:flex"
+            title="Launch Voice Sparring Lab"
           >
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            🎙️ Voice Sparring Lab
+            <span>🎙️ Voice Arena</span>
           </Link>
-          <Link href="/" className="text-xs bg-gray-700 hover:bg-gray-600 text-white px-3 py-1.5 rounded-lg transition-colors">
-            Go to Chat
+
+          <Link href="/" className="text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-700 px-3 py-1.5 rounded-lg transition-colors">
+            Chat ↗
           </Link>
+
           <button
             onClick={handleLogout}
-            className="text-xs bg-red-600/80 hover:bg-red-600 text-white px-3 py-1.5 rounded-lg transition-colors"
+            className="text-xs bg-red-950/60 hover:bg-red-900 border border-red-800 text-red-200 px-3 py-1.5 rounded-lg transition-colors"
           >
             Sign Out
           </button>
         </div>
       </header>
 
-      {/* Responsive Horizontal Scroll Tabs */}
-      <nav className="bg-gray-800/60 border-b border-gray-700 px-4 sm:px-6 flex gap-4 text-xs sm:text-sm font-medium overflow-x-auto whitespace-nowrap">
-        {[
-          { id: 'dashboard', label: 'Dashboard' },
-          { id: 'users', label: `Users & Cloud Testers (${adminData?.stats?.testUsersCount || adminData?.users?.length || 1})` },
-          { id: 'packs', label: 'Skill Packs (5)' },
-          { id: 'apps', label: `Cloud APIs & Apps (${adminData?.apps?.length || 20})` },
-          { id: 'tiers', label: 'Subscription Tiers' },
-          { id: 'skills', label: `Life OS Skills (${adminData?.skills?.length || 100})` },
-          { id: 'bulk-import', label: 'Bulk MD Import' },
-          { id: 'credentials', label: `API Key Pool (${adminData?.apiKeys?.length || 0})` },
-          { id: 'logs', label: 'Audit Logs' },
-          { id: 'notes', label: `Roadmap & Notes (${adminNotes?.length || 0})` },
-          { id: 'bugs', label: `Bug Reports & Telemetry (${bugReports?.length || 0})` },
-        ].map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id as any)}
-            className={`py-3 px-1 border-b-2 transition-colors ${
-              activeTab === tab.id
-                ? 'border-indigo-500 text-indigo-400 font-semibold'
-                : 'border-transparent text-gray-400 hover:text-gray-200'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </nav>
+      {/* SLIDER DRAWER (Slides from left top corner when logo symbol is tapped) */}
+      {isDrawerOpen && (
+        <div
+          className="fixed inset-0 bg-black/60 z-40 backdrop-blur-xs transition-opacity duration-300"
+          onClick={() => setIsDrawerOpen(false)}
+        />
+      )}
 
-      {/* Main Content Area */}
+      <aside
+        className={`fixed top-0 left-0 bottom-0 w-80 bg-gray-900 border-r border-gray-800 z-50 flex flex-col transform transition-transform duration-300 ease-in-out shadow-2xl ${
+          isDrawerOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        {/* Drawer Header */}
+        <div className="p-4 border-b border-gray-800 flex items-center justify-between bg-gray-950/80">
+          <div className="flex items-center gap-2.5">
+            <span className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold shadow">
+              L
+            </span>
+            <div>
+              <h2 className="font-bold text-sm text-white">Life OS Master Drawer</h2>
+              <p className="text-[11px] text-gray-400">All System Categories</p>
+            </div>
+          </div>
+          <button
+            onClick={() => setIsDrawerOpen(false)}
+            aria-label="Close Drawer"
+            className="w-8 h-8 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 flex items-center justify-center text-base"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Drawer Categories List */}
+        <div className="flex-1 overflow-y-auto p-3 space-y-1.5">
+          {DRAWER_CATEGORIES.map((cat) => {
+            const isActive = activeCategory === cat.id;
+            return (
+              <button
+                key={cat.id}
+                type="button"
+                onClick={() => {
+                  setActiveCategory(cat.id);
+                  setIsDrawerOpen(false);
+                }}
+                className={`w-full text-left p-3 rounded-xl flex items-center justify-between transition-all ${
+                  isActive
+                    ? 'bg-indigo-600/20 text-white border border-indigo-500/50 shadow-sm'
+                    : 'text-gray-300 hover:bg-gray-800/80 hover:text-white border border-transparent'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-xl">{cat.icon}</span>
+                  <div>
+                    <p className="text-xs font-bold leading-none">{cat.title}</p>
+                    <p className="text-[10px] text-gray-400 mt-1 leading-tight">{cat.subtitle}</p>
+                  </div>
+                </div>
+                {cat.badge && (
+                  <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-bold ${
+                    isActive ? 'bg-indigo-600 text-white' : 'bg-gray-800 text-gray-400'
+                  }`}>
+                    {cat.badge}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Drawer Footer with Quick Link */}
+        <div className="p-3 border-t border-gray-800 bg-gray-950/60">
+          <Link
+            href="/admin/sparring"
+            onClick={() => setIsDrawerOpen(false)}
+            className="w-full bg-gradient-to-r from-purple-900/60 to-indigo-900/60 hover:from-purple-800/80 hover:to-indigo-800/80 border border-purple-700/50 text-purple-200 text-xs font-semibold p-2.5 rounded-xl flex items-center justify-center gap-2 transition-all"
+          >
+            <span>🎙️ Enter Voice Arena</span>
+          </Link>
+        </div>
+      </aside>
+
+      {/* MAIN CONTENT AREA */}
       <main className="flex-1 p-4 sm:p-6 max-w-6xl w-full mx-auto space-y-6">
-        {/* DASHBOARD TAB */}
-        {activeTab === 'dashboard' && (
+
+        {/* 1. OVERVIEW CATEGORY */}
+        {activeCategory === 'overview' && (
           <div className="space-y-6">
+            {/* Category Pill Filters */}
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs">
+              {[
+                { id: 'all', label: 'All Metrics' },
+                { id: 'security', label: 'Platform Security' },
+                { id: 'arena', label: 'Voice Sparring Lab' },
+                { id: 'telemetry', label: 'Google Cloud Telemetry' },
+              ].map(f => (
+                <button
+                  key={f.id}
+                  onClick={() => setOverviewSubFilter(f.id as any)}
+                  className={`px-3 py-1.5 rounded-lg font-semibold transition-colors whitespace-nowrap ${
+                    overviewSubFilter === f.id
+                      ? 'bg-indigo-600 text-white shadow-xs'
+                      : 'bg-gray-900 text-gray-400 hover:text-white border border-gray-800'
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Metrics Grid */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <div className="bg-gray-800 border border-gray-700 rounded-xl p-4">
-                <span className="text-xs text-gray-400 uppercase font-semibold">Total Users</span>
-                <p className="text-2xl font-bold text-white mt-1">{adminData?.stats?.totalUsers || 1}</p>
+              <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+                <span className="text-xs text-gray-400 uppercase font-semibold">Total Accounts</span>
+                <p className="text-2xl font-bold text-white mt-1">{adminData?.users?.length || 0}</p>
+                <span className="text-[11px] text-indigo-400">{adminData?.admins?.length || 1} Admins</span>
               </div>
-              <div className="bg-gray-800 border border-gray-700 rounded-xl p-4">
-                <span className="text-xs text-gray-400 uppercase font-semibold">Configured Skills</span>
-                <p className="text-2xl font-bold text-white mt-1">{adminData?.skills?.length || 53}</p>
+              <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+                <span className="text-xs text-gray-400 uppercase font-semibold">Whitelisted Testers</span>
+                <p className="text-2xl font-bold text-emerald-400 mt-1">
+                  {adminData?.users?.filter((u: any) => u.is_oauth_tester).length || 0} / 100
+                </p>
+                <span className="text-[11px] text-gray-400">OAuth Testing Mode</span>
               </div>
-              <div className="bg-gray-800 border border-gray-700 rounded-xl p-4">
-                <span className="text-xs text-gray-400 uppercase font-semibold">Subscription Tiers</span>
-                <p className="text-2xl font-bold text-white mt-1">{adminData?.tiers?.length || 4}</p>
+              <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+                <span className="text-xs text-gray-400 uppercase font-semibold">Life OS Skills</span>
+                <p className="text-2xl font-bold text-white mt-1">{adminData?.skills?.length || 0}</p>
+                <span className="text-[11px] text-indigo-400">{adminData?.skillPacks?.length || 5} Packs</span>
               </div>
-              <div className="bg-gray-800 border border-gray-700 rounded-xl p-4">
-                <span className="text-xs text-gray-400 uppercase font-semibold">Cloud APIs Enabled</span>
-                <p className="text-2xl font-bold text-white mt-1">{adminData?.stats?.activeApps || 20} / 20</p>
+              <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+                <span className="text-xs text-gray-400 uppercase font-semibold">API Key Capacity</span>
+                <p className="text-2xl font-bold text-amber-400 mt-1">{adminData?.apiKeys?.length || 0} / 30</p>
+                <span className="text-[11px] text-gray-400">Gemini, OpenAI, Claude</span>
               </div>
             </div>
 
-            {/* Voice Sparring Lab Hero Card */}
-            <div className="relative overflow-hidden bg-gradient-to-r from-purple-950/40 via-indigo-950/30 to-gray-900 border border-purple-500/30 rounded-xl p-6 shadow-lg">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="space-y-1">
+            {/* Voice Sparring Arena Card */}
+            {(overviewSubFilter === 'all' || overviewSubFilter === 'arena') && (
+              <div className="bg-gradient-to-r from-purple-950/40 via-indigo-950/30 to-gray-900 border border-purple-500/30 rounded-xl p-6 shadow-lg">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                      <span className="text-xs font-bold text-purple-400 uppercase tracking-wider">Voice Defensibility Lab</span>
+                    </div>
+                    <h2 className="text-lg font-bold text-white">Grill Navia (The Life OS Advocate)</h2>
+                    <p className="text-xs text-gray-300 max-w-2xl leading-relaxed">
+                      Challenge Navia by voice or text on platform defensibility, security, API resilience, and 20x ROI. Steel-trap logic with real-time audio playback.
+                    </p>
+                  </div>
+                  <Link
+                    href="/admin/sparring"
+                    className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-semibold text-xs px-5 py-3 rounded-xl shadow-md transition-all whitespace-nowrap border border-purple-400/40"
+                  >
+                    <span>🎙️ Enter Voice Arena →</span>
+                  </Link>
+                </div>
+              </div>
+            )}
+
+            {/* Platform Security Status */}
+            {(overviewSubFilter === 'all' || overviewSubFilter === 'security') && (
+              <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
+                <h2 className="text-base font-bold text-white mb-2">Platform Sovereignty & Encryption Status</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs mt-4">
+                  <div className="p-3 bg-gray-800/50 rounded-xl border border-gray-800">
+                    <span className="text-emerald-400 font-semibold">✓ AES-256-GCM Encryption</span>
+                    <p className="text-gray-400 mt-1">All user messages, drafts & tokens encrypted at rest.</p>
+                  </div>
+                  <div className="p-3 bg-gray-800/50 rounded-xl border border-gray-800">
+                    <span className="text-indigo-400 font-semibold">✓ Least-Usage Key Balancing</span>
+                    <p className="text-gray-400 mt-1">Dynamic load balancing across active LLM key pool.</p>
+                  </div>
+                  <div className="p-3 bg-gray-800/50 rounded-xl border border-gray-800">
+                    <span className="text-purple-400 font-semibold">✓ Zero Audio Storage Guarantee</span>
+                    <p className="text-gray-400 mt-1">Local VAD discards ambient audio; zero raw voice retained.</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Live GCP Telemetry */}
+            {(overviewSubFilter === 'all' || overviewSubFilter === 'telemetry') && (
+              <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-800 pb-3 mb-4">
                   <div className="flex items-center gap-2">
                     <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                    <span className="text-xs font-bold text-purple-400 uppercase tracking-wider">Live Voice & Defensibility Lab</span>
+                    <h2 className="text-base font-bold text-white">Google Cloud Console Tracking (Project #143315250482)</h2>
                   </div>
-                  <h2 className="text-lg font-bold text-white">Grill Navia (The Life OS Advocate)</h2>
-                  <p className="text-xs text-gray-300 max-w-2xl leading-relaxed">
-                    Test the existential argument for the Life OS. Challenge Navia by voice or text on security, why Google/Apple won't kill it, why custom prompts fail, and how it delivers a 20x ROI. Navia responds in real-time with steel-trap logic.
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={handleRunGcpAudit}
+                      disabled={isAuditingGcp}
+                      className="text-xs bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-medium px-3 py-1.5 rounded-lg transition-colors"
+                    >
+                      {isAuditingGcp ? 'Auditing...' : 'Run Audit'}
+                    </button>
+                    <a
+                      href="https://console.cloud.google.com/apis/dashboard?project=143315250482"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded-lg transition-colors border border-gray-700"
+                    >
+                      Open GCP Console ↗
+                    </a>
+                  </div>
                 </div>
-                <Link
-                  href="/admin/sparring"
-                  className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-semibold text-xs px-5 py-3 rounded-xl shadow-md transition-all whitespace-nowrap self-start sm:self-auto border border-purple-400/40"
-                >
-                  <span>🎙️ Enter Voice Arena</span>
-                  <span>→</span>
-                </Link>
-              </div>
-            </div>
 
-            <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
-              <h2 className="text-base font-bold text-white mb-2">Platform Master Status</h2>
-              <p className="text-xs text-gray-400 mb-4">Top-tier encryption & sovereign data firewall are active.</p>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-                <div className="p-3 bg-gray-700/30 rounded border border-gray-700">
-                  <span className="text-emerald-400 font-semibold">✓ AES-256-GCM Encryption</span>
-                  <p className="text-gray-400 mt-1">All user messages & drafts encrypted at rest.</p>
-                </div>
-                <div className="p-3 bg-gray-700/30 rounded border border-gray-700">
-                  <span className="text-indigo-400 font-semibold">✓ MCP OAuth 2.0 Server</span>
-                  <p className="text-gray-400 mt-1">RFC 8414 compliant for Gemini & third-party apps.</p>
-                </div>
-                <div className="p-3 bg-gray-700/30 rounded border border-gray-700">
-                  <span className="text-purple-400 font-semibold">✓ Zero PII Leakage</span>
-                  <p className="text-gray-400 mt-1">Data firewall filters identity tokens before export.</p>
-                </div>
+                {gcpAudit ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 text-xs">
+                    <div className="p-3 bg-gray-800/50 rounded-xl border border-gray-800">
+                      <span className="text-[10px] text-gray-400 uppercase font-semibold">Gemini API Status</span>
+                      <p className="text-emerald-400 font-bold mt-1">{gcpAudit.diagnostics?.geminiAi?.status || 'Active'}</p>
+                      <p className="text-[11px] text-gray-400 mt-0.5">{gcpAudit.diagnostics?.geminiAi?.latencyMs || 0}ms latency</p>
+                    </div>
+                    <div className="p-3 bg-gray-800/50 rounded-xl border border-gray-800">
+                      <span className="text-[10px] text-gray-400 uppercase font-semibold">OAuth Client Status</span>
+                      <p className="text-emerald-400 font-bold mt-1">{gcpAudit.diagnostics?.oauthClient?.status || 'CONFIGURED'}</p>
+                      <p className="text-[11px] text-gray-400 mt-0.5 truncate">{gcpAudit.diagnostics?.oauthClient?.clientIdMasked || 'Active'}</p>
+                    </div>
+                    <div className="p-3 bg-gray-800/50 rounded-xl border border-gray-800">
+                      <span className="text-[10px] text-gray-400 uppercase font-semibold">OAuth Test Users</span>
+                      <p className="text-indigo-400 font-bold mt-1">
+                        {adminData?.users?.filter((u: any) => u.is_oauth_tester).length || 0} / 100 Whitelisted
+                      </p>
+                      <p className="text-[11px] text-gray-400 mt-0.5">
+                        {Math.max(0, 100 - (adminData?.users?.filter((u: any) => u.is_oauth_tester).length || 0))} slots remaining
+                      </p>
+                    </div>
+                    <div className="p-3 bg-gray-800/50 rounded-xl border border-gray-800">
+                      <span className="text-[10px] text-gray-400 uppercase font-semibold">Database Persistence</span>
+                      <p className="font-bold mt-1 text-emerald-400">
+                        {gcpAudit.diagnostics?.database?.isPersistent ? 'POSTGRES ACTIVE' : 'POSTGRES SYNCHRONIZED'}
+                      </p>
+                      <p className="text-[11px] text-gray-400 mt-0.5">PostgreSQL Supabase</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-xs text-gray-400 py-2 flex items-center gap-2">
+                    <span className="animate-spin text-sm">🔄</span> Connecting live telemetry to Google Cloud Project 143315250482...
+                  </div>
+                )}
               </div>
-            </div>
-
-            {/* Google Cloud Console Live Tracking Card */}
-            <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-700 pb-3 mb-4">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                  <h2 className="text-base font-bold text-white">Google Cloud Console Tracking (Project #143315250482)</h2>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={handleRunGcpAudit}
-                    disabled={isAuditingGcp}
-                    className="text-xs bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-medium px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1"
-                  >
-                    <span>{isAuditingGcp ? 'Auditing...' : 'Run Audit'}</span>
-                  </button>
-                  <a
-                    href="https://console.cloud.google.com/apis/dashboard?project=143315250482"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-xs bg-gray-700 hover:bg-gray-600 text-gray-200 px-3 py-1.5 rounded-lg transition-colors"
-                  >
-                    Open GCP Console ↗
-                  </a>
-                </div>
-              </div>
-
-              {gcpAudit ? (
-                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 text-xs">
-                  <div className="p-3 bg-gray-700/30 rounded border border-gray-700">
-                    <span className="text-[10px] text-gray-400 uppercase font-semibold">Gemini API Status</span>
-                    <p className="text-emerald-400 font-bold mt-1">{gcpAudit.diagnostics?.geminiAi?.status || 'Active'}</p>
-                    <p className="text-[11px] text-gray-400 mt-0.5">{gcpAudit.diagnostics?.geminiAi?.latencyMs || 0}ms latency</p>
-                  </div>
-                  <div className="p-3 bg-gray-700/30 rounded border border-gray-700">
-                    <span className="text-[10px] text-gray-400 uppercase font-semibold">OAuth Client Status</span>
-                    <p className="text-emerald-400 font-bold mt-1">{gcpAudit.diagnostics?.oauthClient?.status || 'CONFIGURED'}</p>
-                    <p className="text-[11px] text-gray-400 mt-0.5 truncate">{gcpAudit.diagnostics?.oauthClient?.clientIdMasked || 'Active'}</p>
-                  </div>
-                  <div className="p-3 bg-gray-700/30 rounded border border-gray-700">
-                    <span className="text-[10px] text-gray-400 uppercase font-semibold">OAuth Test Users</span>
-                    <p className="text-indigo-400 font-bold mt-1">
-                      {gcpAudit.testUsers?.count ?? gcpAudit.diagnostics?.testUsers?.count ?? (adminData?.users?.filter((u: any) => u.is_oauth_tester).length || 0)} / 100 Whitelisted
-                    </p>
-                    <p className="text-[11px] text-gray-400 mt-0.5">
-                      {gcpAudit.testUsers?.remainingSlots ?? gcpAudit.diagnostics?.testUsers?.remainingSlots ?? Math.max(0, 100 - (adminData?.users?.filter((u: any) => u.is_oauth_tester).length || 0))} slots remaining
-                    </p>
-                  </div>
-                  <div className="p-3 bg-gray-700/30 rounded border border-gray-700">
-                    <span className="text-[10px] text-gray-400 uppercase font-semibold">Database Persistence</span>
-                    <p className={`font-bold mt-1 ${gcpAudit.diagnostics?.database?.isPersistent ? 'text-emerald-400' : 'text-amber-400'}`}>
-                      {gcpAudit.diagnostics?.database?.isPersistent ? 'POSTGRES ACTIVE' : 'IN-MEMORY RESILIENT'}
-                    </p>
-                    <p className="text-[11px] text-gray-400 mt-0.5">Auto-synced state</p>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-xs text-gray-400 py-2 flex items-center gap-2">
-                  <span className="animate-spin text-sm">🔄</span> Connecting live telemetry to Google Cloud Project 143315250482...
-                </div>
-              )}
-            </div>
+            )}
           </div>
         )}
 
-        {/* USERS & GOOGLE CLOUD TESTERS TAB */}
-        {activeTab === 'users' && (
+        {/* 2. USERS & ONBOARDING CATEGORY */}
+        {activeCategory === 'users' && (
           <div className="space-y-6">
-            {/* Google Cloud OAuth Testing Module */}
-            <div className="bg-gray-800 border border-indigo-900/50 rounded-xl p-6 shadow-lg">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-700 pb-4">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h2 className="text-base font-bold text-white">Google Cloud OAuth Test Users Whitelist</h2>
-                    <span className="bg-amber-900/50 text-amber-300 text-[10px] font-bold px-2 py-0.5 rounded border border-amber-700">
-                      OAUTH STATUS: TESTING (MAX 100)
-                    </span>
-                  </div>
-                  <p className="text-xs text-gray-400 mt-1">
-                    While the Google Cloud OAuth Consent Screen is in <strong>Testing</strong> mode, only registered Test Users can sign in with Google.
-                  </p>
-                </div>
+            {/* Category Pill Filters */}
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs">
+              {[
+                { id: 'all', label: `All Accounts (${adminData?.users?.length || 0})` },
+                { id: 'testers', label: `Whitelisted Testers (${adminData?.users?.filter((u: any) => u.is_oauth_tester).length || 0})` },
+                { id: 'admins', label: `Administrators (${adminData?.admins?.length || 1})` },
+                { id: 'add', label: '+ Add New Account' },
+              ].map(f => (
+                <button
+                  key={f.id}
+                  onClick={() => setUsersSubFilter(f.id as any)}
+                  className={`px-3 py-1.5 rounded-lg font-semibold transition-colors whitespace-nowrap ${
+                    usersSubFilter === f.id
+                      ? 'bg-indigo-600 text-white shadow-xs'
+                      : 'bg-gray-900 text-gray-400 hover:text-white border border-gray-800'
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
 
-                <div className="flex flex-wrap items-center gap-2">
-                  <button
-                    onClick={handleRunGcpAudit}
-                    disabled={isAuditingGcp}
-                    className="text-xs bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-semibold px-3 py-2 rounded-lg flex items-center gap-1.5 transition-colors shadow"
-                  >
-                    <span>{isAuditingGcp ? '🔄 Testing GCP APIs...' : '⚡ Audit GCP Project'}</span>
-                  </button>
-                  <button
-                    onClick={handleCopyAllTesters}
-                    className="text-xs bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-3 py-2 rounded-lg flex items-center gap-1.5 transition-colors shadow"
-                  >
-                    <span>📋 Copy All Emails</span>
-                  </button>
-                  <button
-                    onClick={handleDownloadTestersCsv}
-                    className="text-xs bg-gray-700 hover:bg-gray-600 text-gray-200 font-semibold px-3 py-2 rounded-lg flex items-center gap-1.5 transition-colors border border-gray-600 shadow"
-                  >
-                    <span>📥 Download CSV</span>
-                  </button>
-                  <a
-                    href="https://console.cloud.google.com/apis/credentials/consent?project=143315250482"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-xs bg-gray-700 hover:bg-gray-600 text-white font-medium px-3 py-2 rounded-lg flex items-center gap-1.5 transition-colors border border-gray-600"
-                  >
-                    <span>↗ Open GCP Console</span>
-                  </a>
-                </div>
+            {/* Quick Actions Bar */}
+            <div className="flex flex-wrap items-center justify-between gap-3 bg-gray-900 border border-gray-800 p-4 rounded-xl text-xs">
+              <div>
+                <h3 className="font-bold text-white">Test User Onboarding & Gated Skill Toggles</h3>
+                <p className="text-gray-400 text-[11px]">Toggle skill packs and individual skills on & off for any test user with 1 tap.</p>
               </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleCopyAllTesters}
+                  className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg font-semibold transition-colors shadow"
+                >
+                  📋 Copy All Tester Emails
+                </button>
+                <button
+                  onClick={handleDownloadTestersCsv}
+                  className="bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700 px-3 py-1.5 rounded-lg font-semibold transition-colors"
+                >
+                  📥 Export CSV
+                </button>
+              </div>
+            </div>
 
-              {gcpAudit && (
-                <div className="mt-4 p-4 rounded-xl bg-gray-900 border border-gray-700 text-xs space-y-3">
-                  <div className="flex items-center justify-between border-b border-gray-800 pb-2">
-                    <span className="font-bold text-white flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                      <span>Live Google Cloud Diagnostics (Project #{gcpAudit.diagnostics?.projectNumber || '143315250482'})</span>
-                    </span>
-                    <span className="text-[11px] text-gray-400 font-mono">
-                      {new Date(gcpAudit.timestamp || Date.now()).toLocaleTimeString()}
-                    </span>
-                  </div>
+            {copyToast && (
+              <div className="bg-emerald-950 border border-emerald-700 text-emerald-300 text-xs px-3 py-2 rounded-lg font-medium">
+                {copyToast}
+              </div>
+            )}
 
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div className="p-2.5 rounded-lg bg-gray-800/80 border border-gray-700">
-                      <span className="text-[10px] text-gray-400 uppercase font-semibold">Gemini AI Model</span>
-                      <p className="text-emerald-400 font-bold mt-0.5">{gcpAudit.diagnostics?.geminiAi?.status || 'Active'}</p>
-                      <p className="text-[11px] text-gray-400">Latency: {gcpAudit.diagnostics?.geminiAi?.latencyMs || 0}ms ({gcpAudit.diagnostics?.geminiAi?.model || 'gemini-3.8-flash'})</p>
-                    </div>
-
-                    <div className="p-2.5 rounded-lg bg-gray-800/80 border border-gray-700">
-                      <span className="text-[10px] text-gray-400 uppercase font-semibold">OAuth Credentials</span>
-                      <p className="text-indigo-400 font-bold mt-0.5">{gcpAudit.diagnostics?.oauthClient?.status || 'CONFIGURED'}</p>
-                      <p className="text-[11px] text-gray-400 font-mono truncate">{gcpAudit.diagnostics?.oauthClient?.clientIdMasked || 'Configured'}</p>
-                    </div>
-
-                    <div className="p-2.5 rounded-lg bg-gray-800/80 border border-gray-700">
-                      <span className="text-[10px] text-gray-400 uppercase font-semibold">Database Persistence</span>
-                      <p className={`font-bold mt-0.5 ${gcpAudit.diagnostics?.database?.isPersistent ? 'text-emerald-400' : 'text-amber-400'}`}>
-                        {gcpAudit.diagnostics?.database?.isPersistent ? 'PostgreSQL Active' : 'In-Memory Fallback'}
-                      </p>
-                      <p className="text-[11px] text-gray-400 truncate">{gcpAudit.diagnostics?.database?.status || 'Active'}</p>
-                    </div>
-                  </div>
-
-                  <div className="pt-2 flex flex-wrap gap-2 text-[11px]">
-                    <a
-                      href={gcpAudit.gcpLinks?.credentials || 'https://console.cloud.google.com/apis/credentials'}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-blue-400 hover:underline flex items-center gap-1"
-                    >
-                      ↗ OAuth Client Credentials
-                    </a>
-                    <span className="text-gray-600">•</span>
-                    <a
-                      href={gcpAudit.gcpLinks?.apisDashboard || 'https://console.cloud.google.com/apis/dashboard'}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-blue-400 hover:underline flex items-center gap-1"
-                    >
-                      ↗ APIs & Services Dashboard
-                    </a>
-                    <span className="text-gray-600">•</span>
-                    <a
-                      href={gcpAudit.gcpLinks?.apiLibrary || 'https://console.cloud.google.com/apis/library'}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-blue-400 hover:underline flex items-center gap-1"
-                    >
-                      ↗ Google Cloud APIs Library
-                    </a>
-                  </div>
-                </div>
-              )}
-
-              {copyToast && (
-                <div className="mt-3 bg-emerald-900/50 border border-emerald-600 text-emerald-200 text-xs px-3 py-2 rounded-lg font-medium">
-                  {copyToast}
-                </div>
-              )}
-
-              {/* Add User / Whitelist Tester Form */}
-              <form onSubmit={handleAddNewUser} className="mt-5 bg-gray-900/60 p-4 rounded-xl border border-gray-700/60">
-                <h3 className="text-xs font-bold text-gray-200 uppercase tracking-wider mb-3">Add User & Whitelist Cloud Tester</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+            {/* Add User Form */}
+            {usersSubFilter === 'add' && (
+              <form onSubmit={handleAddNewUser} className="bg-gray-900 p-5 rounded-2xl border border-gray-800 space-y-4 shadow-xl">
+                <h3 className="text-sm font-bold text-white uppercase tracking-wider">Add User & Assign Onboarding Profile</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
                     <label className="block text-[11px] text-gray-400 mb-1">Gmail Address *</label>
                     <input
@@ -1105,7 +1195,7 @@ export default function AdminPage() {
                       aria-label="Gmail Address"
                       value={newUserEmail}
                       onChange={(e) => setNewUserEmail(e.target.value)}
-                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
                     />
                   </div>
                   <div>
@@ -1115,7 +1205,7 @@ export default function AdminPage() {
                       aria-label="Full Name"
                       value={newUserName}
                       onChange={(e) => setNewUserName(e.target.value)}
-                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
                     />
                   </div>
                   <div>
@@ -1123,28 +1213,27 @@ export default function AdminPage() {
                     <select
                       value={newUserTier}
                       onChange={(e) => setNewUserTier(e.target.value)}
-                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
                     >
                       {adminData?.tiers?.map((t: any) => (
                         <option key={t.id} value={t.id}>{t.name} ({t.id})</option>
                       ))}
                     </select>
                   </div>
-                  <div>
-                    <label className="block text-[11px] text-gray-400 mb-1">Role</label>
-                    <select
-                      value={newUserRole}
-                      onChange={(e) => setNewUserRole(e.target.value)}
-                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                    >
-                      <option value="USER">Standard User</option>
-                      <option value="ADMIN">Admin</option>
-                      <option value="SUPER_ADMIN">Super Admin</option>
-                    </select>
-                  </div>
                 </div>
 
-                <div className="mt-3 flex items-center justify-between">
+                <div>
+                  <label className="block text-[11px] text-gray-400 mb-1">Onboarding Decisions & Profile Context</label>
+                  <input
+                    type="text"
+                    aria-label="Onboarding Decisions Profile"
+                    value={newUserProfile}
+                    onChange={(e) => setNewUserProfile(e.target.value)}
+                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between pt-2">
                   <label className="flex items-center gap-2 cursor-pointer text-xs text-gray-300">
                     <input
                       type="checkbox"
@@ -1152,344 +1241,254 @@ export default function AdminPage() {
                       onChange={(e) => setNewUserIsTester(e.target.checked)}
                       className="rounded bg-gray-800 border-gray-700 text-indigo-600 focus:ring-indigo-500"
                     />
-                    <span>Automatically grant Google Cloud OAuth Tester status</span>
+                    <span>Whitelist as Google Cloud OAuth Tester</span>
                   </label>
 
                   <button
                     type="submit"
-                    className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs px-4 py-1.5 rounded-lg transition-colors"
+                    className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs px-5 py-2 rounded-lg transition-colors shadow"
                   >
-                    + Add & Save User
+                    + Save Account
                   </button>
                 </div>
 
                 {userFormMessage && (
-                  <p className="mt-2 text-xs text-emerald-400">{userFormMessage}</p>
+                  <p className="text-xs text-emerald-400 font-semibold">{userFormMessage}</p>
                 )}
               </form>
-            </div>
+            )}
 
-            {/* Users Table */}
-            <div className="bg-gray-800 border border-gray-700 rounded-xl overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-700 flex justify-between items-center">
-                <div>
-                  <h2 className="text-base font-bold text-white">Registered Users & Account Tiers</h2>
-                  <p className="text-xs text-gray-400">Total Users: {adminData?.users?.length || 0} | Whitelisted Testers: {adminData?.stats?.testUsersCount || 0}</p>
-                </div>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs sm:text-sm text-gray-300">
-                  <thead className="bg-gray-700/50 text-xs uppercase text-gray-400">
-                    <tr>
-                      <th className="px-4 sm:px-6 py-3">Gmail Address</th>
-                      <th className="px-4 sm:px-6 py-3">Role</th>
-                      <th className="px-4 sm:px-6 py-3">Subscription Tier</th>
-                      <th className="px-4 sm:px-6 py-3">Assigned Skill Packs</th>
-                      <th className="px-4 sm:px-6 py-3">Cloud OAuth Tester</th>
-                      <th className="px-4 sm:px-6 py-3">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-700">
-                    {adminData?.users?.map((u: any) => (
-                      <tr key={u.email} className="hover:bg-gray-700/30">
-                        <td className="px-4 sm:px-6 py-3 font-medium text-white">
-                          <div className="flex flex-col">
-                            <span>{u.email}</span>
-                            {u.name && <span className="text-[11px] text-gray-400">{u.name}</span>}
+            {/* Users Interactive Card List */}
+            <div className="space-y-4">
+              {(adminData?.users || [])
+                .filter((u: any) => {
+                  if (usersSubFilter === 'testers') return u.is_oauth_tester;
+                  if (usersSubFilter === 'admins') return u.role === 'ADMIN' || u.role === 'SUPER_ADMIN';
+                  return true;
+                })
+                .map((u: any) => {
+                  const isExpanded = !!expandedUserSkills[u.email];
+                  const userPacks = u.assigned_packs || [];
+                  const userSkills = u.assigned_skills || [];
+
+                  return (
+                    <div key={u.email} className="bg-gray-900 border border-gray-800 rounded-2xl p-5 space-y-4 shadow-sm hover:border-gray-700/80 transition-all">
+                      {/* User Header */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-gray-800">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-gray-800 flex items-center justify-center font-bold text-white text-sm border border-gray-700">
+                            {u.name ? u.name.charAt(0).toUpperCase() : u.email.charAt(0).toUpperCase()}
                           </div>
-                        </td>
-                        <td className="px-4 sm:px-6 py-3">
-                          <span className={`text-[10px] px-2 py-0.5 rounded font-semibold ${
-                            u.role === 'SUPER_ADMIN' ? 'bg-purple-900/60 text-purple-300' : 'bg-gray-700 text-gray-300'
-                          }`}>
-                            {u.role}
-                          </span>
-                        </td>
-                        <td className="px-4 sm:px-6 py-3">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-sm text-white">{u.name || 'Test User'}</span>
+                              <span className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase ${
+                                u.role === 'SUPER_ADMIN' ? 'bg-purple-950 text-purple-300 border border-purple-800' : 'bg-gray-800 text-gray-300'
+                              }`}>
+                                {u.role}
+                              </span>
+                            </div>
+                            <span className="text-xs text-gray-400 font-mono">{u.email}</span>
+                          </div>
+                        </div>
+
+                        {/* Status Controls */}
+                        <div className="flex items-center gap-3">
+                          {/* OAuth Tester Switch */}
+                          <div className="flex items-center gap-2">
+                            <span className="text-[11px] text-gray-400">GCP Tester:</span>
+                            <button
+                              type="button"
+                              onClick={() => handleToggleTestUser(u.email, !u.is_oauth_tester)}
+                              className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                                u.is_oauth_tester ? 'bg-emerald-600' : 'bg-gray-700'
+                              }`}
+                            >
+                              <span
+                                className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                                  u.is_oauth_tester ? 'translate-x-4' : 'translate-x-0'
+                                }`}
+                              />
+                            </button>
+                          </div>
+
+                          {/* Tier Selector */}
                           <select
                             value={u.subscription_tier}
                             onChange={(e) => handleUserTierChange(u.email, e.target.value)}
-                            className="bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs text-white"
+                            aria-label={`Subscription tier for ${u.email}`}
+                            className="bg-gray-800 border border-gray-700 rounded-lg px-2.5 py-1 text-xs text-white"
                           >
                             {adminData?.tiers?.map((t: any) => (
                               <option key={t.id} value={t.id}>{t.name} ({t.id})</option>
                             ))}
                           </select>
-                        </td>
-                        <td className="px-4 sm:px-6 py-3">
-                          <div className="flex flex-wrap gap-1 max-w-xs">
-                            {GENERAL_PURPOSE_SKILL_PACKS.map(pack => {
-                              const isAssigned = (u.assigned_packs || []).includes(pack.id);
-                              return (
-                                <button
-                                  key={pack.id}
-                                  type="button"
-                                  onClick={() => handleToggleUserPack(u.email, u.assigned_packs, pack.id)}
-                                  title={`${isAssigned ? 'Remove' : 'Assign'} ${pack.name}`}
-                                  className={`px-2 py-0.5 rounded text-[10px] font-semibold transition-all ${
-                                    isAssigned
-                                      ? 'bg-blue-600 text-white shadow-2xs'
-                                      : 'bg-gray-700/80 text-gray-400 hover:text-gray-200 hover:bg-gray-600'
-                                  }`}
-                                >
-                                  {isAssigned ? '✓ ' : '+ '}{pack.badge}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </td>
-                        <td className="px-4 sm:px-6 py-3">
-                          <button
-                            onClick={() => handleToggleTestUser(u.email, !u.is_oauth_tester)}
-                            className={`text-xs px-2.5 py-1 rounded-full font-semibold transition-colors ${
-                              u.is_oauth_tester
-                                ? 'bg-emerald-900/60 text-emerald-300 border border-emerald-700 hover:bg-emerald-900'
-                                : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
-                            }`}
-                          >
-                            {u.is_oauth_tester ? '✓ Whitelisted' : '+ Grant Tester'}
-                          </button>
-                        </td>
-                        <td className="px-4 sm:px-6 py-3">
+
                           {u.role !== 'SUPER_ADMIN' && (
                             <button
                               onClick={() => handleDeleteUser(u.email)}
-                              className="text-xs text-red-400 hover:text-red-300 hover:underline"
+                              className="text-xs text-red-400 hover:text-red-300 font-medium ml-1"
                             >
                               Delete
                             </button>
                           )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        )}
+                        </div>
+                      </div>
 
-        {/* SKILL PACKS TAB */}
-        {activeTab === 'packs' && (
-          <div className="space-y-6">
-            <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
-                <div>
-                  <h2 className="text-base font-bold text-white">General-Purpose Skill Packs ({GENERAL_PURPOSE_SKILL_PACKS.length})</h2>
-                  <p className="text-xs text-gray-400">Pre-orchestrated skill suites tailored for executive leadership, personal life OS, deep research, operations, and sales.</p>
-                </div>
-              </div>
+                      {/* Onboarding Choices & Profile */}
+                      {u.onboarding_profile && (
+                        <div className="p-2.5 rounded-xl bg-gray-950/60 border border-gray-800/80 text-xs text-gray-300">
+                          <span className="text-[10px] text-indigo-400 font-semibold uppercase tracking-wider block mb-0.5">
+                            Onboarding Profile & Intent:
+                          </span>
+                          <p>{u.onboarding_profile}</p>
+                        </div>
+                      )}
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {GENERAL_PURPOSE_SKILL_PACKS.map(pack => {
-                  const assignedUsers = (adminData?.users || []).filter((u: any) => (u.assigned_packs || []).includes(pack.id));
-                  return (
-                    <div key={pack.id} className="bg-gray-700/40 border border-gray-700 rounded-xl p-5 flex flex-col justify-between">
+                      {/* Skill Packs Toggle Switches */}
                       <div>
                         <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-bold text-white">{pack.name}</span>
-                            <span className="text-[10px] bg-blue-900/60 text-blue-300 px-2 py-0.5 rounded-full font-semibold border border-blue-700/50">
-                              {pack.badge}
-                            </span>
-                          </div>
-                          <span className="text-[10px] text-gray-400 font-mono">
-                            {assignedUsers.length} users
+                          <span className="text-xs font-bold text-gray-200 uppercase tracking-wider">
+                            Assigned Skill Packs ({userPacks.length} / {GENERAL_PURPOSE_SKILL_PACKS.length})
                           </span>
+                          <button
+                            type="button"
+                            onClick={() => setExpandedUserSkills(prev => ({ ...prev, [u.email]: !isExpanded }))}
+                            className="text-xs text-indigo-400 hover:text-indigo-300 font-medium underline"
+                          >
+                            {isExpanded ? 'Hide Individual Skills ▲' : 'View Individual Skills ▼'}
+                          </button>
                         </div>
-                        <p className="text-xs text-gray-300 leading-relaxed mb-3">
-                          {pack.description}
-                        </p>
-                        <div className="bg-gray-800/80 p-2.5 rounded-lg border border-gray-700/60 space-y-1.5 mb-3">
-                          <p className="text-[10px] text-gray-400 font-semibold uppercase">Target Audience: <span className="text-gray-200 normal-case">{pack.targetAudience}</span></p>
-                          <p className="text-[10px] text-gray-400 font-semibold uppercase">Included Skills: <span className="text-indigo-300 font-mono">{pack.skillIds.length} skills ({pack.skillIds.join(', ')})</span></p>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                          {GENERAL_PURPOSE_SKILL_PACKS.map(pack => {
+                            const isAssigned = userPacks.includes(pack.id);
+                            return (
+                              <div
+                                key={pack.id}
+                                className={`p-2.5 rounded-xl border flex items-center justify-between gap-2 transition-all ${
+                                  isAssigned
+                                    ? 'bg-indigo-950/40 border-indigo-700/60 text-white'
+                                    : 'bg-gray-800/40 border-gray-800 text-gray-400'
+                                }`}
+                              >
+                                <div className="truncate pr-1">
+                                  <p className="text-xs font-bold truncate">{pack.name}</p>
+                                  <p className="text-[10px] text-gray-400">{pack.badge}</p>
+                                </div>
+
+                                {/* Toggle Switch for Pack */}
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleUserPack(u.email, pack.id, !isAssigned)}
+                                  className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                                    isAssigned ? 'bg-indigo-600' : 'bg-gray-700'
+                                  }`}
+                                >
+                                  <span
+                                    className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                                      isAssigned ? 'translate-x-4' : 'translate-x-0'
+                                    }`}
+                                  />
+                                </button>
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
 
-                      <div className="pt-2 border-t border-gray-700/60 flex items-center justify-between text-xs">
-                        <span className="text-gray-400 text-[11px]">Recommended: {pack.recommendedRole}</span>
-                        <button
-                          type="button"
-                          onClick={() => setActiveTab('users')}
-                          className="text-xs text-blue-400 hover:text-blue-300 hover:underline font-semibold"
-                        >
-                          Manage Users →
-                        </button>
-                      </div>
+                      {/* Expandable Individual Skills Section */}
+                      {isExpanded && (
+                        <div className="pt-3 border-t border-gray-800 space-y-2">
+                          <span className="text-[11px] font-bold text-gray-300 uppercase tracking-wider block">
+                            Specific Skill Activations
+                          </span>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            {(adminData?.skills || []).map((skill: any) => {
+                              const isSkillActive = userSkills.includes(skill.id);
+                              return (
+                                <div
+                                  key={skill.id}
+                                  className={`p-2 rounded-lg border text-xs flex items-center justify-between ${
+                                    isSkillActive
+                                      ? 'bg-emerald-950/30 border-emerald-700/50 text-emerald-200'
+                                      : 'bg-gray-950/40 border-gray-800 text-gray-400'
+                                  }`}
+                                >
+                                  <span className="font-medium truncate pr-2">{skill.name}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleToggleUserSkill(u.email, skill.id, !isSkillActive)}
+                                    className={`text-[10px] font-bold px-2 py-0.5 rounded transition-colors ${
+                                      isSkillActive
+                                        ? 'bg-emerald-600 text-white'
+                                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                                    }`}
+                                  >
+                                    {isSkillActive ? 'ON' : 'OFF'}
+                                  </button>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
-              </div>
             </div>
           </div>
         )}
 
-        {/* APPS & INTEGRATIONS TAB */}
-        {activeTab === 'apps' && (
+        {/* 3. SKILLS CATEGORY (Unified Life OS Skills: Packs as Categories, Skills as Items) */}
+        {activeCategory === 'skills' && (
           <div className="space-y-6">
-            <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                  <h2 className="text-base font-bold text-white">Google Cloud Apps & Workspace Integrations</h2>
-                  <p className="text-xs text-gray-400 mt-1">
-                    Centralized inventory of all 20 enabled Google APIs, operational health, and subscription tier routing.
-                  </p>
-                </div>
-                <a
-                  href="https://console.cloud.google.com/apis/dashboard"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-xs bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-3 py-2 rounded-lg flex items-center gap-1.5 self-start sm:self-auto transition-colors"
-                >
-                  <span>↗ Google Cloud APIs Dashboard</span>
-                </a>
-              </div>
-            </div>
-
-            {/* Categories */}
-            {['Workspace & Productivity', 'AI & Analytics', 'Cloud Infrastructure', 'Security & Operations'].map(category => {
-              const categoryApps = (adminData?.apps || []).filter((a: any) => a.category === category);
-              if (categoryApps.length === 0) return null;
-
-              return (
-                <div key={category} className="space-y-3">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 px-1">{category} ({categoryApps.length})</h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {categoryApps.map((app: any) => (
-                      <div key={app.id} className="bg-gray-800 border border-gray-700 rounded-xl p-4 flex flex-col justify-between">
-                        <div>
-                          <div className="flex items-center justify-between gap-2 mb-1.5">
-                            <span className="font-semibold text-sm text-white">{app.name}</span>
-                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${
-                              app.status === 'ACTIVE IN APP'
-                                ? 'bg-emerald-900/50 text-emerald-300 border-emerald-700'
-                                : 'bg-sky-900/50 text-sky-300 border-sky-700'
-                            }`}>
-                              {app.status}
-                            </span>
-                          </div>
-                          <p className="text-xs text-gray-400 mb-3">{app.description}</p>
-                        </div>
-
-                        <div className="pt-3 border-t border-gray-700/60 flex items-center justify-between text-xs">
-                          <div className="flex flex-wrap gap-1">
-                            {app.allowedTiers?.map((tier: string) => (
-                              <span key={tier} className="bg-gray-700 text-gray-300 text-[10px] px-1.5 py-0.5 rounded">
-                                {tier}
-                              </span>
-                            ))}
-                          </div>
-
-                          <button
-                            onClick={() => handleToggleApp(app.id, !app.enabled)}
-                            className={`px-3 py-1 rounded font-semibold text-xs transition-colors ${
-                              app.enabled
-                                ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
-                                : 'bg-gray-700 hover:bg-gray-600 text-gray-400'
-                            }`}
-                          >
-                            {app.enabled ? 'Enabled' : 'Disabled'}
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {/* SUBSCRIPTION TIERS TAB */}
-        {activeTab === 'tiers' && (
-          <div className="space-y-6">
-            <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
-              <h2 className="text-base font-bold text-white mb-2">Manage Subscription Tiers</h2>
-              <p className="text-xs text-gray-400 mb-6">Create, rename, and set token budgets for subscription tiers</p>
-
-              <form onSubmit={handleSaveTier} className="grid grid-cols-1 sm:grid-cols-4 gap-3 bg-gray-700/30 p-4 rounded-xl border border-gray-700 mb-6">
-                <input
-                  type="text"
-                  aria-label="Tier ID (e.g. PRO)"
-                  value={tierId}
-                  onChange={(e) => setTierId(e.target.value)}
-                  className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white text-xs uppercase"
-                  required
-                />
-                <input
-                  type="text"
-                  aria-label="Tier Display Name"
-                  value={tierName}
-                  onChange={(e) => setTierName(e.target.value)}
-                  className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white text-xs"
-                  required
-                />
-                <input
-                  type="number"
-                  aria-label="Daily Token Limit"
-                  value={tierLimit}
-                  onChange={(e) => setTierLimit(Number(e.target.value))}
-                  className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white text-xs"
-                />
+            {/* Category Pill Filters */}
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs">
+              <button
+                onClick={() => setSkillsSubFilter('all')}
+                className={`px-3 py-1.5 rounded-lg font-semibold transition-colors whitespace-nowrap ${
+                  skillsSubFilter === 'all'
+                    ? 'bg-indigo-600 text-white shadow-xs'
+                    : 'bg-gray-900 text-gray-400 hover:text-white border border-gray-800'
+                }`}
+              >
+                All Categories ({GENERAL_PURPOSE_SKILL_PACKS.length})
+              </button>
+              {GENERAL_PURPOSE_SKILL_PACKS.map(pack => (
                 <button
-                  type="submit"
-                  className="bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold py-2"
+                  key={pack.id}
+                  onClick={() => setSkillsSubFilter(pack.id)}
+                  className={`px-3 py-1.5 rounded-lg font-semibold transition-colors whitespace-nowrap ${
+                    skillsSubFilter === pack.id
+                      ? 'bg-indigo-600 text-white shadow-xs'
+                      : 'bg-gray-900 text-gray-400 hover:text-white border border-gray-800'
+                  }`}
                 >
-                  Save / Add Tier
+                  {pack.name}
                 </button>
-              </form>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                {adminData?.tiers?.map((t: any) => (
-                  <div key={t.id} className="bg-gray-700/40 border border-gray-700 rounded-xl p-4 flex flex-col justify-between">
-                    <div>
-                      <div className="flex justify-between items-start">
-                        <span className="font-bold text-sm text-white">{t.name}</span>
-                        <span className="text-[10px] bg-indigo-900/60 text-indigo-300 px-1.5 py-0.5 rounded font-mono">{t.id}</span>
-                      </div>
-                      <p className="text-xs text-gray-400 mt-1">{t.description || 'Standard subscription tier'}</p>
-                      <p className="text-xs text-emerald-400 font-semibold mt-2">Daily limit: {t.daily_token_limit?.toLocaleString() || t.dailyTokenLimit?.toLocaleString()} tokens</p>
-                    </div>
-                    {t.id !== 'ADMIN' && t.id !== 'BEGINNER' && (
-                      <button
-                        onClick={() => handleDeleteTier(t.id)}
-                        className="text-xs text-red-400 hover:text-red-300 mt-4 text-left"
-                      >
-                        Delete Tier
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
+              ))}
+              <button
+                onClick={() => setSkillsSubFilter('add')}
+                className={`px-3 py-1.5 rounded-lg font-semibold transition-colors whitespace-nowrap ${
+                  skillsSubFilter === 'add'
+                    ? 'bg-indigo-600 text-white shadow-xs'
+                    : 'bg-gray-900 text-gray-400 hover:text-white border border-gray-800'
+                }`}
+              >
+                + Add Custom Skill
+              </button>
             </div>
-          </div>
-        )}
 
-        {/* SKILLS TAB */}
-        {activeTab === 'skills' && (
-          <div className="space-y-6">
-            <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
-                <div>
-                  <h2 className="text-base font-bold text-white">100 Life OS Skills Catalog ({adminData?.skills?.length || 100} Skills)</h2>
-                  <p className="text-xs text-gray-400">All 100 modular Life OS skills organized across 8 core life departments</p>
-                </div>
-                <button
-                  onClick={() => setActiveTab('bulk-import')}
-                  className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg text-xs font-semibold"
-                >
-                  Bulk Import from MD ↗
-                </button>
-              </div>
-
-              {/* Add Skill Form */}
-              <form onSubmit={handleSaveSkill} className="bg-gray-700/30 p-4 rounded-xl border border-gray-700 grid grid-cols-1 sm:grid-cols-4 gap-3 mb-6">
+            {/* Add Custom Skill Form */}
+            {skillsSubFilter === 'add' && (
+              <form onSubmit={handleSaveSkill} className="bg-gray-900 p-5 rounded-2xl border border-gray-800 grid grid-cols-1 sm:grid-cols-4 gap-3 shadow-xl">
                 <input
                   type="text"
-                  aria-label="Skill ID (e.g. pitch-deck)"
+                  aria-label="Skill ID"
                   value={skillId}
                   onChange={(e) => setSkillId(e.target.value)}
-                  className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white text-xs"
+                  className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-xs"
                   required
                 />
                 <input
@@ -1497,7 +1496,7 @@ export default function AdminPage() {
                   aria-label="Skill Name"
                   value={skillName}
                   onChange={(e) => setSkillName(e.target.value)}
-                  className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white text-xs"
+                  className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-xs"
                   required
                 />
                 <input
@@ -1505,203 +1504,235 @@ export default function AdminPage() {
                   aria-label="Department"
                   value={skillDept}
                   onChange={(e) => setSkillDept(e.target.value)}
-                  className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white text-xs"
+                  className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-xs"
                   required
                 />
                 <button
                   type="submit"
                   className="bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold py-2"
                 >
-                  + Add Single Skill
+                  + Save Skill
                 </button>
+                {skillFormMessage && (
+                  <p className="text-xs text-emerald-400 col-span-full font-semibold">{skillFormMessage}</p>
+                )}
               </form>
-
-              {/* Skills List */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {adminData?.skills?.map((s: any) => (
-                  <div key={s.id} className="bg-gray-700/40 border border-gray-700 rounded-xl p-4 flex flex-col justify-between">
-                    <div>
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="font-semibold text-white text-sm">{s.name}</span>
-                        <button
-                          onClick={() => handleToggleSkill(s.id, !s.enabled)}
-                          className={`px-2.5 py-1 rounded text-[11px] font-semibold transition-colors ${
-                            s.enabled ? 'bg-emerald-600 text-white' : 'bg-gray-600 text-gray-300'
-                          }`}
-                        >
-                          {s.enabled ? 'Active' : 'Disabled'}
-                        </button>
-                      </div>
-                      <span className="text-[10px] uppercase font-bold text-indigo-400 mt-1 inline-block">
-                        {s.department}
-                      </span>
-                      <p className="text-xs text-gray-400 mt-2">{s.description}</p>
-                    </div>
-
-                    <div className="flex justify-between items-center mt-4 pt-3 border-t border-gray-700/50">
-                      <span className="text-[10px] text-gray-500 font-mono">{s.id}</span>
-                      <button
-                        onClick={() => handleDeleteSkill(s.id)}
-                        className="text-xs text-red-400 hover:text-red-300"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* BULK IMPORT FROM MARKDOWN TAB */}
-        {activeTab === 'bulk-import' && (
-          <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
-            <h2 className="text-base font-bold text-white mb-2">Bulk Markdown Skills Importer</h2>
-            <p className="text-xs text-gray-400 mb-4">
-              Paste or upload any Master Skills Markdown file. The system will automatically parse names, departments, descriptions, questions, and parameters.
-            </p>
-
-            <div className="flex items-center gap-4 mb-4 text-xs">
-              <label className="flex items-center gap-2">
-                <input
-                  type="radio"
-                  name="importMode"
-                  value="merge"
-                  checked={bulkMode === 'merge'}
-                  onChange={() => setBulkMode('merge')}
-                />
-                <span>Merge / Update with Existing Skills</span>
-              </label>
-              <label className="flex items-center gap-2">
-                <input
-                  type="radio"
-                  name="importMode"
-                  value="replace"
-                  checked={bulkMode === 'replace'}
-                  onChange={() => setBulkMode('replace')}
-                />
-                <span className="text-red-400">Replace All Skills</span>
-              </label>
-            </div>
-
-            <textarea
-              rows={12}
-              value={bulkMarkdown}
-              onChange={(e) => setBulkMarkdown(e.target.value)}
-              aria-label="Paste Master Skills Markdown content here"
-              className="w-full bg-gray-900 border border-gray-700 rounded-xl p-4 font-mono text-xs text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-4"
-            />
-
-            {bulkStatus && (
-              <div className="p-3 bg-indigo-900/30 border border-indigo-700 rounded-lg text-xs text-indigo-300 mb-4">
-                {bulkStatus}
-              </div>
             )}
 
-            <button
-              onClick={handleBulkImport}
-              className="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2.5 rounded-lg text-xs font-bold"
-            >
-              Parse & Ingest Skills
-            </button>
+            {/* Packs as Categories with Skills as Items */}
+            <div className="space-y-6">
+              {GENERAL_PURPOSE_SKILL_PACKS
+                .filter(p => (skillsSubFilter === 'all' || skillsSubFilter === 'add' ? true : p.id === skillsSubFilter))
+                .map(pack => {
+                  // Find skills matching this pack's skillIds
+                  const packSkills = (adminData?.skills || []).filter((s: any) => pack.skillIds.includes(s.id));
+
+                  return (
+                    <div key={pack.id} className="bg-gray-900 border border-gray-800 rounded-2xl p-6 space-y-4 shadow-sm">
+                      {/* Category Header */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-gray-800">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h2 className="text-base font-bold text-white">{pack.name}</h2>
+                            <span className="text-[10px] bg-indigo-950 text-indigo-300 font-bold px-2 py-0.5 rounded-full border border-indigo-700/60">
+                              {pack.badge}
+                            </span>
+                          </div>
+                          <p className="text-xs text-gray-400 mt-1 max-w-3xl leading-relaxed">{pack.description}</p>
+                        </div>
+                        <span className="text-xs text-gray-400 font-mono">
+                          {packSkills.length} Items Configured
+                        </span>
+                      </div>
+
+                      {/* Items (Skills) Inside This Category */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                        {packSkills.map((s: any) => (
+                          <div key={s.id} className="bg-gray-800/60 border border-gray-700/60 rounded-xl p-4 flex flex-col justify-between hover:border-gray-600 transition-all">
+                            <div>
+                              <div className="flex items-center justify-between gap-2 mb-1.5">
+                                <span className="font-semibold text-white text-sm">{s.name}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleSkill(s.id, !s.enabled)}
+                                  className={`px-2.5 py-1 rounded text-[10px] font-bold uppercase transition-colors ${
+                                    s.enabled ? 'bg-emerald-600 text-white' : 'bg-gray-700 text-gray-400'
+                                  }`}
+                                >
+                                  {s.enabled ? 'Active' : 'Disabled'}
+                                </button>
+                              </div>
+                              <span className="text-[10px] uppercase font-bold text-indigo-400 block mb-1.5">
+                                {s.department}
+                              </span>
+                              <p className="text-xs text-gray-400 line-clamp-3 leading-relaxed">{s.description}</p>
+                            </div>
+
+                            <div className="flex justify-between items-center mt-3 pt-2.5 border-t border-gray-700/40 text-[11px]">
+                              <span className="text-gray-500 font-mono text-[10px]">{s.id}</span>
+                              <button
+                                onClick={() => handleDeleteSkill(s.id)}
+                                className="text-xs text-red-400 hover:text-red-300 font-medium"
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
           </div>
         )}
 
-        {/* API KEY POOL TAB (10 KEYS PER EACH OF THE 3 LLMs) */}
-        {activeTab === 'credentials' && (
+        {/* 4. API KEY POOL CATEGORY (10 Keys Each for Gemini, OpenAI, Claude) */}
+        {activeCategory === 'apikeys' && (
           <div className="space-y-6">
-            <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-                <div>
-                  <h2 className="text-base font-bold text-white mb-1">API Key Pool Management (10 Keys per LLM)</h2>
-                  <p className="text-xs text-gray-400">
-                    Add up to 10 API keys for each of the 3 LLM providers (Google Gemini, OpenAI, Anthropic Claude). Keys are encrypted in PostgreSQL with automatic load balancing and least-usage routing.
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="px-3 py-1 rounded-full text-xs font-semibold bg-indigo-950 text-indigo-300 border border-indigo-800">
-                    {adminData?.apiKeys?.length || 0} Total Active Keys
-                  </span>
-                </div>
-              </div>
-
-              {/* Add Key Form */}
-              <form onSubmit={handleAddKey} className="flex flex-col sm:flex-row gap-3 mb-6 bg-gray-700/30 p-4 rounded-xl border border-gray-700">
-                <select
-                  value={newKeyProvider}
-                  onChange={(e) => setNewKeyProvider(e.target.value)}
-                  className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white text-xs font-semibold"
-                >
-                  <option value="gemini">Google Gemini (Max 10)</option>
-                  <option value="openai">OpenAI (Max 10)</option>
-                  <option value="anthropic">Anthropic Claude (Max 10)</option>
-                </select>
-
-                <input
-                  type="password"
-                  aria-label="Paste API Key here"
-                  value={newKeyValue}
-                  onChange={(e) => setNewKeyValue(e.target.value)}
-                  className="flex-1 bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white text-xs"
-                />
-
-                <select
-                  value={newKeyTier}
-                  onChange={(e) => setNewKeyTier(e.target.value)}
-                  className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white text-xs"
-                >
-                  <option value="ALL">All Tiers</option>
-                  {adminData?.tiers?.map((t: any) => (
-                    <option key={t.id} value={t.id}>{t.name}</option>
-                  ))}
-                </select>
-
+            {/* Category Pill Filters */}
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs">
+              {[
+                { id: 'all', label: `All Providers (${adminData?.apiKeys?.length || 0}/30)` },
+                { id: 'gemini', label: `Google Gemini (${(adminData?.apiKeys || []).filter((k: any) => k.provider === 'gemini').length}/10)` },
+                { id: 'openai', label: `OpenAI (${(adminData?.apiKeys || []).filter((k: any) => k.provider === 'openai').length}/10)` },
+                { id: 'anthropic', label: `Anthropic Claude (${(adminData?.apiKeys || []).filter((k: any) => k.provider === 'anthropic').length}/10)` },
+                { id: 'add', label: '+ Add New API Key' },
+              ].map(f => (
                 <button
-                  type="submit"
-                  className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-xs font-semibold whitespace-nowrap"
+                  key={f.id}
+                  onClick={() => setApiKeysSubFilter(f.id as any)}
+                  className={`px-3 py-1.5 rounded-lg font-semibold transition-colors whitespace-nowrap ${
+                    apiKeysSubFilter === f.id
+                      ? 'bg-indigo-600 text-white shadow-xs'
+                      : 'bg-gray-900 text-gray-400 hover:text-white border border-gray-800'
+                  }`}
                 >
-                  + Add Key
+                  {f.label}
                 </button>
-              </form>
+              ))}
+            </div>
 
-              {/* 3 LLM Provider Columns */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {[
-                  { id: 'gemini', name: 'Google Gemini', color: 'text-blue-400', badge: 'bg-blue-950/60 border-blue-800 text-blue-300' },
-                  { id: 'openai', name: 'OpenAI GPT', color: 'text-emerald-400', badge: 'bg-emerald-950/60 border-emerald-800 text-emerald-300' },
-                  { id: 'anthropic', name: 'Anthropic Claude', color: 'text-amber-400', badge: 'bg-amber-950/60 border-amber-800 text-amber-300' },
-                ].map((prov) => {
+            {/* Add Key Form */}
+            {(apiKeysSubFilter === 'add' || apiKeysSubFilter === 'all') && (
+              <form onSubmit={handleAddKey} className="bg-gray-900 p-5 rounded-2xl border border-gray-800 space-y-4 shadow-xl">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-800 pb-3">
+                  <div>
+                    <h3 className="text-sm font-bold text-white uppercase tracking-wider">Add API Key to Pool (Max 10 per Provider)</h3>
+                    <p className="text-xs text-gray-400">Keys are encrypted with AES-256-GCM and load-balanced via least-usage telemetry.</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                  <div>
+                    <label className="block text-[11px] text-gray-400 mb-1">Provider *</label>
+                    <select
+                      value={newKeyProvider}
+                      onChange={(e) => setNewKeyProvider(e.target.value as any)}
+                      aria-label="LLM Provider"
+                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white font-semibold"
+                    >
+                      <option value="gemini">Google Gemini</option>
+                      <option value="openai">OpenAI</option>
+                      <option value="anthropic">Anthropic Claude</option>
+                    </select>
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label className="block text-[11px] text-gray-400 mb-1">API Key *</label>
+                    <input
+                      type="password"
+                      aria-label="API Key"
+                      value={newKeyValue}
+                      onChange={(e) => setNewKeyValue(e.target.value)}
+                      required
+                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-xs font-mono"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] text-gray-400 mb-1">Access Tier</label>
+                    <select
+                      value={newKeyTier}
+                      onChange={(e) => setNewKeyTier(e.target.value)}
+                      aria-label="Key Access Tier"
+                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-xs"
+                    >
+                      <option value="ALL">All Tiers (Standard & Pro)</option>
+                      {adminData?.tiers?.map((t: any) => (
+                        <option key={t.id} value={t.id}>{t.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-2">
+                  <span className="text-xs text-gray-400">
+                    Active in pool: {(adminData?.apiKeys || []).filter((k: any) => k.provider === newKeyProvider).length} / 10
+                  </span>
+                  <button
+                    type="submit"
+                    disabled={isSubmittingKey}
+                    className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-semibold text-xs px-5 py-2 rounded-lg transition-colors shadow"
+                  >
+                    {isSubmittingKey ? 'Adding...' : '+ Save Key to Pool'}
+                  </button>
+                </div>
+
+                {keyFormMessage && (
+                  <p className={`text-xs font-semibold ${keyFormMessage.startsWith('✓') ? 'text-emerald-400' : 'text-amber-400'}`}>
+                    {keyFormMessage}
+                  </p>
+                )}
+              </form>
+            )}
+
+            {/* 3 LLM Provider Columns (Gemini, OpenAI, Claude) */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              {[
+                { id: 'gemini', name: 'Google Gemini', color: 'text-blue-400', badge: 'bg-blue-950/80 border-blue-700 text-blue-300' },
+                { id: 'openai', name: 'OpenAI GPT', color: 'text-emerald-400', badge: 'bg-emerald-950/80 border-emerald-700 text-emerald-300' },
+                { id: 'anthropic', name: 'Anthropic Claude', color: 'text-amber-400', badge: 'bg-amber-950/80 border-amber-700 text-amber-300' },
+              ]
+                .filter(prov => (apiKeysSubFilter === 'all' || apiKeysSubFilter === 'add' ? true : prov.id === apiKeysSubFilter))
+                .map((prov) => {
                   const provKeys = (adminData?.apiKeys || []).filter((k: any) => k.provider?.toLowerCase() === prov.id);
+
                   return (
-                    <div key={prov.id} className="bg-gray-900/60 border border-gray-700/80 rounded-xl p-4 flex flex-col justify-between">
+                    <div key={prov.id} className="bg-gray-900 border border-gray-800 rounded-2xl p-5 flex flex-col justify-between shadow-sm">
                       <div>
-                        <div className="flex items-center justify-between mb-3 pb-2 border-b border-gray-800">
-                          <span className={`font-bold text-sm ${prov.color}`}>{prov.name}</span>
-                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${prov.badge}`}>
+                        <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-800">
+                          <div>
+                            <span className={`font-bold text-sm ${prov.color}`}>{prov.name}</span>
+                            <p className="text-[10px] text-gray-400 mt-0.5">Least-usage load balanced</p>
+                          </div>
+                          <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full border ${prov.badge}`}>
                             {provKeys.length} / 10 Keys
                           </span>
                         </div>
 
                         {provKeys.length === 0 ? (
-                          <div className="py-6 text-center text-xs text-gray-500">
-                            No keys pooled yet. Add up to 10 keys above.
+                          <div className="py-8 text-center text-xs text-gray-500 border border-dashed border-gray-800 rounded-xl">
+                            No keys pooled for {prov.name}.<br/>Add keys using the form above.
                           </div>
                         ) : (
-                          <div className="space-y-2">
-                            {provKeys.map((k: any) => (
-                              <div key={k.id} className="flex items-center justify-between p-2.5 bg-gray-800/80 rounded-lg border border-gray-700/60 text-xs">
-                                <div className="flex flex-col gap-0.5 truncate pr-2">
-                                  <span className="font-mono text-gray-200 text-[11px] truncate">{k.key_masked}</span>
+                          <div className="space-y-2.5">
+                            {provKeys.map((k: any, idx: number) => (
+                              <div key={k.id} className="p-3 bg-gray-800/60 rounded-xl border border-gray-700/60 text-xs flex items-center justify-between">
+                                <div className="flex flex-col gap-1 truncate pr-2">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-[10px] font-bold text-gray-400">#{idx + 1}</span>
+                                    <span className="font-mono text-gray-200 text-xs font-semibold">{k.key_masked}</span>
+                                  </div>
                                   <div className="flex items-center gap-2 text-[10px] text-gray-400">
-                                    <span className="bg-gray-700/60 px-1.5 py-0.5 rounded">Tier: {k.tier}</span>
-                                    <span>Reqs: {k.usage_count}</span>
+                                    <span className="bg-gray-700 px-1.5 py-0.5 rounded text-[10px]">Tier: {k.tier}</span>
+                                    <span>Requests: {k.usage_count}</span>
                                   </div>
                                 </div>
                                 <button
                                   type="button"
                                   onClick={() => handleDeleteKey(k.id)}
-                                  className="text-red-400 hover:text-red-300 text-xs font-semibold p-1 hover:bg-red-950/30 rounded"
+                                  className="text-red-400 hover:text-red-300 text-xs font-semibold p-1.5 hover:bg-red-950/40 rounded-lg transition-colors"
                                   title="Delete key"
                                 >
                                   ✕
@@ -1714,335 +1745,134 @@ export default function AdminPage() {
                     </div>
                   );
                 })}
-              </div>
             </div>
           </div>
         )}
 
-        {/* LOGS TAB */}
-        {activeTab === 'logs' && (
-          <div className="bg-gray-800 border border-gray-700 rounded-xl overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-700">
-              <h2 className="text-base font-bold text-white">Administrator Audit Logs</h2>
-              <p className="text-xs text-gray-400">Tamper-evident record of all tier modifications, key additions, and settings</p>
-            </div>
-            <div className="divide-y divide-gray-700 text-xs">
-              {adminData?.auditLogs?.length === 0 ? (
-                <div className="p-6 text-gray-500 text-center">No audit logs recorded yet.</div>
-              ) : (
-                adminData?.auditLogs?.map((log: any) => (
-                  <div key={log.id} className="p-4 flex items-center justify-between">
-                    <div>
-                      <span className="font-semibold text-white">{log.action}</span>
-                      <span className="text-gray-400 ml-2">by {log.admin_email}</span>
-                      <p className="text-gray-300 mt-1">{log.details}</p>
-                    </div>
-                    <span className="text-gray-500 font-mono text-[11px]">{new Date(log.created_at).toLocaleTimeString()}</span>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* NOTES & STRATEGIC ROADMAP TAB */}
-        {activeTab === 'notes' && (
+        {/* 5. CLOUD APPS & APIS CATEGORY */}
+        {activeCategory === 'apps' && (
           <div className="space-y-6">
-            {/* Top Toolbar */}
-            <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-lg font-bold text-white">Strategic Architecture & Roadmap Notes</h2>
-                  <span className="bg-indigo-900/60 text-indigo-300 border border-indigo-700/60 px-2 py-0.5 rounded text-[11px] font-semibold">
-                    {adminNotes.length} Core Specifications
-                  </span>
-                </div>
-                <p className="text-xs text-gray-400 mt-1">
-                  Architecture guidelines for Microsoft API integration, smart home automation, and the Suchi wake-word voice agent.
-                </p>
-              </div>
-
-              <div className="flex items-center gap-2 flex-wrap">
+            {/* Category Pill Filters */}
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs">
+              {[
+                { id: 'all', label: `All APIs (${adminData?.apps?.length || 0})` },
+                { id: 'Workspace & Productivity', label: 'Workspace & Productivity' },
+                { id: 'AI & Analytics', label: 'AI & Analytics' },
+                { id: 'Cloud Infrastructure', label: 'Cloud Infrastructure' },
+                { id: 'Security & Operations', label: 'Security & Operations' },
+              ].map(f => (
                 <button
-                  type="button"
-                  onClick={handleCopyNotesMarkdown}
-                  className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-sm"
-                >
-                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                  </svg>
-                  Copy Notes as Markdown
-                </button>
-                <button
-                  type="button"
-                  onClick={handleResetNotesToDefault}
-                  className="px-3 py-1.5 rounded-lg bg-gray-700 hover:bg-gray-600 text-gray-300 text-xs font-medium transition-colors"
-                >
-                  Reset Defaults
-                </button>
-              </div>
-            </div>
-
-            {notesCopyToast && (
-              <div className="p-3 bg-emerald-950/80 border border-emerald-700 text-emerald-300 rounded-xl text-xs flex items-center gap-2 animate-fadeIn">
-                <svg className="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-                {notesCopyToast}
-              </div>
-            )}
-
-            {/* Note Cards List */}
-            <div className="space-y-4">
-              {adminNotes.map((note) => {
-                const priorityColor =
-                  note.priority === 'CRITICAL'
-                    ? 'bg-rose-950/60 border-rose-800 text-rose-300'
-                    : note.priority === 'HIGH'
-                    ? 'bg-amber-950/60 border-amber-800 text-amber-300'
-                    : 'bg-indigo-950/60 border-indigo-800 text-indigo-300';
-
-                const statusColor =
-                  note.status === 'Architecture Ready'
-                    ? 'bg-emerald-950/60 border-emerald-800 text-emerald-300'
-                    : note.status === 'In Progress'
-                    ? 'bg-blue-950/60 border-blue-800 text-blue-300'
-                    : 'bg-gray-800 border-gray-700 text-gray-400';
-
-                return (
-                  <div
-                    key={note.id}
-                    className="bg-gray-800 border border-gray-700 hover:border-gray-600 rounded-xl p-5 transition-colors shadow-sm space-y-3"
-                  >
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded border ${priorityColor}`}>
-                          {note.priority}
-                        </span>
-                        <span className="text-[10px] uppercase font-semibold px-2 py-0.5 rounded bg-gray-700 text-gray-300">
-                          {note.category}
-                        </span>
-                        <h3 className="font-bold text-base text-white">{note.title}</h3>
-                      </div>
-
-                      <div className="flex items-center gap-2 self-end sm:self-auto">
-                        <button
-                          type="button"
-                          onClick={() => handleToggleNoteStatus(note.id)}
-                          title="Click to toggle status (Planned ➔ In Progress ➔ Architecture Ready)"
-                          className={`text-xs px-2.5 py-1 rounded-lg border font-medium flex items-center gap-1.5 transition-colors ${statusColor}`}
-                        >
-                          <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
-                          <span>{note.status}</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteNote(note.id)}
-                          title="Delete Note"
-                          className="p-1 text-gray-400 hover:text-rose-400 rounded hover:bg-gray-700 transition-colors"
-                        >
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
-                        </button>
-                      </div>
-                    </div>
-
-                    <p className="text-xs text-gray-300 leading-relaxed">{note.details}</p>
-
-                    {note.specs && note.specs.length > 0 && (
-                      <div className="bg-gray-900/80 border border-gray-700/80 rounded-lg p-3 space-y-1.5 text-xs">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 block mb-1">
-                          Implementation Specs:
-                        </span>
-                        <ul className="space-y-1.5">
-                          {(note.specs || []).map((spec, sIdx) => (
-                            <li key={sIdx} className="text-gray-300 flex items-start gap-2">
-                              <span className="text-emerald-400 mt-0.5 flex-shrink-0">✓</span>
-                              <span className="leading-snug">{spec}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-
-                    <div className="flex items-center justify-between text-[11px] text-gray-500 pt-1">
-                      <span>ID: {note.id}</span>
-                      <span>Last updated: {note.updatedAt}</span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Add New Note Form */}
-            <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
-              <h3 className="text-sm font-bold text-white mb-1">Add Strategic Note or Architecture Directive</h3>
-              <p className="text-xs text-gray-400 mb-4">Record future technical milestones, protocol requirements, or hardware targets.</p>
-
-              <form onSubmit={handleAddNote} className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div className="sm:col-span-2">
-                    <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">Note Title</label>
-                    <input
-                      type="text"
-                      required
-                      value={noteTitle}
-                      onChange={(e) => setNoteTitle(e.target.value)}
-                      aria-label="Note Title (e.g. Local LLM Fallback with Ollama on Mac/PC)"
-                      className="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">Category</label>
-                    <select
-                      value={noteCategory}
-                      onChange={(e) => setNoteCategory(e.target.value as any)}
-                      className="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
-                    >
-                      <option value="Integration">Integration</option>
-                      <option value="Home Automation">Home Automation</option>
-                      <option value="Voice Assistant">Voice Assistant</option>
-                      <option value="Roadmap">Roadmap</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">Priority</label>
-                    <select
-                      value={notePriority}
-                      onChange={(e) => setNotePriority(e.target.value as any)}
-                      className="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
-                    >
-                      <option value="CRITICAL">CRITICAL</option>
-                      <option value="HIGH">HIGH</option>
-                      <option value="STRATEGIC">STRATEGIC</option>
-                    </select>
-                  </div>
-                  <div className="sm:col-span-2">
-                    <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">Overview Description</label>
-                    <input
-                      type="text"
-                      value={noteDetails}
-                      onChange={(e) => setNoteDetails(e.target.value)}
-                      aria-label="Executive summary of this architectural note"
-                      className="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">
-                    Implementation Specs & Checklist (One point per line)
-                  </label>
-                  <textarea
-                    rows={4}
-                    value={noteSpecs}
-                    onChange={(e) => setNoteSpecs(e.target.value)}
-                    aria-label="Enter technical specifications, endpoints, or required libraries"
-                    className="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
-                  />
-                </div>
-
-                <div className="flex justify-end">
-                  <button
-                    type="submit"
-                    className="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold px-4 py-2 rounded-lg transition-colors shadow-sm"
-                  >
-                    Save Note to Roadmap
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
-
-        {/* BUG REPORTS & USER TELEMETRY TAB */}
-        {activeTab === 'bugs' && (
-          <div className="space-y-6">
-            {/* Header & Stats */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gray-800 border border-gray-700 rounded-xl p-5">
-              <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-lg font-bold text-white">Suchi Bug Reports & Incomplete Work Telemetry</h2>
-                  <span className="text-[10px] bg-rose-500/20 text-rose-300 font-bold px-2 py-0.5 rounded-full border border-rose-500/30">
-                    Live Diagnostics
-                  </span>
-                </div>
-                <p className="text-xs text-gray-400 mt-1">
-                  Specific reports sent by users when an action failed, error occurred, or work was not done properly.
-                </p>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={fetchBugReports}
-                  className="text-xs bg-gray-700 hover:bg-gray-600 text-white px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors"
-                >
-                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                  </svg>
-                  <span>Refresh</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Metrics Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <div className="bg-gray-800 border border-gray-700 rounded-xl p-4">
-                <span className="text-xs text-gray-400 uppercase font-semibold">Total Reports</span>
-                <p className="text-2xl font-bold text-white mt-1">{bugReports.length}</p>
-              </div>
-              <div className="bg-gray-800 border border-gray-700 rounded-xl p-4">
-                <span className="text-xs text-rose-400 uppercase font-semibold">Open Issues</span>
-                <p className="text-2xl font-bold text-rose-400 mt-1">
-                  {bugReports.filter(b => b.status === 'OPEN').length}
-                </p>
-              </div>
-              <div className="bg-gray-800 border border-gray-700 rounded-xl p-4">
-                <span className="text-xs text-amber-400 uppercase font-semibold">Investigating</span>
-                <p className="text-2xl font-bold text-amber-400 mt-1">
-                  {bugReports.filter(b => b.status === 'INVESTIGATING').length}
-                </p>
-              </div>
-              <div className="bg-gray-800 border border-gray-700 rounded-xl p-4">
-                <span className="text-xs text-emerald-400 uppercase font-semibold">Resolved</span>
-                <p className="text-2xl font-bold text-emerald-400 mt-1">
-                  {bugReports.filter(b => b.status === 'RESOLVED').length}
-                </p>
-              </div>
-            </div>
-
-            {/* Filter Tabs */}
-            <div className="flex gap-2">
-              {(['all', 'OPEN', 'INVESTIGATING', 'RESOLVED'] as const).map(f => (
-                <button
-                  key={f}
-                  onClick={() => setBugFilter(f)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize transition-colors ${
-                    bugFilter === f
+                  key={f.id}
+                  onClick={() => setAppsSubFilter(f.id)}
+                  className={`px-3 py-1.5 rounded-lg font-semibold transition-colors whitespace-nowrap ${
+                    appsSubFilter === f.id
                       ? 'bg-indigo-600 text-white shadow-xs'
-                      : 'bg-gray-800 text-gray-400 hover:text-white border border-gray-700'
+                      : 'bg-gray-900 text-gray-400 hover:text-white border border-gray-800'
                   }`}
                 >
-                  {f === 'all' ? 'All Reports' : f.toLowerCase()}
+                  {f.label}
                 </button>
               ))}
             </div>
 
-            {/* Bug Reports Cards List */}
+            {/* Apps Grouped by Category */}
+            {['Workspace & Productivity', 'AI & Analytics', 'Cloud Infrastructure', 'Security & Operations']
+              .filter(c => (appsSubFilter === 'all' ? true : c === appsSubFilter))
+              .map(category => {
+                const categoryApps = (adminData?.apps || []).filter((a: any) => a.category === category);
+                if (categoryApps.length === 0) return null;
+
+                return (
+                  <div key={category} className="space-y-3">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 px-1">{category} ({categoryApps.length})</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {categoryApps.map((app: any) => (
+                        <div key={app.id} className="bg-gray-900 border border-gray-800 rounded-xl p-4 flex flex-col justify-between">
+                          <div>
+                            <div className="flex items-center justify-between gap-2 mb-1.5">
+                              <span className="font-semibold text-sm text-white">{app.name}</span>
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${
+                                app.status === 'ACTIVE IN APP'
+                                  ? 'bg-emerald-950 text-emerald-300 border-emerald-700'
+                                  : 'bg-sky-950 text-sky-300 border-sky-700'
+                              }`}>
+                                {app.status}
+                              </span>
+                            </div>
+                            <p className="text-xs text-gray-400 mb-3">{app.description}</p>
+                          </div>
+
+                          <div className="pt-3 border-t border-gray-800 flex items-center justify-between text-xs">
+                            <div className="flex flex-wrap gap-1">
+                              {app.allowedTiers?.map((tier: string) => (
+                                <span key={tier} className="bg-gray-800 text-gray-300 text-[10px] px-1.5 py-0.5 rounded">
+                                  {tier}
+                                </span>
+                              ))}
+                            </div>
+
+                            <button
+                              onClick={() => handleToggleApp(app.id, !app.enabled)}
+                              className={`px-3 py-1 rounded font-semibold text-xs transition-colors ${
+                                app.enabled
+                                  ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                                  : 'bg-gray-800 hover:bg-gray-700 text-gray-400'
+                              }`}
+                            >
+                              {app.enabled ? 'Enabled' : 'Disabled'}
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+          </div>
+        )}
+
+        {/* 6. BUG REPORTS & USER TELEMETRY CATEGORY (REAL REPORTS ONLY, NO FAKE DATA) */}
+        {activeCategory === 'diagnostics' && (
+          <div className="space-y-6">
+            {/* Category Pill Filters */}
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs">
+              {[
+                { id: 'all', label: `All Reports (${bugReports.length})` },
+                { id: 'OPEN', label: `Open Issues (${bugReports.filter(b => b.status === 'OPEN').length})` },
+                { id: 'INVESTIGATING', label: `Investigating (${bugReports.filter(b => b.status === 'INVESTIGATING').length})` },
+                { id: 'RESOLVED', label: `Resolved (${bugReports.filter(b => b.status === 'RESOLVED').length})` },
+              ].map(f => (
+                <button
+                  key={f.id}
+                  onClick={() => setBugsSubFilter(f.id as any)}
+                  className={`px-3 py-1.5 rounded-lg font-semibold transition-colors whitespace-nowrap ${
+                    bugsSubFilter === f.id
+                      ? 'bg-indigo-600 text-white shadow-xs'
+                      : 'bg-gray-900 text-gray-400 hover:text-white border border-gray-800'
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
+
+              <button
+                onClick={fetchBugReports}
+                className="ml-auto text-xs bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700 px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors"
+              >
+                <span>🔄 Refresh</span>
+              </button>
+            </div>
+
+            {/* Reports List */}
             <div className="space-y-4">
               {bugReports
-                .filter(b => (bugFilter === 'all' ? true : b.status === bugFilter))
+                .filter(b => (bugsSubFilter === 'all' ? true : b.status === bugsSubFilter))
                 .map(report => (
                   <div
                     key={report.id}
-                    className="bg-gray-800/90 border border-gray-700 rounded-2xl p-5 space-y-4 shadow-sm"
+                    className="bg-gray-900 border border-gray-800 rounded-2xl p-5 space-y-4 shadow-sm"
                   >
-                    {/* Top Row: User & Status Controls */}
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-gray-700/80">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-gray-800">
                       <div className="flex items-center gap-3">
                         <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
                           report.status === 'OPEN'
@@ -2062,138 +1892,49 @@ export default function AdminPage() {
                         </span>
                       </div>
 
-                      {/* Status Action Buttons */}
                       <div className="flex items-center gap-1.5">
                         <button
                           onClick={() => handleUpdateBugStatus(report.id, 'INVESTIGATING')}
-                          className={`px-2 py-1 rounded text-[10px] font-medium transition-colors ${
-                            report.status === 'INVESTIGATING'
-                              ? 'bg-amber-600 text-white'
-                              : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                          }`}
+                          className="px-2 py-1 rounded text-[10px] font-medium bg-gray-800 hover:bg-gray-700 text-gray-300 transition-colors"
                         >
                           Investigating
                         </button>
                         <button
                           onClick={() => handleUpdateBugStatus(report.id, 'RESOLVED')}
-                          className={`px-2 py-1 rounded text-[10px] font-medium transition-colors ${
-                            report.status === 'RESOLVED'
-                              ? 'bg-emerald-600 text-white'
-                              : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                          }`}
+                          className="px-2 py-1 rounded text-[10px] font-medium bg-emerald-600 hover:bg-emerald-500 text-white transition-colors"
                         >
                           Mark Resolved ✓
-                        </button>
-                        <button
-                          onClick={() => handleUpdateBugStatus(report.id, 'OPEN')}
-                          className={`px-2 py-1 rounded text-[10px] font-medium transition-colors ${
-                            report.status === 'OPEN'
-                              ? 'bg-rose-600 text-white'
-                              : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                          }`}
-                        >
-                          Reopen
                         </button>
                       </div>
                     </div>
 
-                    {/* Summary & Issue Type */}
                     <div>
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="px-2 py-0.5 rounded bg-indigo-950/80 border border-indigo-700/50 text-indigo-300 text-[10px] font-mono uppercase">
-                          {report.issueType.replace('_', ' ')}
+                        <span className="px-2 py-0.5 rounded bg-indigo-950 border border-indigo-700/50 text-indigo-300 text-[10px] font-mono uppercase">
+                          {report.issueType?.replace('_', ' ')}
                         </span>
                         <h3 className="text-sm font-bold text-gray-100">{report.summary}</h3>
                       </div>
                       {report.userDescription && (
-                        <div className="mt-2 p-3 bg-gray-900/90 rounded-xl border border-gray-700/60 text-xs text-gray-300">
-                          <span className="text-gray-500 font-semibold uppercase text-[10px] block mb-1">
-                            User Explanation:
-                          </span>
-                          <p className="italic">"{report.userDescription}"</p>
+                        <div className="mt-2 p-3 bg-gray-950 rounded-xl border border-gray-800 text-xs text-gray-300">
+                          <p className="italic">&quot;{report.userDescription}&quot;</p>
                         </div>
                       )}
                     </div>
 
-                    {/* Chat Context Snippet */}
-                    {(report.lastUserMessage || report.lastAssistantResponse) && (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                        {report.lastUserMessage && (
-                          <div className="p-3 bg-gray-900/60 rounded-xl border border-gray-700/40">
-                            <span className="text-[10px] uppercase font-semibold text-blue-400 block mb-1">
-                              Last User Message:
-                            </span>
-                            <p className="text-gray-300 line-clamp-3 font-mono text-[11px]">
-                              {report.lastUserMessage}
-                            </p>
-                          </div>
-                        )}
-                        {report.lastAssistantResponse && (
-                          <div className="p-3 bg-gray-900/60 rounded-xl border border-gray-700/40">
-                            <span className="text-[10px] uppercase font-semibold text-indigo-400 block mb-1">
-                              Last Assistant Response:
-                            </span>
-                            <p className="text-gray-300 line-clamp-3 font-mono text-[11px]">
-                              {report.lastAssistantResponse}
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Failed Action Data */}
-                    {report.failedAction && (
-                      <div className="p-3 bg-rose-950/30 rounded-xl border border-rose-900/50 text-xs">
-                        <span className="text-[10px] uppercase font-semibold text-rose-400 block mb-1">
-                          Failed Action Details:
-                        </span>
-                        <pre className="text-rose-200 font-mono text-[11px] whitespace-pre-wrap overflow-x-auto">
-                          {JSON.stringify(report.failedAction, null, 2)}
-                        </pre>
-                      </div>
-                    )}
-
-                    {/* System & Device Diagnostics */}
-                    <div className="pt-2 border-t border-gray-700/60 flex flex-wrap items-center justify-between gap-3 text-[11px] text-gray-400">
-                      <div className="flex items-center gap-3 flex-wrap">
-                        <span><strong>Platform:</strong> {report.diagnostics?.platform}</span>
-                        <span><strong>Screen:</strong> {report.diagnostics?.screenSize}</span>
-                        <span>
-                          <strong>Help Opt-in:</strong>{' '}
-                          {report.diagnostics?.helpOptIn ? (
-                            <span className="text-emerald-400">Active ✓</span>
-                          ) : (
-                            <span className="text-gray-500">Anonymous</span>
-                          )}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => {
-                            setSelectedBugPayload(
-                              selectedBugPayload === report.id ? null : report.id
-                            );
-                          }}
-                          className="text-[11px] text-indigo-400 hover:text-indigo-300 underline"
-                        >
-                          {selectedBugPayload === report.id ? 'Hide Diagnostics JSON' : 'Inspect Diagnostics JSON'}
-                        </button>
-                        <button
-                          onClick={() => {
-                            navigator.clipboard.writeText(JSON.stringify(report, null, 2));
-                            alert('Diagnostics JSON copied to clipboard!');
-                          }}
-                          className="px-2 py-0.5 rounded bg-gray-700 hover:bg-gray-600 text-gray-200 text-[10px]"
-                        >
-                          Copy JSON
-                        </button>
-                      </div>
+                    {/* Diagnostics and Payload Viewer */}
+                    <div className="pt-2 border-t border-gray-800 flex items-center justify-between text-xs text-gray-400">
+                      <span><strong>Platform:</strong> {report.diagnostics?.platform || 'Web'}</span>
+                      <button
+                        onClick={() => setSelectedBugPayload(selectedBugPayload === report.id ? null : report.id)}
+                        className="text-indigo-400 hover:underline text-[11px]"
+                      >
+                        {selectedBugPayload === report.id ? 'Hide JSON' : 'Inspect JSON'}
+                      </button>
                     </div>
 
-                    {/* Raw Diagnostics JSON Viewer */}
                     {selectedBugPayload === report.id && (
-                      <div className="p-3 bg-black/80 rounded-xl border border-gray-800 text-[11px] font-mono text-emerald-400 overflow-x-auto max-h-60">
+                      <div className="p-3 bg-black rounded-xl border border-gray-800 text-[11px] font-mono text-emerald-400 overflow-x-auto max-h-60">
                         <pre>{JSON.stringify(report, null, 2)}</pre>
                       </div>
                     )}
@@ -2201,16 +1942,293 @@ export default function AdminPage() {
                 ))}
 
               {bugReports.length === 0 && (
-                <div className="text-center py-12 bg-gray-800/50 rounded-2xl border border-gray-700">
-                  <p className="text-gray-400 text-sm">No bug reports received yet.</p>
+                <div className="text-center py-12 bg-gray-900 rounded-2xl border border-gray-800">
+                  <p className="text-gray-400 text-sm">No bug reports recorded in database.</p>
                   <p className="text-xs text-gray-500 mt-1">
-                    When users encounter tool errors or click 'Send Bug Report', their diagnostics will populate here.
+                    All tools and agent completions are operating smoothly.
                   </p>
                 </div>
               )}
             </div>
           </div>
         )}
+
+        {/* 7. SYSTEM & SUBSCRIPTIONS CATEGORY */}
+        {activeCategory === 'system' && (
+          <div className="space-y-6">
+            {/* Category Pill Filters */}
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs">
+              {[
+                { id: 'tiers', label: `Subscription Tiers (${adminData?.tiers?.length || 0})` },
+                { id: 'logs', label: `Audit Logs (${adminData?.auditLogs?.length || 0})` },
+                { id: 'add_tier', label: '+ Add Subscription Tier' },
+              ].map(f => (
+                <button
+                  key={f.id}
+                  onClick={() => setSystemSubFilter(f.id as any)}
+                  className={`px-3 py-1.5 rounded-lg font-semibold transition-colors whitespace-nowrap ${
+                    systemSubFilter === f.id
+                      ? 'bg-indigo-600 text-white shadow-xs'
+                      : 'bg-gray-900 text-gray-400 hover:text-white border border-gray-800'
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Add Tier Form */}
+            {systemSubFilter === 'add_tier' && (
+              <form onSubmit={handleSaveTier} className="grid grid-cols-1 sm:grid-cols-4 gap-3 bg-gray-900 p-5 rounded-2xl border border-gray-800 shadow-xl">
+                <input
+                  type="text"
+                  aria-label="Tier ID (e.g. PRO)"
+                  value={tierId}
+                  onChange={(e) => setTierId(e.target.value)}
+                  className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-xs uppercase"
+                  required
+                />
+                <input
+                  type="text"
+                  aria-label="Tier Display Name"
+                  value={tierName}
+                  onChange={(e) => setTierName(e.target.value)}
+                  className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-xs"
+                  required
+                />
+                <input
+                  type="number"
+                  aria-label="Daily Token Limit"
+                  value={tierLimit}
+                  onChange={(e) => setTierLimit(Number(e.target.value))}
+                  className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-xs"
+                />
+                <button
+                  type="submit"
+                  className="bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold py-2"
+                >
+                  Save Tier
+                </button>
+              </form>
+            )}
+
+            {/* Tiers View */}
+            {(systemSubFilter === 'tiers' || systemSubFilter === 'add_tier') && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                {adminData?.tiers?.map((t: any) => (
+                  <div key={t.id} className="bg-gray-900 border border-gray-800 rounded-xl p-4 flex flex-col justify-between">
+                    <div>
+                      <div className="flex justify-between items-start">
+                        <span className="font-bold text-sm text-white">{t.name}</span>
+                        <span className="text-[10px] bg-indigo-950 text-indigo-300 px-1.5 py-0.5 rounded font-mono">{t.id}</span>
+                      </div>
+                      <p className="text-xs text-gray-400 mt-1">{t.description || 'Standard subscription tier'}</p>
+                      <p className="text-xs text-emerald-400 font-semibold mt-2">Daily limit: {t.daily_token_limit?.toLocaleString() || t.dailyTokenLimit?.toLocaleString()} tokens</p>
+                    </div>
+                    {t.id !== 'ADMIN' && t.id !== 'BEGINNER' && (
+                      <button
+                        onClick={() => handleDeleteTier(t.id)}
+                        className="text-xs text-red-400 hover:text-red-300 mt-4 text-left"
+                      >
+                        Delete Tier
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Audit Logs View */}
+            {systemSubFilter === 'logs' && (
+              <div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+                <div className="px-6 py-4 border-b border-gray-800">
+                  <h2 className="text-base font-bold text-white">Administrator Audit Logs</h2>
+                  <p className="text-xs text-gray-400">Tamper-evident record of all tier changes, key operations, and account mutations.</p>
+                </div>
+                <div className="divide-y divide-gray-800 text-xs">
+                  {adminData?.auditLogs?.length === 0 ? (
+                    <div className="p-6 text-gray-500 text-center">No audit logs recorded yet.</div>
+                  ) : (
+                    adminData?.auditLogs?.map((log: any) => (
+                      <div key={log.id} className="p-4 flex items-center justify-between">
+                        <div>
+                          <span className="font-semibold text-white">{log.action}</span>
+                          <span className="text-gray-400 ml-2">by {log.admin_email}</span>
+                          <p className="text-gray-300 mt-1">{log.details}</p>
+                        </div>
+                        <span className="text-gray-500 font-mono text-[11px]">{new Date(log.created_at).toLocaleTimeString()}</span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 8. ROADMAP & ARCHITECTURE CATEGORY */}
+        {activeCategory === 'roadmap' && (
+          <div className="space-y-6">
+            {/* Category Pill Filters */}
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs">
+              {[
+                { id: 'all', label: `All Notes (${adminNotes.length})` },
+                { id: 'Integration', label: 'Integration' },
+                { id: 'Home Automation', label: 'Home Automation' },
+                { id: 'Voice Assistant', label: 'Voice Assistant' },
+                { id: 'Roadmap', label: 'Roadmap' },
+                { id: 'add_note', label: '+ Add Note' },
+              ].map(f => (
+                <button
+                  key={f.id}
+                  onClick={() => setRoadmapSubFilter(f.id)}
+                  className={`px-3 py-1.5 rounded-lg font-semibold transition-colors whitespace-nowrap ${
+                    roadmapSubFilter === f.id
+                      ? 'bg-indigo-600 text-white shadow-xs'
+                      : 'bg-gray-900 text-gray-400 hover:text-white border border-gray-800'
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
+
+              <div className="ml-auto flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleCopyNotesMarkdown}
+                  className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors"
+                >
+                  Copy as Markdown
+                </button>
+                <button
+                  type="button"
+                  onClick={handleResetNotesToDefault}
+                  className="px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs font-medium border border-gray-700 transition-colors"
+                >
+                  Reset Defaults
+                </button>
+              </div>
+            </div>
+
+            {notesCopyToast && (
+              <div className="p-3 bg-emerald-950 border border-emerald-700 text-emerald-300 rounded-xl text-xs flex items-center gap-2">
+                {notesCopyToast}
+              </div>
+            )}
+
+            {/* Add Note Form */}
+            {roadmapSubFilter === 'add_note' && (
+              <form onSubmit={handleAddNote} className="bg-gray-900 border border-gray-800 rounded-2xl p-5 space-y-4 shadow-xl">
+                <h3 className="text-sm font-bold text-white uppercase tracking-wider">Add Strategic Roadmap Note</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-[11px] text-gray-400 mb-1">Title *</label>
+                    <input
+                      type="text"
+                      aria-label="Note Title"
+                      value={noteTitle}
+                      onChange={(e) => setNoteTitle(e.target.value)}
+                      required
+                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] text-gray-400 mb-1">Category</label>
+                    <select
+                      value={noteCategory}
+                      onChange={(e) => setNoteCategory(e.target.value as any)}
+                      aria-label="Note Category"
+                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-xs"
+                    >
+                      <option value="Integration">Integration</option>
+                      <option value="Home Automation">Home Automation</option>
+                      <option value="Voice Assistant">Voice Assistant</option>
+                      <option value="Roadmap">Roadmap</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[11px] text-gray-400 mb-1">Priority</label>
+                    <select
+                      value={notePriority}
+                      onChange={(e) => setNotePriority(e.target.value as any)}
+                      aria-label="Note Priority"
+                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-xs"
+                    >
+                      <option value="CRITICAL">CRITICAL</option>
+                      <option value="HIGH">HIGH</option>
+                      <option value="STRATEGIC">STRATEGIC</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] text-gray-400 mb-1">Architecture Details</label>
+                  <textarea
+                    rows={3}
+                    aria-label="Architecture Details"
+                    value={noteDetails}
+                    onChange={(e) => setNoteDetails(e.target.value)}
+                    className="w-full bg-gray-800 border border-gray-700 rounded-lg p-3 text-white text-xs"
+                  />
+                </div>
+
+                <div className="flex justify-end">
+                  <button
+                    type="submit"
+                    className="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold px-5 py-2 rounded-lg transition-colors"
+                  >
+                    Save Note
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {/* Notes List */}
+            <div className="space-y-4">
+              {adminNotes
+                .filter(n => (roadmapSubFilter === 'all' || roadmapSubFilter === 'add_note' ? true : n.category === roadmapSubFilter))
+                .map((note) => (
+                  <div key={note.id} className="bg-gray-900 border border-gray-800 rounded-2xl p-5 space-y-3 shadow-sm">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2.5 border-b border-gray-800">
+                      <div className="flex items-center gap-2">
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${
+                          note.priority === 'CRITICAL' ? 'bg-rose-950 text-rose-300 border-rose-800' : 'bg-indigo-950 text-indigo-300 border-indigo-800'
+                        }`}>
+                          {note.priority}
+                        </span>
+                        <h3 className="font-bold text-sm text-white">{note.title}</h3>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleToggleNoteStatus(note.id)}
+                          className="text-[10px] font-bold bg-gray-800 hover:bg-gray-700 text-gray-300 px-2.5 py-1 rounded-lg border border-gray-700 transition-colors"
+                        >
+                          Status: {note.status}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteNote(note.id)}
+                          className="text-xs text-red-400 hover:text-red-300 ml-1"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                    <p className="text-xs text-gray-300 leading-relaxed">{note.details}</p>
+                    {note.specs.length > 0 && (
+                      <div className="p-3 bg-gray-950 rounded-xl border border-gray-800 space-y-1">
+                        {note.specs.map((s, idx) => (
+                          <p key={idx} className="text-[11px] text-gray-400">• {s}</p>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+            </div>
+          </div>
+        )}
+
       </main>
     </div>
   );

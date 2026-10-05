@@ -17,6 +17,9 @@ import {
   toggleApp,
   updateAppTiers,
   updateUserAssignedPacks,
+  updateUserAssignedSkills,
+  toggleUserPack,
+  toggleUserSkill,
   logAdminAction,
 } from '@/lib/db';
 
@@ -40,6 +43,8 @@ export async function POST(request: NextRequest) {
           subscription_tier: payload.subscription_tier || 'BEGINNER',
           is_oauth_tester: payload.is_oauth_tester !== false,
           assigned_packs: payload.assigned_packs || [],
+          assigned_skills: payload.assigned_skills || [],
+          onboarding_profile: payload.onboarding_profile || '',
         });
         await logAdminAction(session.email, 'ADD_USER', payload.email, `Added user (OAuth Tester: ${payload.is_oauth_tester !== false})`);
         return NextResponse.json({ success: true, user: added });
@@ -58,6 +63,21 @@ export async function POST(request: NextRequest) {
         await updateUserAssignedPacks(payload.email, payload.packs || []);
         await logAdminAction(session.email, 'UPDATE_USER_PACKS', payload.email, `Assigned packs: ${(payload.packs || []).join(', ')}`);
         return NextResponse.json({ success: true });
+
+      case 'UPDATE_USER_SKILLS':
+        await updateUserAssignedSkills(payload.email, payload.skills || []);
+        await logAdminAction(session.email, 'UPDATE_USER_SKILLS', payload.email, `Assigned skills: ${(payload.skills || []).join(', ')}`);
+        return NextResponse.json({ success: true });
+
+      case 'TOGGLE_USER_PACK':
+        const updatedPacks = await toggleUserPack(payload.email, payload.packId, payload.enabled);
+        await logAdminAction(session.email, 'TOGGLE_USER_PACK', payload.email, `Pack ${payload.packId} set to ${payload.enabled}`);
+        return NextResponse.json({ success: true, packs: updatedPacks });
+
+      case 'TOGGLE_USER_SKILL':
+        const updatedSkills = await toggleUserSkill(payload.email, payload.skillId, payload.enabled);
+        await logAdminAction(session.email, 'TOGGLE_USER_SKILL', payload.email, `Skill ${payload.skillId} set to ${payload.enabled}`);
+        return NextResponse.json({ success: true, skills: updatedSkills });
 
       case 'DELETE_USER':
         await deleteUser(payload.email);

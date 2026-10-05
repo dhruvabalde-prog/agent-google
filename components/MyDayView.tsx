@@ -542,7 +542,7 @@ export default function MyDayView({
                   type="text"
                   value={formTitle}
                   onChange={e => setFormTitle(e.target.value)}
-                  placeholder="e.g. Weekly Strategy Sync"
+                  aria-label="Title or Outcome"
                   className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
                 />
               </div>
@@ -555,7 +555,7 @@ export default function MyDayView({
                     type="text"
                     value={formDue}
                     onChange={e => setFormDue(e.target.value)}
-                    placeholder="e.g. Today 5:00 PM"
+                    aria-label="Due Date"
                     className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent text-xs"
                   />
                 </div>
@@ -571,7 +571,7 @@ export default function MyDayView({
                         type="text"
                         value={formStartTime}
                         onChange={e => setFormStartTime(e.target.value)}
-                        placeholder="e.g. 10:00 AM"
+                        aria-label="Start Time"
                         className="w-full p-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent text-xs"
                       />
                     </div>
@@ -581,7 +581,7 @@ export default function MyDayView({
                         type="text"
                         value={formEndTime}
                         onChange={e => setFormEndTime(e.target.value)}
-                        placeholder="e.g. 10:45 AM"
+                        aria-label="End Time"
                         className="w-full p-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent text-xs"
                       />
                     </div>
@@ -608,6 +608,7 @@ export default function MyDayView({
                         type="number"
                         value={formRoutineDuration}
                         onChange={e => setFormRoutineDuration(e.target.value)}
+                        aria-label="Routine Timer Duration"
                         className="w-full p-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent text-xs"
                       />
                     </div>
@@ -617,7 +618,7 @@ export default function MyDayView({
                         type="text"
                         value={formRoutineFrequency}
                         onChange={e => setFormRoutineFrequency(e.target.value)}
-                        placeholder="e.g. Daily / Weekly"
+                        aria-label="Routine Frequency"
                         className="w-full p-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent text-xs"
                       />
                     </div>
@@ -628,7 +629,7 @@ export default function MyDayView({
                       rows={3}
                       value={formRoutineSteps}
                       onChange={e => setFormRoutineSteps(e.target.value)}
-                      placeholder="Step 1: Check emails&#10;Step 2: Prioritize 3 tasks&#10;Step 3: Review metrics"
+                      aria-label="Routine Steps List"
                       className="w-full p-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent text-xs"
                     />
                   </div>
@@ -644,7 +645,7 @@ export default function MyDayView({
                       type="text"
                       value={formGoalNorthStar}
                       onChange={e => setFormGoalNorthStar(e.target.value)}
-                      placeholder="e.g. 100 Active Enterprise Users"
+                      aria-label="North Star Metric"
                       className="w-full p-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent text-xs"
                     />
                   </div>
@@ -655,7 +656,7 @@ export default function MyDayView({
                         type="text"
                         value={formGoalTargetDate}
                         onChange={e => setFormGoalTargetDate(e.target.value)}
-                        placeholder="e.g. Q4 2026"
+                        aria-label="Goal Target Date"
                         className="w-full p-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent text-xs"
                       />
                     </div>
@@ -665,7 +666,7 @@ export default function MyDayView({
                         type="text"
                         value={formGoalSheetUrl}
                         onChange={e => setFormGoalSheetUrl(e.target.value)}
-                        placeholder="https://docs.google.com/spreadsheets/..."
+                        aria-label="Google Sheets URL"
                         className="w-full p-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent text-xs"
                       />
                     </div>

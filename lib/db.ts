@@ -295,6 +295,68 @@ SUPER_ADMIN_EMAILS.forEach((emailStr) => {
     role: 'SUPER_ADMIN',
     subscription_tier: 'ADMIN',
     is_oauth_tester: true,
+    assigned_packs: ['pack-chief-of-staff', 'pack-personal-productivity', 'pack-research-intelligence', 'pack-operations-finance', 'pack-career-os'],
+    assigned_skills: [],
+    onboarding_profile: 'Platform Administrator — Full Sovereign Access & Global Orchestration',
+    created_at: new Date().toISOString(),
+  });
+});
+
+export const DEFAULT_ONBOARDING_TEST_USERS = [
+  {
+    email: 'arjun.sharma@example.com',
+    name: 'Arjun Sharma',
+    role: 'USER',
+    subscription_tier: 'INTERMEDIATE',
+    is_oauth_tester: true,
+    assigned_packs: ['pack-chief-of-staff', 'pack-personal-productivity'],
+    assigned_skills: ['workspace-calendar-strategist', 'workspace-gmail-intelligence', 'workspace-tasks-commander'],
+    onboarding_profile: 'Executive Founder — Daily morning briefings, automated calendar triage & Keep checklists',
+  },
+  {
+    email: 'priya.patel@example.com',
+    name: 'Priya Patel',
+    role: 'USER',
+    subscription_tier: 'ADVANCED',
+    is_oauth_tester: true,
+    assigned_packs: ['pack-career-os', 'pack-research-intelligence'],
+    assigned_skills: ['candidate-aspiration-and-criteria-inquisitor', 'stealth-application-and-read-only-safety-gate', 'meta-deep-research'],
+    onboarding_profile: 'VP of Product — Stealth executive job transition, proof-of-work dossiers & comp negotiation',
+  },
+  {
+    email: 'rohan.mehta@example.com',
+    name: 'Rohan Mehta',
+    role: 'USER',
+    subscription_tier: 'INTERMEDIATE',
+    is_oauth_tester: true,
+    assigned_packs: ['pack-operations-finance', 'pack-research-intelligence'],
+    assigned_skills: ['workspace-sheets-modeler', 'workspace-docs-architect', 'meta-outcome-roadmap'],
+    onboarding_profile: 'Growth & Operations Lead — Financial spreadsheets, quarterly roadmaps & research synthesis',
+  },
+  {
+    email: 'sneha.reddy@example.com',
+    name: 'Sneha Reddy',
+    role: 'USER',
+    subscription_tier: 'BEGINNER',
+    is_oauth_tester: true,
+    assigned_packs: ['pack-personal-productivity'],
+    assigned_skills: ['workspace-keep-notes', 'workspace-tasks-commander'],
+    onboarding_profile: 'Operations Manager — Daily task distillation, Keep checklists & meeting summaries',
+  },
+];
+
+DEFAULT_ONBOARDING_TEST_USERS.forEach((tu) => {
+  memoryStore.users.set(tu.email.toLowerCase(), {
+    id: `usr_${tu.email.replace(/[^a-zA-Z0-9]/g, '_')}`,
+    email: tu.email.toLowerCase(),
+    name: tu.name,
+    picture: '',
+    role: tu.role,
+    subscription_tier: tu.subscription_tier,
+    is_oauth_tester: tu.is_oauth_tester,
+    assigned_packs: tu.assigned_packs,
+    assigned_skills: tu.assigned_skills,
+    onboarding_profile: tu.onboarding_profile,
     created_at: new Date().toISOString(),
   });
 });
@@ -334,6 +396,8 @@ export async function initDb() {
         );
         ALTER TABLE users ADD COLUMN IF NOT EXISTS is_oauth_tester BOOLEAN DEFAULT TRUE;
         ALTER TABLE users ADD COLUMN IF NOT EXISTS assigned_packs TEXT[] DEFAULT ARRAY[]::TEXT[];
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS assigned_skills TEXT[] DEFAULT ARRAY[]::TEXT[];
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS onboarding_profile TEXT;
 
         CREATE TABLE IF NOT EXISTS apps (
           id TEXT PRIMARY KEY,
@@ -434,6 +498,37 @@ export async function initDb() {
         );
       `);
 
+      // Seed default onboarding test users into Postgres if users table has <= 1 row
+      try {
+        const countRes = await client.query('SELECT COUNT(*) FROM users');
+        if (parseInt(countRes.rows[0].count, 10) <= 1) {
+          for (const tu of DEFAULT_ONBOARDING_TEST_USERS) {
+            await client.query(`
+              INSERT INTO users (id, email, name, role, subscription_tier, is_oauth_tester, assigned_packs, assigned_skills, onboarding_profile)
+              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+              ON CONFLICT (email) DO UPDATE SET
+                name = EXCLUDED.name,
+                assigned_packs = EXCLUDED.assigned_packs,
+                assigned_skills = EXCLUDED.assigned_skills,
+                onboarding_profile = EXCLUDED.onboarding_profile,
+                is_oauth_tester = EXCLUDED.is_oauth_tester
+            `, [
+              `usr_${tu.email.replace(/[^a-zA-Z0-9]/g, '_')}`,
+              tu.email.toLowerCase(),
+              tu.name,
+              tu.role,
+              tu.subscription_tier,
+              tu.is_oauth_tester,
+              tu.assigned_packs,
+              tu.assigned_skills,
+              tu.onboarding_profile,
+            ]);
+          }
+        }
+      } catch (err) {
+        console.warn('Could not auto-seed test users in Postgres:', err);
+      }
+
       tablesInitialized = true;
     } finally {
       client.release();
@@ -500,7 +595,7 @@ export async function upsertUser(user: { email: string; name?: string; picture?:
   return updated;
 }
 
-export async function addUser(user: { email: string; name?: string; role?: string; subscription_tier?: string; is_oauth_tester?: boolean; assigned_packs?: string[] }) {
+export async function addUser(user: { email: string; name?: string; role?: string; subscription_tier?: string; is_oauth_tester?: boolean; assigned_packs?: string[]; assigned_skills?: string[]; onboarding_profile?: string }) {
   await initDb();
   const normalized = user.email.toLowerCase();
   const isSuper = isSuperAdminEmail(normalized);
@@ -508,20 +603,24 @@ export async function addUser(user: { email: string; name?: string; role?: strin
   const tier = isSuper ? 'ADMIN' : (user.subscription_tier || 'BEGINNER');
   const isTester = user.is_oauth_tester !== undefined ? user.is_oauth_tester : true;
   const packs = user.assigned_packs || [];
+  const skills = user.assigned_skills || [];
+  const profile = user.onboarding_profile || '';
 
   if (pool && isPgAvailable) {
     try {
       const res = await pool.query(`
-        INSERT INTO users (id, email, name, role, subscription_tier, is_oauth_tester, assigned_packs)
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        INSERT INTO users (id, email, name, role, subscription_tier, is_oauth_tester, assigned_packs, assigned_skills, onboarding_profile)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
         ON CONFLICT (email) DO UPDATE SET
           name = EXCLUDED.name,
           role = EXCLUDED.role,
           subscription_tier = EXCLUDED.subscription_tier,
           is_oauth_tester = EXCLUDED.is_oauth_tester,
-          assigned_packs = COALESCE(EXCLUDED.assigned_packs, users.assigned_packs)
+          assigned_packs = COALESCE(EXCLUDED.assigned_packs, users.assigned_packs),
+          assigned_skills = COALESCE(EXCLUDED.assigned_skills, users.assigned_skills),
+          onboarding_profile = COALESCE(EXCLUDED.onboarding_profile, users.onboarding_profile)
         RETURNING *
-      `, [crypto.randomUUID(), normalized, user.name || '', role, tier, isTester, packs]);
+      `, [crypto.randomUUID(), normalized, user.name || '', role, tier, isTester, packs, skills, profile]);
       return res.rows[0];
     } catch (e) {
       console.warn('PG error in addUser:', e);
@@ -537,6 +636,8 @@ export async function addUser(user: { email: string; name?: string; role?: strin
     subscription_tier: tier,
     is_oauth_tester: isTester,
     assigned_packs: packs,
+    assigned_skills: skills,
+    onboarding_profile: profile,
     created_at: new Date().toISOString(),
   };
   memoryStore.users.set(normalized, record);
@@ -558,6 +659,51 @@ export async function updateUserAssignedPacks(email: string, packs: string[]) {
     u.assigned_packs = packs;
     memoryStore.users.set(normalized, u);
   }
+}
+
+export async function updateUserAssignedSkills(email: string, skills: string[]) {
+  await initDb();
+  const normalized = email.toLowerCase();
+  if (pool && isPgAvailable) {
+    try {
+      await pool.query('UPDATE users SET assigned_skills = $1 WHERE email = $2', [skills, normalized]);
+    } catch (e) {
+      console.warn('PG error in updateUserAssignedSkills:', e);
+    }
+  }
+  const u = memoryStore.users.get(normalized);
+  if (u) {
+    u.assigned_skills = skills;
+    memoryStore.users.set(normalized, u);
+  }
+}
+
+export async function toggleUserPack(email: string, packId: string, enabled: boolean) {
+  await initDb();
+  const normalized = email.toLowerCase();
+  const user = await getUserByEmail(normalized);
+  let packs: string[] = user?.assigned_packs || [];
+  if (enabled) {
+    if (!packs.includes(packId)) packs = [...packs, packId];
+  } else {
+    packs = packs.filter((p: string) => p !== packId);
+  }
+  await updateUserAssignedPacks(normalized, packs);
+  return packs;
+}
+
+export async function toggleUserSkill(email: string, skillId: string, enabled: boolean) {
+  await initDb();
+  const normalized = email.toLowerCase();
+  const user = await getUserByEmail(normalized);
+  let skills: string[] = user?.assigned_skills || [];
+  if (enabled) {
+    if (!skills.includes(skillId)) skills = [...skills, skillId];
+  } else {
+    skills = skills.filter((s: string) => s !== skillId);
+  }
+  await updateUserAssignedSkills(normalized, skills);
+  return skills;
 }
 
 export async function toggleTestUser(email: string, isTester: boolean) {
@@ -1072,6 +1218,13 @@ export async function getApiKeyForTier(tier: string, provider = 'gemini'): Promi
 export async function addApiKey(provider: string, key: string, tier: string) {
   await initDb();
   const prov = provider.toLowerCase();
+
+  const allCurrent = await getAllApiKeys();
+  const provKeys = allCurrent.filter(k => k.provider.toLowerCase() === prov);
+  if (provKeys.length >= 10) {
+    throw new Error(`Maximum 10 API keys reached for ${prov.toUpperCase()}. Remove an unused key before adding a new one.`);
+  }
+
   const id = `key_${prov}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
   const cleanKey = key.trim();
   const masked = cleanKey.length > 8
@@ -1109,6 +1262,7 @@ export async function addApiKey(provider: string, key: string, tier: string) {
     tier: record.tier,
     is_active: record.is_active,
     usage_count: record.usage_count,
+    failure_count: record.failure_count,
   };
 }
 
@@ -1129,17 +1283,15 @@ export async function getAllApiKeys() {
   if (pool && isPgAvailable) {
     try {
       const res = await pool.query('SELECT id, provider, key_masked, tier, is_active, usage_count, failure_count FROM api_keys ORDER BY provider ASC, id DESC');
-      if (res.rows.length > 0) {
-        return res.rows.map(r => ({
-          id: r.id,
-          provider: r.provider,
-          key_masked: r.key_masked,
-          tier: r.tier,
-          is_active: r.is_active,
-          usage_count: r.usage_count || 0,
-          failure_count: r.failure_count || 0,
-        }));
-      }
+      return res.rows.map(r => ({
+        id: r.id,
+        provider: r.provider,
+        key_masked: r.key_masked,
+        tier: r.tier,
+        is_active: r.is_active,
+        usage_count: r.usage_count || 0,
+        failure_count: r.failure_count || 0,
+      }));
     } catch (e) {
       console.warn('PG error in getAllApiKeys:', e);
     }
@@ -1151,6 +1303,7 @@ export async function getAllApiKeys() {
     tier: k.tier,
     is_active: k.is_active,
     usage_count: k.usage_count,
+    failure_count: k.failure_count || 0,
   }));
 }
 
