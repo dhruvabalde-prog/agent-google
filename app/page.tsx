@@ -1593,6 +1593,9 @@ export default function Home() {
       } else if (tab === 'actions') {
         setActiveAppTab('actions');
       }
+      if (params.get('onboarding') === 'true' || params.get('onboarding') === '1') {
+        setShowOnboardingModal(true);
+      }
     }
   }, []);
 
