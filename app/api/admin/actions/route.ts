@@ -16,6 +16,7 @@ import {
   deleteApiKey,
   toggleApp,
   updateAppTiers,
+  updateUserAssignedPacks,
   logAdminAction,
 } from '@/lib/db';
 
@@ -38,6 +39,7 @@ export async function POST(request: NextRequest) {
           role: payload.role || 'USER',
           subscription_tier: payload.subscription_tier || 'BEGINNER',
           is_oauth_tester: payload.is_oauth_tester !== false,
+          assigned_packs: payload.assigned_packs || [],
         });
         await logAdminAction(session.email, 'ADD_USER', payload.email, `Added user (OAuth Tester: ${payload.is_oauth_tester !== false})`);
         return NextResponse.json({ success: true, user: added });
@@ -50,6 +52,11 @@ export async function POST(request: NextRequest) {
       case 'UPDATE_USER_TIER':
         await updateUserTier(payload.email, payload.tier, payload.role);
         await logAdminAction(session.email, 'UPDATE_USER_TIER', payload.email, `Tier changed to ${payload.tier}`);
+        return NextResponse.json({ success: true });
+
+      case 'UPDATE_USER_PACKS':
+        await updateUserAssignedPacks(payload.email, payload.packs || []);
+        await logAdminAction(session.email, 'UPDATE_USER_PACKS', payload.email, `Assigned packs: ${(payload.packs || []).join(', ')}`);
         return NextResponse.json({ success: true });
 
       case 'DELETE_USER':

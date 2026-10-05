@@ -360,12 +360,327 @@ export const CORE_MASTER_SKILLS: SkillDefinition[] = [
     workflow: [
       'Deconstruct complex multi-part user request into sequential skill steps.',
       'Execute tool calls across the relevant skills in logical progression without stopping prematurely.',
-      'Pass intermediate data (e.g. data found in Gmail) into downstream tool calls (e.g. populating Google Sheet).',
+      'Pass intermediate data into downstream tool calls.',
       'Deliver a consolidated, concise executive summary with links to all created artifacts.'
     ],
     guardrails: [
       'Never drop any step of a multi-part prompt.',
       'Deliver a cohesive executive summary linking all created assets together.'
+    ]
+  },
+
+  // --- SAVIA CAREER OS: 19 MASTER SKILLS (READ-ONLY WITH HUMAN-IN-THE-LOOP STAGING) ---
+  {
+    num: 18,
+    id: 'candidate-aspiration-and-criteria-inquisitor',
+    name: 'Candidate Aspiration & Criteria Inquisitor',
+    department: 'Career Intake & Strategy',
+    description: 'Proactively extracts candidate non-negotiables, psychological energizers, minimum in-hand monthly net cash floor (distinguishing fixed cash from inflated CTC), work style preferences, and toxic culture triggers. Delivers Candidate_Mandate_Vault (Google Sheet) with weighted multi-factor scoring algorithms.',
+    enabled: true,
+    allowedTiers: ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'ADMIN'],
+    workflow: [
+      'Trigger at campaign launch or when candidate priorities shift.',
+      'Inquire: Role scope (IC vs. Management, 0-to-1 vs. 1-to-10), Minimum net in-hand cash, Work style (Remote/Hybrid/Commute radius), and Toxic culture boundaries.',
+      'Build Candidate_Mandate_Vault via create_spreadsheet with weighted evaluation columns.',
+      'Provide single link to the mandate spreadsheet.'
+    ],
+    guardrails: ['Distinguish real in-hand fixed monthly cash from vanity CTC figures.']
+  },
+  {
+    num: 19,
+    id: 'career-trajectory-and-pivot-architect',
+    name: 'Career Trajectory & Pivot Architect',
+    department: 'Career Intake & Strategy',
+    description: 'Deconstructs historical achievements to identify transferable core competencies; models low-friction adjacent pivots vs high-friction radical jumps. Bridges functional transitions (e.g., Quick Commerce Operations to Technical Product Management or B2B SaaS Sales) and translates domain jargon. Delivers Career_Pivot_Dossier.gdoc detailing 12/24/36-month progression milestones.',
+    enabled: true,
+    allowedTiers: ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'ADMIN'],
+    workflow: [
+      'Audit past achievements and translate technical/operational jargon into target industry language.',
+      'Model 12/24/36-month career roadmap with tangible milestones.',
+      'Execute create_document to generate Career_Pivot_Dossier.',
+      'Deliver single document link with concise summary.'
+    ],
+    guardrails: ['Focus on low-friction adjacent pivots over reckless jumps.']
+  },
+  {
+    num: 20,
+    id: 'upskilling-and-skill-arbitrage-curator',
+    name: 'Upskilling & Skill Gap Arbitrage Curator',
+    department: 'Upskilling & Skill Arbitrage',
+    description: 'Analyzes market vacancy trends to identify "Skill Arbitrage" opportunities—high-demand, low-supply technical/strategic skills offering the highest salary multiplier with minimum study overhead. Maps 20-hour to 80-hour accelerated learning tracks and prescribes hands-on capstone project briefs. Delivers Upskilling_Sprint_Roadmap in Google Keep and Tasks.',
+    enabled: true,
+    allowedTiers: ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'ADMIN'],
+    workflow: [
+      'Identify highest-ROI skill gaps for target role compensation tier.',
+      'Structure 20-80h accelerated track with hands-on capstone briefs (not passive video watching).',
+      'Create structured checklist in Google Keep via create_note and milestone tasks via create_task.',
+      'Confirm roadmap creation with actionable next steps.'
+    ],
+    guardrails: ['Prioritize production-grade capstone proof-of-work over passive certificates.']
+  },
+  {
+    num: 21,
+    id: 'portal-profile-synthesizer-and-seo-optimizer',
+    name: 'Portal Profile Synthesizer & SEO Optimizer',
+    department: 'Portal Profile Synthesis & SEO',
+    description: 'Autonomously formats, optimizes, and writes bespoke profile content tailored to ranking algorithms: LinkedIn (High-converting Headline, 1st-person Storytelling "About", SEO keyword-packed Experience blocks), Naukri.com (Optimized 250-character indexer Resume Headline, Key Skills clustering driving 90% of recruiter search matching), Instahyre/Cutshort, Wellfound/YC, Foundit/IIMjobs. Delivers Portal_Profile_Master_Matrix.gdoc with 1-click copy-paste sections.',
+    enabled: true,
+    allowedTiers: ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'ADMIN'],
+    workflow: [
+      'Tailor content specifically for each platform ranking engine (LinkedIn, Naukri, Instahyre, Wellfound).',
+      'Optimize Naukri 250-char indexer headline and cluster key skills for algorithmic discovery.',
+      'Synthesize into Portal_Profile_Master_Matrix via create_document.',
+      'Deliver single document link with copy-paste readiness.'
+    ],
+    guardrails: ['Never output generic summaries; optimize for exact recruiter search query clusters.']
+  },
+  {
+    num: 22,
+    id: 'ats-resume-and-impact-bullet-synthesizer',
+    name: 'ATS Resume & Impact Bullet Synthesizer',
+    department: 'Collateral Studio, Resumes & Web',
+    description: 'Generates single-page and two-page ATS-compliant resume variants strictly implementing Google XYZ format ("Accomplished [X], measured by [Y], by doing [Z]"). Embeds exact JD keyword semantics into natural career narrative bullets. Eliminates parsing traps (no tables, multi-column layouts, graphics, or non-standard fonts). Delivers tailored .gdoc files with 1-click PDF download links.',
+    enabled: true,
+    allowedTiers: ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'ADMIN'],
+    workflow: [
+      'Parse target job description requirements and extract high-weight keywords.',
+      'Rewrite experience bullets into strict Google XYZ format: Accomplished [X], measured by [Y], by doing [Z].',
+      'Create single/two-page clean layout via create_document in /Applications/{Company_Role}/.',
+      'Provide single master link to the finished resume doc.'
+    ],
+    guardrails: [
+      'Zero ATS parsing traps: no tables, columns, or non-standard symbols.',
+      'Every single bullet point must contain quantifiable business impact.'
+    ]
+  },
+  {
+    num: 23,
+    id: 'multi-variant-static-portfolio-deployer',
+    name: 'Multi-Variant Static Portfolio Deployer',
+    department: 'Collateral Studio, Resumes & Web',
+    description: 'Generates clean, responsive HTML5/Tailwind CSS static websites tailored to specific candidate personas (Variant A: Engineering & Systems Architecture, Variant B: Product & Business Operations, Variant C: Executive Leadership & Strategy). Delivers standalone, deployable static code bundles (index.html, style.css) ready for 1-click publishing on GitHub Pages or Vercel.',
+    enabled: true,
+    allowedTiers: ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'ADMIN'],
+    workflow: [
+      'Select candidate persona variant (Variant A Engineering, Variant B Product/Ops, Variant C Executive).',
+      'Generate production-ready HTML5 + Tailwind CSS code bundle.',
+      'Render live interactive preview in chat sandbox and prepare static deployable files.',
+      'Confirm bundle readiness for GitHub Pages, Netlify, or Vercel.'
+    ],
+    guardrails: ['Zero build dependencies: pure static HTML5 + Tailwind CSS + Vanilla JS.']
+  },
+  {
+    num: 24,
+    id: 'bespoke-work-sample-and-proof-of-work-architect',
+    name: 'Bespoke Work Sample & Proof-of-Work Architect',
+    department: 'Collateral Studio, Resumes & Web',
+    description: 'Replaces generic cover letters with high-impact, unsolicited bespoke work samples addressing the target company\'s current operational bottlenecks: First 90 Days Strategic Plan, Product Teardown / Feature Spec (with 3 high-impact UX/architectural improvements), Commercial/Financial Model (Google Sheet), or Architecture RFC/Tech Spike. Delivers Bespoke_Work_Sample_{Company}.gdoc/.gsheet.',
+    enabled: true,
+    allowedTiers: ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'ADMIN'],
+    workflow: [
+      'Diagnose the target company\'s single biggest operational or technical friction point.',
+      'Build concrete artifact: 30-60-90 Day Plan, Product Spec, or Financial Unit Economics Model.',
+      'Execute create_document or create_spreadsheet.',
+      'Stage review card in Suchi center cockpit for human confirmation before release.'
+    ],
+    guardrails: ['Approval safeguard: artifact is strictly staged and released only upon human confirmation.']
+  },
+  {
+    num: 25,
+    id: 'multi-board-job-scout-and-matchmaker',
+    name: 'Multi-Board Job Scout & Matchmaker',
+    department: 'Sourcing, Matching & Network Activation',
+    description: 'Aggregates and filters listings from 30+ domestic and international job platforms against the candidate\'s exact mandate. Deduplicates cross-posted listings and scores fit percentage based on compensation floor, tech stack alignment, commute/remote posture, and company stage. Delivers live updates to Job_Search_Master_Pipeline.gsheet with curated top-3 daily opportunities.',
+    enabled: true,
+    allowedTiers: ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'ADMIN'],
+    workflow: [
+      'Perform web intelligence search across relevant target boards.',
+      'Deduplicate postings and score candidate-mandate fit percentage.',
+      'Update Job_Search_Master_Pipeline spreadsheet with curated top opportunities.',
+      'Provide concise briefing highlighting the top 3 highest-conviction leads.'
+    ],
+    guardrails: ['Filter out ghost jobs and listings violating the candidate\'s hard compensation floor.']
+  },
+  {
+    num: 26,
+    id: 'circle-of-trust-and-referral-mobilizer',
+    name: 'Circle-of-Trust & Referral Mobilizer',
+    department: 'Sourcing, Matching & Network Activation',
+    description: 'Taps phone contacts, personal WhatsApp circles, alumni directories, and family networks to secure internal referrals without transactional friction. Categorizes contacts by relationship depth and crafts warm, graceful outreach messages providing the referee with an easy copy-paste forwardable blurb for their internal HR portal. Delivers pre-formatted https://wa.me/ links and draft emails in Gmail Drafts.',
+    enabled: true,
+    allowedTiers: ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'ADMIN'],
+    workflow: [
+      'Identify 1st and 2nd degree connections at target organization.',
+      'Craft high-warmth, low-friction outreach with pre-written forwardable blurb.',
+      'Generate native wa.me URI links and stage draft messages in Gmail Drafts.',
+      'Present staged Action Cards for human 1-tap review.'
+    ],
+    guardrails: ['Never send autonomously; always provide pre-formatted wa.me links or staged Gmail drafts.']
+  },
+  {
+    num: 27,
+    id: 'network-infiltrator-and-referral-closer',
+    name: 'Network Infiltrator & Referral Closer',
+    department: 'Sourcing, Matching & Network Activation',
+    description: 'Composes hyper-concise (under 90 words), value-first cold emails and LinkedIn InMails that achieve 40%+ open-and-reply rates. Hooks with an immediate observation about the company\'s recent milestone or problem, quotes 1-2 undeniable quantified metrics from candidate track record, and proposes a frictionless, low-pressure call to action (e.g. "Open to a 5-minute exploratory chat this Thursday?"). Delivers staged Gmail drafts.',
+    enabled: true,
+    allowedTiers: ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'ADMIN'],
+    workflow: [
+      'Research target hiring manager, recent company releases, or tech blog posts.',
+      'Draft hyper-concise pitch (under 90 words) with 1-2 quantified metric hooks.',
+      'Execute draft_reply or compose draft in Gmail Drafts.',
+      'Present Action Card for 1-tap approval.'
+    ],
+    guardrails: [
+      'Strictly under 90 words.',
+      'Zero generic greetings; hook directly on company public milestones.'
+    ]
+  },
+  {
+    num: 28,
+    id: 'reverse-recruiter-and-talent-agent-desk',
+    name: 'Reverse Recruiter & Talent Agent Desk',
+    department: 'Sourcing, Matching & Network Activation',
+    description: 'Operates as a boutique talent representation agency pitching the candidate as an exclusive, high-impact asset. Compiles Executive One-Pager Candidate Teaser showcasing high-level track record and domain authority. Identifies and stages outreach to Talent Partners at major venture capital and private equity firms (Peak XV, Accel, Matrix, Lightspeed, Elevation) and retained search consultants (Michael Page, Korn Ferry, Egon Zehnder). Delivers Executive_Candidate_Teaser.gdoc and staged institutional partnership pitches.',
+    enabled: true,
+    allowedTiers: ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'ADMIN'],
+    workflow: [
+      'Compile authoritative Executive One-Pager Candidate Teaser via create_document.',
+      'Map relevant VC/PE talent partners and executive search recruiters.',
+      'Stage bespoke institutional pitches into Gmail Drafts.',
+      'Deliver single document link and review cards.'
+    ],
+    guardrails: ['Position candidate as a scarce, exclusive sovereign talent asset.']
+  },
+  {
+    num: 29,
+    id: 'stealth-diligence-and-backchannel-auditor',
+    name: 'Stealth Diligence & Backchannel Auditor',
+    department: 'Due Diligence & Culture Auditing',
+    description: 'Conducts forensic due diligence on prospective employers to protect the candidate from toxic cultures, financial distress, or unstable leadership. Audits Financial & Corporate Runway (MCA filings, recent funding, burn rate estimates), Attrition & Layoff Signals (silent layoffs, engineering headcount trajectory over 6-12 months, Glassdoor/AmbitionBox trendlines), and Discreet Backchanneling questions. Delivers Employer_Health_Scorecard (Green / Amber / Red flag audit).',
+    enabled: true,
+    allowedTiers: ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'ADMIN'],
+    workflow: [
+      'Investigate public filings, MCA registers, recent funding rounds, and executive turnover.',
+      'Analyze Glassdoor, AmbitionBox, and LinkedIn headcount trendlines for silent attrition signals.',
+      'Synthesize audit into Employer_Health_Scorecard with clear Red/Amber/Green ratings.',
+      'Deliver debrief summary with objective backchannel inquiry questions.'
+    ],
+    guardrails: ['Never rely on PR statements; evaluate objective financial runway and attrition facts.']
+  },
+  {
+    num: 30,
+    id: 'interview-simulator-and-debrief-coach',
+    name: 'Interview Simulator & Debrief Coach',
+    department: 'Interview Simulation & Intelligence',
+    description: 'Conducts structured, realistic mock interviews, prepares comprehensive company briefings, and assists with post-round debriefs. Formats: Behavioral drills (STAR method calibration: Situation, Task, Action, Result), Functional problem-solving (live case studies, system design breakdowns, product metrics), and Reverse interview mastery (supplying 3 insightful questions to ask the interviewer demonstrating deep strategic grasp). Delivers Company_Intelligence_Brief.gdoc and post-interview thank-you note draft.',
+    enabled: true,
+    allowedTiers: ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'ADMIN'],
+    workflow: [
+      'Prepare Company_Intelligence_Brief with interviewer background and strategic priorities.',
+      'Run interactive STAR drills, asking one question at a time with crisp feedback.',
+      'Equip candidate with 3 high-impact reverse interview questions.',
+      'Stage post-round thank-you note in Gmail Drafts.'
+    ],
+    guardrails: ['Every mock response must be calibrated for conciseness and punchy STAR metrics.']
+  },
+  {
+    num: 31,
+    id: 'hike-maximization-and-offer-arbitrage-tactician',
+    name: 'Hike Maximization & Offer Arbitrage Tactician',
+    department: 'Compensation, Hike Hacks & Terms Arbitrage',
+    description: 'Deploys strategic levers and industry hacks to maximize in-hand hike, equity upside, and protective employment terms. The Strategic Playbook: Fixed vs. Variable Arbitrage (insists on fixed base maximization, counters performance bonus traps), Notice Period Arbitrage & Compression (uses buyout clauses as upfront signing cash), Multi-Offer Laddering (synchronizes final rounds within 7-day window to create competitive bidding), Signing Bonus Ringfencing (pro-rated monthly vesting vs punitive cliff clawbacks), Early Appraisal Clause (contractual 6-month review), and ESOP Exercise Shield (5-10 year PTEW). Delivers Offer_Maximization_Strategy_Memo.gdoc.',
+    enabled: true,
+    allowedTiers: ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'ADMIN'],
+    workflow: [
+      'Deconstruct offer components into guaranteed fixed cash vs contingent variable traps.',
+      'Formulate tactical counter-strategies (Notice buyout as bonus, 7-day multi-offer laddering, PTEW extension).',
+      'Generate Offer_Maximization_Strategy_Memo via create_document.',
+      'Deliver single document link with negotiation timeline.'
+    ],
+    guardrails: ['Strictly prioritize fixed in-hand cash and 5-10 year ESOP exercise windows.']
+  },
+  {
+    num: 32,
+    id: 'compensation-and-offer-negotiation-desk',
+    name: 'Compensation & Offer Negotiation Desk',
+    department: 'Compensation, Hike Hacks & Terms Arbitrage',
+    description: 'Audits complex multi-component compensation packages and builds mathematical models comparing net real-world earnings. Modeling Features: Indian/Global tax optimization (in-hand monthly breakdown accounting for standard deductions, allowances, PF, and tax brackets), Multi-offer scenario simulator (comparing 3+ competing offers on total cash, equity expected value, commute costs, and health insurance), and Counter-offer email scripts citing market benchmarks. Delivers Compensation_Comparison_Model.gsheet and negotiation email drafts.',
+    enabled: true,
+    allowedTiers: ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'ADMIN'],
+    workflow: [
+      'Audit offer salary slips, allowances, PF contributions, and tax deductions.',
+      'Model 3+ competing offers in dynamic Google Sheet with automated net-takehome formulas.',
+      'Compose diplomatic, data-backed counter-proposal staged in Gmail Drafts.',
+      'Provide single spreadsheet link and Action Card.'
+    ],
+    guardrails: ['Always calculate real post-tax in-hand monthly net cash, not inflated annual CTC.']
+  },
+  {
+    num: 33,
+    id: 'job-campaign-pipeline-and-cadence-tracker',
+    name: 'Job Campaign Pipeline & Cadence Tracker',
+    department: 'Pipeline Tracking, Exit & Onboarding',
+    description: 'Central CRM managing every active opportunity, preventing follow-up slips, and balancing application velocity. Funnel Diagnostics: Tracks conversion stages (Discovered -> Staged -> Applied -> Recruiter Screen -> Case Study -> Leadership -> Offer) and identifies bottlenecks (low screen rate points to resume keywords; low case study conversion points to work sample depth). Delivers Job_Search_Master_Pipeline.gsheet integrated with Google Calendar.',
+    enabled: true,
+    allowedTiers: ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'ADMIN'],
+    workflow: [
+      'Maintain living candidate CRM spreadsheet with active pipeline stages.',
+      'Schedule follow-up reminder events and interview preparation blocks in Google Calendar.',
+      'Diagnose conversion drop-offs across pipeline stages.',
+      'Provide weekly pipeline status and calendar sync.'
+    ],
+    guardrails: ['Never let an active application go more than 5 business days without staged follow-up.']
+  },
+  {
+    num: 34,
+    id: 'resignation-and-onboarding-transition-navigator',
+    name: 'Resignation & Onboarding Transition Navigator',
+    department: 'Pipeline Tracking, Exit & Onboarding',
+    description: 'Manages notice period diplomacy, counter-offer psychology, statutory settlements, and the first 90 days ramp-up. Key Capabilities: Drafts graceful, bridge-preserving resignation letters, deconstructs current employer counter-offers to highlight hidden risks of staying, tracks statutory clearances (PF transfer/UAN mapping, Gratuity eligibility, leave encashment calculations, experience letter releases), and builds First_90_Days_Gameplan.gdoc for Day-1 momentum.',
+    enabled: true,
+    allowedTiers: ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'ADMIN'],
+    workflow: [
+      'Draft elegant, bridge-preserving resignation letter staged in Gmail Drafts.',
+      'Calculate statutory dues: Gratuity, PF transfer checklist, and leave encashment.',
+      'Synthesize Day 1 to Day 90 strategic impact milestones via create_document.',
+      'Deliver single document link and transition timeline.'
+    ],
+    guardrails: ['Preserve professional relationships; deconstruct counter-offer retention traps diplomatically.']
+  },
+  {
+    num: 35,
+    id: 'tailored-outreach-and-pitch-copywriter',
+    name: 'Tailored Outreach & Pitch Copywriter',
+    department: 'Pipeline Tracking, Exit & Onboarding',
+    description: 'Crafts bespoke written communications tailored specifically to the company, role seniority, and hiring team\'s current focus. Output Standards: Zero generic clichés ("I am writing to express my interest..."), context-calibrated tone (Formal Corporate vs. High-Velocity Startup), direct attachment integration pointing to tailored resume variant and portfolio HTML link. Delivers staged messages inside the user\'s Gmail Drafts folder.',
+    enabled: true,
+    allowedTiers: ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'ADMIN'],
+    workflow: [
+      'Analyze role seniority and company culture tone.',
+      'Draft bespoke outreach copy without boilerplate cliches.',
+      'Stage complete message into user\'s Gmail Drafts folder with clear subject line.',
+      'Present 1-tap review card to the user.'
+    ],
+    guardrails: ['Strictly zero clichés; every outreach note must be unique and context-calibrated.']
+  },
+  {
+    num: 36,
+    id: 'stealth-application-and-read-only-safety-gate',
+    name: 'Stealth Application & Read-Only Safety Gate',
+    department: 'Foundational Safety Gatekeeper',
+    description: 'FOUNDATIONAL GATEKEEPER. Enforces the inviolable safety constraint: No automated external communication. Protocol & Enforcement: Intercepts any proposed external send action and diverts output into local staging environments (Emails -> Gmail DRAFTS folder, WhatsApp -> Native https://wa.me/ URI ready for phone launch, Portals -> Pre-filled fields in Portal_Application_Brief.gdoc). Renders an interactive Action Card in Suchi\'s Center Cockpit: [ Review & Open Draft ] / [ Reject ].',
+    enabled: true,
+    allowedTiers: ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'ADMIN'],
+    workflow: [
+      'Intercept any proposed outbound transmission (email, message, web form).',
+      'Stage into user\'s Gmail Drafts, native wa.me link, or application brief doc.',
+      'Render interactive approval Action Card with clear Review / Discard buttons.',
+      'Wait for human 1-tap approval before candidate transmits externally.'
+    ],
+    guardrails: [
+      'Zero Autonomous Transmission: Savia will never independently transmit messages externally.',
+      'Mandatory Human-in-the-Loop Approval for every outbound communication.'
     ]
   }
 ];
@@ -406,6 +721,22 @@ export function findMatchingSkills(userPrompt: string, skills: SkillDefinition[]
     if (s.id === 'meta-deep-research' && (lower.includes('search') || lower.includes('look up') || lower.includes('find out') || lower.includes('google') || lower.includes('internet') || lower.includes('web'))) score += 5;
     if (s.id === 'meta-inbox-sweeper-tasks' && (lower.includes('scan my email') || lower.includes('extract task') || lower.includes('check mail') || lower.includes('sweep'))) score += 6;
     if (s.id === 'meta-outcome-roadmap' && (lower.includes('roadmap') || lower.includes('project plan') || lower.includes('timeline') || lower.includes('milestone') || lower.includes('by next'))) score += 5;
+
+    // SAVIA CAREER OS TRIGGER KEYWORDS
+    if (s.id === 'ats-resume-and-impact-bullet-synthesizer' && (lower.includes('resume') || lower.includes('cv') || lower.includes('ats') || lower.includes('bullet') || lower.includes('job application'))) score += 7;
+    if (s.id === 'multi-board-job-scout-and-matchmaker' && (lower.includes('job') || lower.includes('career') || lower.includes('vacancy') || lower.includes('hiring') || lower.includes('role') || lower.includes('hunt') || lower.includes('matchmaker'))) score += 6;
+    if (s.id === 'candidate-aspiration-and-criteria-inquisitor' && (lower.includes('salary expectation') || lower.includes('non-negotiable') || lower.includes('in-hand') || lower.includes('ctc') || lower.includes('criteria') || lower.includes('mandate'))) score += 6;
+    if (s.id === 'career-trajectory-and-pivot-architect' && (lower.includes('pivot') || lower.includes('switch industry') || lower.includes('career change') || lower.includes('trajectory') || lower.includes('milestones'))) score += 6;
+    if (s.id === 'portal-profile-synthesizer-and-seo-optimizer' && (lower.includes('linkedin') || lower.includes('naukri') || lower.includes('profile') || lower.includes('instahyre') || lower.includes('wellfound') || lower.includes('bio'))) score += 6;
+    if (s.id === 'bespoke-work-sample-and-proof-of-work-architect' && (lower.includes('work sample') || lower.includes('proof of work') || lower.includes('teardown') || lower.includes('90 day plan') || lower.includes('case study'))) score += 7;
+    if (s.id === 'interview-simulator-and-debrief-coach' && (lower.includes('interview') || lower.includes('mock') || lower.includes('star method') || lower.includes('debrief') || lower.includes('interviewer'))) score += 7;
+    if (s.id === 'hike-maximization-and-offer-arbitrage-tactician' && (lower.includes('hike') || lower.includes('offer negotiation') || lower.includes('counter-offer') || lower.includes('signing bonus') || lower.includes('esop') || lower.includes('notice period'))) score += 7;
+    if (s.id === 'compensation-and-offer-negotiation-desk' && (lower.includes('compensation') || lower.includes('salary breakdown') || lower.includes('in-hand cash') || lower.includes('compare offer') || lower.includes('comp package'))) score += 7;
+    if (s.id === 'resignation-and-onboarding-transition-navigator' && (lower.includes('resignation') || lower.includes('resign') || lower.includes('notice period') || lower.includes('gratuity') || lower.includes('onboarding'))) score += 7;
+    if (s.id === 'tailored-outreach-and-pitch-copywriter' && (lower.includes('cold email') || lower.includes('outreach') || lower.includes('pitch') || lower.includes('inmail') || lower.includes('recruiter email'))) score += 6;
+    if (s.id === 'multi-variant-static-portfolio-deployer' && (lower.includes('portfolio') || lower.includes('static website') || lower.includes('personal site') || lower.includes('showcase'))) score += 6;
+    if (s.id === 'stealth-diligence-and-backchannel-auditor' && (lower.includes('due diligence') || lower.includes('toxic') || lower.includes('runway') || lower.includes('layoffs') || lower.includes('culture audit'))) score += 6;
+    if (s.id === 'stealth-application-and-read-only-safety-gate' && (lower.includes('safety gate') || lower.includes('read-only') || lower.includes('staging') || lower.includes('approval'))) score += 6;
 
     // Description word matching
     const descWords = s.description.toLowerCase().split(/\s+/).filter(w => w.length > 5);
@@ -482,30 +813,26 @@ export function formatSkillPrompt(skill: SkillDefinition): string {
  *   Format A: ## 1. Skill Name           (numbered heading)
  *   Format B: ### Skill 1: Skill Name    (skill-prefixed heading)
  *   Format C: ## Skill Name / ### Name   (plain heading, no number)
- *   Format D: - **Skill Name**: desc     (bullet list)
- *
- * Extracts Skill ID, Department, Objective/Description from body content.
- * Returns EMPTY array on failure — caller decides fallback.
+ *   Format D: 3.1 candidate-inquisitor   (dotted numbering)
+ *   Format E: - **Skill Name**: desc     (bullet list)
  */
 export function parseSkillsFromMarkdown(markdownText: string): SkillDefinition[] {
   if (!markdownText || !markdownText.trim()) return [];
 
   const skills: SkillDefinition[] = [];
 
-  // ---- Strategy 1: Split on heading lines (##/### with optional number) ----
-  // Matches: "## 1. Name", "### Skill 1: Name", "## Name", "### Name"
-  const headingPattern = /^(#{2,3})\s+(?:Skill\s+)?(\d+)?[.:\s]*\s*(.+)$/gm;
+  // Match: "## 1. Name", "### 3.1 Name", "3.1 Name", "### Skill 1: Name", "## Name"
+  const headingPattern = /^(?:(#{2,4})\s+)?(?:Skill\s+)?(\d+(?:\.\d+)*)?[.:\s]*\s*([A-Za-z0-9_\-\s]{3,120})$/gm;
   const headings: { index: number; level: number; num: number; title: string }[] = [];
   let hMatch;
 
   while ((hMatch = headingPattern.exec(markdownText)) !== null) {
     const title = hMatch[3].trim();
-    // Skip generic section headings (Part 1, Part 2, Table of Contents, etc.)
-    if (/^part\s+\d/i.test(title) || /^table\s+of/i.test(title) || /^appendix/i.test(title)) continue;
+    if (!title || /^part\s+\d/i.test(title) || /^table\s+of/i.test(title) || /^appendix/i.test(title) || /^stage\s+\d/i.test(title)) continue;
     headings.push({
       index: hMatch.index,
-      level: hMatch[1].length,
-      num: hMatch[2] ? parseInt(hMatch[2], 10) : 0,
+      level: hMatch[1]?.length || 3,
+      num: hMatch[2] ? parseFloat(hMatch[2]) || 0 : 0,
       title,
     });
   }
@@ -518,19 +845,13 @@ export function parseSkillsFromMarkdown(markdownText: string): SkillDefinition[]
     if (bodyStart < 0) continue;
     const body = markdownText.slice(bodyStart, bodyEnd);
 
-    // Skip headings that are clearly section titles (no skill-like content)
-    const hasSkillMarkers = /\*\*(?:Skill ID|Department|Objective|Description|Tool Calls|Workspace Tool|Delivery)\*\*/i.test(body)
-      || /`[a-z0-9_-]+`/i.test(body)
-      || body.trim().length > 50;
-    if (!hasSkillMarkers && body.trim().length < 30) continue;
-
-    const parsed = extractSkillFromBody(h.title, body, h.num || (i + 1));
+    const parsed = extractSkillFromBody(h.title, body, Math.floor(h.num) || (i + 1));
     if (parsed) skills.push(parsed);
   }
 
-  // ---- Strategy 2: Bullet-list skills (- **Name**: description) ----
+  // Bullet-list fallback
   if (skills.length === 0) {
-    const bulletPattern = /^[-*]\s+\*\*([^*]+)\*\*[:\s]*(.+)$/gm;
+    const bulletPattern = /^[-*•]\s+\*\*([^*]+)\*\*[:\s]*(.+)$/gm;
     let bMatch;
     let bNum = 1;
     while ((bMatch = bulletPattern.exec(markdownText)) !== null) {
@@ -555,10 +876,9 @@ export function parseSkillsFromMarkdown(markdownText: string): SkillDefinition[]
 
 /** Helper: extract a SkillDefinition from a heading title + body block */
 function extractSkillFromBody(title: string, body: string, fallbackNum: number): SkillDefinition | null {
-  // Extract key-value fields from **Key**: Value or * **Key**: Value patterns
   const kv = (key: string): string => {
     const patterns = [
-      new RegExp(`\\*\\*${key}\\*\\*\\s*:\\s*(.+)`, 'i'),
+      new RegExp(`(?:\\*\\*|●\\s*|\\*\\s*)?${key}(?:\\*\\*)?\\s*:\\s*(.+)`, 'i'),
       new RegExp(`${key}\\s*:\\s*\`([^\`]+)\``, 'i'),
       new RegExp(`${key}\\s*:\\s*(.+)`, 'i'),
     ];
@@ -569,16 +889,15 @@ function extractSkillFromBody(title: string, body: string, fallbackNum: number):
     return '';
   };
 
-  const skillId = kv('Skill ID').replace(/`/g, '') || title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-  const department = kv('Department') || 'General Operations';
-  const description = kv('Objective') || kv('Description') || '';
+  const cleanTitle = title.replace(/^[\d.]+\s*/, '').replace(/[*_#`]/g, '').trim();
+  const skillId = kv('Skill ID').replace(/`/g, '') || cleanTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  const department = kv('Department') || kv('Subsystem') || kv('Stage') || 'Career & Operations';
+  const description = kv('Purpose') || kv('Objective') || kv('Description') || kv('Trigger') || body.slice(0, 250).trim();
 
-  // Extract workflow steps (numbered items with bold prefix)
   const wfSteps = Array.from(body.matchAll(/\d+\.\s+\*\*([^*]+)\*\*[:\s]*([^\n]+)/g)).map(
     s => s[1].trim() + ': ' + s[2].trim()
   );
 
-  // Extract guardrails (bullet items with bold prefix)
   const guardrails = Array.from(body.matchAll(/-\s+\*\*([^*]+)\*\*[:\s]*([^\n]+)/g))
     .filter(g => /guard|gotcha|rule|limit|warning|never|always/i.test(g[1] + g[2]))
     .map(g => g[1].trim() + ': ' + g[2].trim());
@@ -586,9 +905,9 @@ function extractSkillFromBody(title: string, body: string, fallbackNum: number):
   return {
     num: fallbackNum,
     id: skillId,
-    name: title,
+    name: cleanTitle,
     department,
-    description,
+    description: description.slice(0, 400),
     enabled: true,
     allowedTiers: ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'ADMIN'],
     workflow: wfSteps.length > 0 ? wfSteps : undefined,

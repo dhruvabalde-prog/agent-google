@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
-import fs from 'fs';
-import path from 'path';
+import { getAllBugReports, saveBugReport, updateBugReportStatus } from '@/lib/db';
 
 export interface BugReport {
   id: string;
@@ -51,11 +50,14 @@ const memoryBugReports: BugReport[] = [
 
 export async function GET(request: NextRequest) {
   try {
+    const dbReports = await getAllBugReports();
+    const combined = dbReports.length > 0 ? dbReports : memoryBugReports;
+
     return NextResponse.json({
       success: true,
-      reports: memoryBugReports,
-      totalCount: memoryBugReports.length,
-      openCount: memoryBugReports.filter(r => r.status === 'OPEN').length,
+      reports: combined,
+      totalCount: combined.length,
+      openCount: combined.filter((r: any) => r.status === 'OPEN').length,
     });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
@@ -89,6 +91,7 @@ export async function POST(request: NextRequest) {
       status: 'OPEN',
     };
 
+    await saveBugReport(newReport);
     memoryBugReports.unshift(newReport);
 
     return NextResponse.json({
@@ -106,16 +109,14 @@ export async function PATCH(request: NextRequest) {
     const body = await request.json();
     const { reportId, status } = body;
 
-    const report = memoryBugReports.find(r => r.id === reportId);
-    if (!report) {
-      return NextResponse.json({ error: 'Report not found' }, { status: 404 });
-    }
-
     if (status && ['OPEN', 'INVESTIGATING', 'RESOLVED'].includes(status)) {
-      report.status = status;
+      await updateBugReportStatus(reportId, status);
+      const memReport = memoryBugReports.find(r => r.id === reportId);
+      if (memReport) memReport.status = status;
+      return NextResponse.json({ success: true });
     }
 
-    return NextResponse.json({ success: true, report });
+    return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }

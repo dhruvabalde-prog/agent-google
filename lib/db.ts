@@ -333,6 +333,7 @@ export async function initDb() {
           created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
         );
         ALTER TABLE users ADD COLUMN IF NOT EXISTS is_oauth_tester BOOLEAN DEFAULT TRUE;
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS assigned_packs TEXT[] DEFAULT ARRAY[]::TEXT[];
 
         CREATE TABLE IF NOT EXISTS apps (
           id TEXT PRIMARY KEY,
@@ -369,7 +370,7 @@ export async function initDb() {
           updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
         );
 
-        CREATE TABLE IF NOT EXISTS messages (
+        CREATE TABLE IF NOT EXISTS chat_messages (
           id TEXT PRIMARY KEY,
           chat_id TEXT NOT NULL REFERENCES chats(id) ON DELETE CASCADE,
           role TEXT NOT NULL,
@@ -416,6 +417,21 @@ export async function initDb() {
           details TEXT,
           created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
         );
+
+        CREATE TABLE IF NOT EXISTS bug_reports (
+          id TEXT PRIMARY KEY,
+          user_email TEXT NOT NULL,
+          user_name TEXT,
+          issue_type TEXT NOT NULL,
+          summary TEXT NOT NULL,
+          user_description TEXT,
+          last_user_message TEXT,
+          last_assistant_response TEXT,
+          failed_action JSONB,
+          diagnostics JSONB,
+          status TEXT DEFAULT 'OPEN',
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+        );
       `);
 
       tablesInitialized = true;
@@ -443,24 +459,25 @@ export async function getUserByEmail(email: string) {
   return memoryStore.users.get(normalized) || null;
 }
 
-export async function upsertUser(user: { email: string; name?: string; picture?: string; role?: string; subscription_tier?: string; is_oauth_tester?: boolean }) {
+export async function upsertUser(user: { email: string; name?: string; picture?: string; role?: string; subscription_tier?: string; is_oauth_tester?: boolean; assigned_packs?: string[] }) {
   await initDb();
   const normalized = user.email.toLowerCase();
   const isSuper = isSuperAdminEmail(normalized);
   const role = isSuper ? 'SUPER_ADMIN' : (user.role || 'USER');
   const tier = isSuper ? 'ADMIN' : (user.subscription_tier || 'BEGINNER');
   const isTester = user.is_oauth_tester !== undefined ? user.is_oauth_tester : true;
+  const packs = user.assigned_packs || [];
 
   if (pool && isPgAvailable) {
     try {
       const res = await pool.query(`
-        INSERT INTO users (id, email, name, picture, role, subscription_tier, is_oauth_tester)
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        INSERT INTO users (id, email, name, picture, role, subscription_tier, is_oauth_tester, assigned_packs)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         ON CONFLICT (email) DO UPDATE SET
           name = COALESCE(EXCLUDED.name, users.name),
           picture = COALESCE(EXCLUDED.picture, users.picture)
         RETURNING *
-      `, [crypto.randomUUID(), normalized, user.name || '', user.picture || '', role, tier, isTester]);
+      `, [crypto.randomUUID(), normalized, user.name || '', user.picture || '', role, tier, isTester, packs]);
       return res.rows[0];
     } catch (e) {
       console.warn('PG error in upsertUser:', e);
@@ -476,32 +493,35 @@ export async function upsertUser(user: { email: string; name?: string; picture?:
     role: isSuper ? 'SUPER_ADMIN' : (existing.role || role),
     subscription_tier: isSuper ? 'ADMIN' : (existing.subscription_tier || tier),
     is_oauth_tester: existing.is_oauth_tester !== undefined ? existing.is_oauth_tester : isTester,
+    assigned_packs: user.assigned_packs || existing.assigned_packs || [],
     created_at: existing.created_at || new Date().toISOString(),
   };
   memoryStore.users.set(normalized, updated);
   return updated;
 }
 
-export async function addUser(user: { email: string; name?: string; role?: string; subscription_tier?: string; is_oauth_tester?: boolean }) {
+export async function addUser(user: { email: string; name?: string; role?: string; subscription_tier?: string; is_oauth_tester?: boolean; assigned_packs?: string[] }) {
   await initDb();
   const normalized = user.email.toLowerCase();
   const isSuper = isSuperAdminEmail(normalized);
   const role = isSuper ? 'SUPER_ADMIN' : (user.role || 'USER');
   const tier = isSuper ? 'ADMIN' : (user.subscription_tier || 'BEGINNER');
   const isTester = user.is_oauth_tester !== undefined ? user.is_oauth_tester : true;
+  const packs = user.assigned_packs || [];
 
   if (pool && isPgAvailable) {
     try {
       const res = await pool.query(`
-        INSERT INTO users (id, email, name, role, subscription_tier, is_oauth_tester)
-        VALUES ($1, $2, $3, $4, $5, $6)
+        INSERT INTO users (id, email, name, role, subscription_tier, is_oauth_tester, assigned_packs)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
         ON CONFLICT (email) DO UPDATE SET
           name = EXCLUDED.name,
           role = EXCLUDED.role,
           subscription_tier = EXCLUDED.subscription_tier,
-          is_oauth_tester = EXCLUDED.is_oauth_tester
+          is_oauth_tester = EXCLUDED.is_oauth_tester,
+          assigned_packs = COALESCE(EXCLUDED.assigned_packs, users.assigned_packs)
         RETURNING *
-      `, [crypto.randomUUID(), normalized, user.name || '', role, tier, isTester]);
+      `, [crypto.randomUUID(), normalized, user.name || '', role, tier, isTester, packs]);
       return res.rows[0];
     } catch (e) {
       console.warn('PG error in addUser:', e);
@@ -516,10 +536,28 @@ export async function addUser(user: { email: string; name?: string; role?: strin
     role,
     subscription_tier: tier,
     is_oauth_tester: isTester,
+    assigned_packs: packs,
     created_at: new Date().toISOString(),
   };
   memoryStore.users.set(normalized, record);
   return record;
+}
+
+export async function updateUserAssignedPacks(email: string, packs: string[]) {
+  await initDb();
+  const normalized = email.toLowerCase();
+  if (pool && isPgAvailable) {
+    try {
+      await pool.query('UPDATE users SET assigned_packs = $1 WHERE email = $2', [packs, normalized]);
+    } catch (e) {
+      console.warn('PG error in updateUserAssignedPacks:', e);
+    }
+  }
+  const u = memoryStore.users.get(normalized);
+  if (u) {
+    u.assigned_packs = packs;
+    memoryStore.users.set(normalized, u);
+  }
 }
 
 export async function toggleTestUser(email: string, isTester: boolean) {
@@ -797,6 +835,7 @@ export async function deleteChat(chatId: string) {
   await initDb();
   if (pool && isPgAvailable) {
     try {
+      await pool.query('DELETE FROM chat_messages WHERE chat_id = $1', [chatId]);
       await pool.query('DELETE FROM chats WHERE id = $1', [chatId]);
     } catch (e) {
       console.warn('PG error in deleteChat:', e);
@@ -811,7 +850,7 @@ export async function getMessagesByChatId(chatId: string) {
   await initDb();
   if (pool && isPgAvailable) {
     try {
-      const res = await pool.query('SELECT * FROM messages WHERE chat_id = $1 ORDER BY created_at ASC', [chatId]);
+      const res = await pool.query('SELECT * FROM chat_messages WHERE chat_id = $1 ORDER BY created_at ASC', [chatId]);
       return res.rows.map(r => ({
         ...r,
         content: decryptData(r.content),
@@ -836,7 +875,7 @@ export async function saveMessage(msg: { id: string; chat_id: string; role: stri
   if (pool && isPgAvailable) {
     try {
       await pool.query(`
-        INSERT INTO messages (id, chat_id, role, content, actions, attachments, audio_url, created_at)
+        INSERT INTO chat_messages (id, chat_id, role, content, actions, attachments, audio_url, created_at)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       `, [
         msg.id, msg.chat_id, msg.role, encryptedContent,
@@ -992,11 +1031,29 @@ export async function bulkImportSkillsFromMarkdown(markdownContent: string, mode
   return { importedCount: parsedSkills.length };
 }
 
-// ----------------- API KEY POOL -----------------
+// ----------------- API KEY POOL (PERSISTED IN POSTGRESQL & LOAD BALANCED) -----------------
 export async function getApiKeyForTier(tier: string, provider = 'gemini'): Promise<string> {
   await initDb();
+  const prov = provider.toLowerCase();
+
+  if (pool && isPgAvailable) {
+    try {
+      const res = await pool.query(
+        'SELECT * FROM api_keys WHERE LOWER(provider) = $1 AND is_active = TRUE AND (tier = $2 OR tier = $3) ORDER BY usage_count ASC LIMIT 1',
+        [prov, 'ALL', tier]
+      );
+      if (res.rows.length > 0) {
+        const row = res.rows[0];
+        await pool.query('UPDATE api_keys SET usage_count = usage_count + 1 WHERE id = $1', [row.id]);
+        return decryptData(row.key_value);
+      }
+    } catch (e) {
+      console.warn('PG error in getApiKeyForTier:', e);
+    }
+  }
+
   const keys = Array.from(memoryStore.apiKeys.values()).filter(
-    k => k.provider === provider && k.is_active && (k.tier === 'ALL' || k.tier === tier)
+    k => k.provider.toLowerCase() === prov && k.is_active && (k.tier === 'ALL' || k.tier === tier)
   );
 
   if (keys.length > 0) {
@@ -1006,31 +1063,87 @@ export async function getApiKeyForTier(tier: string, provider = 'gemini'): Promi
     return chosen.key_value;
   }
 
-  return process.env.GEMINI_API_KEY || '';
+  if (prov === 'gemini') return process.env.GEMINI_API_KEY || '';
+  if (prov === 'anthropic') return process.env.ANTHROPIC_API_KEY || '';
+  if (prov === 'openai') return process.env.OPENAI_API_KEY || '';
+  return '';
 }
 
 export async function addApiKey(provider: string, key: string, tier: string) {
-  const id = `key_${Date.now()}`;
-  const masked = key.substring(0, 4) + '...' + key.substring(key.length - 4);
+  await initDb();
+  const prov = provider.toLowerCase();
+  const id = `key_${prov}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+  const cleanKey = key.trim();
+  const masked = cleanKey.length > 8
+    ? cleanKey.substring(0, 4) + '...' + cleanKey.substring(cleanKey.length - 4)
+    : '****';
+  const encrypted = encryptData(cleanKey);
+
   const record = {
     id,
-    provider,
+    provider: prov,
     key_masked: masked,
-    key_value: key,
-    tier,
+    key_value: cleanKey,
+    tier: tier || 'ALL',
     is_active: true,
     usage_count: 0,
     failure_count: 0,
   };
+
+  if (pool && isPgAvailable) {
+    try {
+      await pool.query(`
+        INSERT INTO api_keys (id, provider, key_masked, key_value, tier, is_active, usage_count, failure_count)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      `, [id, prov, masked, encrypted, record.tier, true, 0, 0]);
+    } catch (e) {
+      console.warn('PG error in addApiKey:', e);
+    }
+  }
+
   memoryStore.apiKeys.set(id, record);
-  return record;
+  return {
+    id: record.id,
+    provider: record.provider,
+    key_masked: record.key_masked,
+    tier: record.tier,
+    is_active: record.is_active,
+    usage_count: record.usage_count,
+  };
 }
 
 export async function deleteApiKey(keyId: string) {
+  await initDb();
+  if (pool && isPgAvailable) {
+    try {
+      await pool.query('DELETE FROM api_keys WHERE id = $1', [keyId]);
+    } catch (e) {
+      console.warn('PG error in deleteApiKey:', e);
+    }
+  }
   memoryStore.apiKeys.delete(keyId);
 }
 
 export async function getAllApiKeys() {
+  await initDb();
+  if (pool && isPgAvailable) {
+    try {
+      const res = await pool.query('SELECT id, provider, key_masked, tier, is_active, usage_count, failure_count FROM api_keys ORDER BY provider ASC, id DESC');
+      if (res.rows.length > 0) {
+        return res.rows.map(r => ({
+          id: r.id,
+          provider: r.provider,
+          key_masked: r.key_masked,
+          tier: r.tier,
+          is_active: r.is_active,
+          usage_count: r.usage_count || 0,
+          failure_count: r.failure_count || 0,
+        }));
+      }
+    } catch (e) {
+      console.warn('PG error in getAllApiKeys:', e);
+    }
+  }
   return Array.from(memoryStore.apiKeys.values()).map(k => ({
     id: k.id,
     provider: k.provider,
@@ -1039,6 +1152,76 @@ export async function getAllApiKeys() {
     is_active: k.is_active,
     usage_count: k.usage_count,
   }));
+}
+
+// ----------------- REAL BUG REPORTS & TELEMETRY (PERSISTED) -----------------
+export async function saveBugReport(report: any) {
+  await initDb();
+  if (pool && isPgAvailable) {
+    try {
+      await pool.query(`
+        INSERT INTO bug_reports (id, user_email, user_name, issue_type, summary, user_description, last_user_message, last_assistant_response, failed_action, diagnostics, status, created_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+        ON CONFLICT (id) DO UPDATE SET
+          status = EXCLUDED.status,
+          user_description = EXCLUDED.user_description
+      `, [
+        report.id,
+        report.userEmail,
+        report.userName || '',
+        report.issueType,
+        report.summary,
+        report.userDescription || '',
+        report.lastUserMessage || '',
+        report.lastAssistantResponse || '',
+        report.failedAction ? JSON.stringify(report.failedAction) : null,
+        report.diagnostics ? JSON.stringify(report.diagnostics) : null,
+        report.status || 'OPEN',
+        report.createdAt || new Date().toISOString(),
+      ]);
+    } catch (e) {
+      console.warn('PG error in saveBugReport:', e);
+    }
+  }
+}
+
+export async function getAllBugReports() {
+  await initDb();
+  if (pool && isPgAvailable) {
+    try {
+      const res = await pool.query('SELECT * FROM bug_reports ORDER BY created_at DESC');
+      if (res.rows.length > 0) {
+        return res.rows.map(r => ({
+          id: r.id,
+          createdAt: r.created_at,
+          userEmail: r.user_email,
+          userName: r.user_name,
+          issueType: r.issue_type,
+          summary: r.summary,
+          userDescription: r.user_description,
+          lastUserMessage: r.last_user_message,
+          lastAssistantResponse: r.last_assistant_response,
+          failedAction: r.failed_action,
+          diagnostics: r.diagnostics || {},
+          status: r.status,
+        }));
+      }
+    } catch (e) {
+      console.warn('PG error in getAllBugReports:', e);
+    }
+  }
+  return [];
+}
+
+export async function updateBugReportStatus(reportId: string, status: string) {
+  await initDb();
+  if (pool && isPgAvailable) {
+    try {
+      await pool.query('UPDATE bug_reports SET status = $1 WHERE id = $2', [status, reportId]);
+    } catch (e) {
+      console.warn('PG error in updateBugReportStatus:', e);
+    }
+  }
 }
 
 // ----------------- AUDIT LOGS -----------------

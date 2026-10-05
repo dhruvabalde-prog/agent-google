@@ -166,6 +166,29 @@ function CodeBlock({ children, className }: { children: React.ReactNode; classNa
   );
 }
 
+interface QuestionOption {
+  key: string;
+  text: string;
+}
+
+function extractQuestionOptions(text: string): QuestionOption[] {
+  if (!text) return [];
+  const lines = text.split('\n');
+  const results: QuestionOption[] = [];
+  const regex = /^[-*]?\s*\[([A-Da-d])\]\s*(.+)$/;
+  for (const line of lines) {
+    const trimmed = line.trim();
+    const match = trimmed.match(regex);
+    if (match) {
+      results.push({
+        key: match[1].toUpperCase(),
+        text: match[2].trim(),
+      });
+    }
+  }
+  return results;
+}
+
 export default function Home() {
   // Two Parallel Chat Slots (Only 2 chats at a time)
   const [activeSlot, setActiveSlot] = useState<1 | 2>(1);
@@ -232,14 +255,27 @@ export default function Home() {
   }, [currentChatId, activeSlot]);
 
   const [input, setInput] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [slot1Loading, setSlot1Loading] = useState(false);
+  const [slot2Loading, setSlot2Loading] = useState(false);
+  const isLoading = activeSlot === 1 ? slot1Loading : slot2Loading;
   const [progressIndex, setProgressIndex] = useState(0);
   const [user, setUser] = useState<{ email: string; name: string; picture: string } | null>(null);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [isInstallable, setIsInstallable] = useState(false);
 
-  // System 1: AbortController for Stop Generation
-  const abortControllerRef = useRef<AbortController | null>(null);
+  // Independent AbortControllers per slot
+  const slot1AbortControllerRef = useRef<AbortController | null>(null);
+  const slot2AbortControllerRef = useRef<AbortController | null>(null);
+  const abortControllerRef = activeSlot === 1 ? slot1AbortControllerRef : slot2AbortControllerRef;
+
+  // Q&A Pill filters text override
+  const [showTextInputOverride, setShowTextInputOverride] = useState(false);
+
+  const currentQuestionOptions = React.useMemo(() => {
+    const lastMsg = messages.length > 0 ? messages[messages.length - 1] : null;
+    if (!lastMsg || lastMsg.role !== 'assistant' || isLoading || isChatLocked) return [];
+    return extractQuestionOptions(lastMsg.content);
+  }, [messages, isLoading, isChatLocked]);
 
   // System 3: Scroll Management & Jump-to-Latest
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -760,11 +796,10 @@ export default function Home() {
     }
   }
 
-  // Open Archive Modal
+  // Open Full-Page Archive
   function openArchive() {
-    fetchArchiveChats();
     setIsSettingsOpen(false);
-    setIsArchiveOpen(true);
+    window.location.href = '/archive';
   }
 
   // Toggle Star on a Chat
@@ -1012,10 +1047,27 @@ export default function Home() {
     }
   }
 
+  // Fresh New Chat Handler
+  function handleStartNewChat() {
+    setMessages([]);
+    setCurrentChatId(crypto.randomUUID());
+    setMeaningfulOutcome('');
+    setOutcomeStatus('NONE');
+    setIsChatLocked(false);
+    setInput('');
+    setAttachedFiles([]);
+    setRecordedAudioUrl(null);
+    setShowTextInputOverride(false);
+    triggerToast('Started a fresh new chat');
+  }
+
   // Send message
   async function sendMessage(textToSend?: string) {
+    const currentSlot = activeSlot;
+    const isCurrentSlotLoading = currentSlot === 1 ? slot1Loading : slot2Loading;
+    const isCurrentSlotLocked = currentSlot === 1 ? slot1Locked : slot2Locked;
     const promptText = (textToSend || input).trim();
-    if ((!promptText && attachedFiles.length === 0 && !recordedAudioUrl) || isLoading || isChatLocked) return;
+    if ((!promptText && attachedFiles.length === 0 && !recordedAudioUrl) || isCurrentSlotLoading || isCurrentSlotLocked) return;
 
     let fullPrompt = promptText;
 
@@ -1035,26 +1087,32 @@ export default function Home() {
       content: fullPrompt || 'Attached voice note',
     };
 
-    const newHistory = [...messages, userMessage];
-    setMessages(newHistory);
+    const currentHistory = currentSlot === 1 ? slot1Messages : slot2Messages;
+    const newHistory = [...currentHistory, userMessage];
+    if (currentSlot === 1) setSlot1Messages(newHistory);
+    else setSlot2Messages(newHistory);
+
     setInput('');
     try {
       localStorage.removeItem('suchi_composer_draft');
     } catch (e) {}
     setAttachedFiles([]);
     setRecordedAudioUrl(null);
+    setShowTextInputOverride(false);
     if (textareaRef.current) textareaRef.current.style.height = 'auto';
 
-    await executeChatWithHistory(newHistory);
+    await executeChatWithHistory(newHistory, currentSlot);
   }
 
   // System 1: Stop Generation Handler
   function handleStopGeneration() {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-      abortControllerRef.current = null;
+    const activeRef = activeSlot === 1 ? slot1AbortControllerRef : slot2AbortControllerRef;
+    if (activeRef.current) {
+      activeRef.current.abort();
+      activeRef.current = null;
     }
-    setIsLoading(false);
+    if (activeSlot === 1) setSlot1Loading(false);
+    else setSlot2Loading(false);
     triggerToast('Generation stopped');
   }
 
@@ -1069,16 +1127,21 @@ export default function Home() {
     if (priorHistory.length === 0) return;
 
     setMessages(priorHistory);
-    await executeChatWithHistory(priorHistory);
+    await executeChatWithHistory(priorHistory, activeSlot);
   }
 
-  // Core chat execution dispatcher
-  async function executeChatWithHistory(chatHistory: ChatMessage[]) {
-    setIsLoading(true);
+  // Core chat execution dispatcher decoupled per slot
+  async function executeChatWithHistory(chatHistory: ChatMessage[], targetSlot: 1 | 2 = activeSlot) {
+    if (targetSlot === 1) setSlot1Loading(true);
+    else setSlot2Loading(true);
     setProgressIndex(0);
 
     const controller = new AbortController();
-    abortControllerRef.current = controller;
+    if (targetSlot === 1) slot1AbortControllerRef.current = controller;
+    else slot2AbortControllerRef.current = controller;
+
+    const slotChatId = targetSlot === 1 ? slot1Id : slot2Id;
+    const slotOutcome = targetSlot === 1 ? slot1Outcome : slot2Outcome;
 
     try {
       const res = await fetch('/api/chat', {
@@ -1086,9 +1149,9 @@ export default function Home() {
         headers: { 'Content-Type': 'application/json' },
         signal: controller.signal,
         body: JSON.stringify({
-          chatId: currentChatId,
+          chatId: slotChatId,
           isIncognito,
-          meaningfulOutcome,
+          meaningfulOutcome: slotOutcome,
           delegationSettings,
           messages: chatHistory.map(m => ({ role: m.role, content: m.content })),
         }),
@@ -1105,37 +1168,44 @@ export default function Home() {
         pendingDraft: data.pendingDraft,
       };
 
-      setMessages([...chatHistory, assistantMessage]);
+      const finalHistory = [...chatHistory, assistantMessage];
+      if (targetSlot === 1) setSlot1Messages(finalHistory);
+      else setSlot2Messages(finalHistory);
 
-      if (data.meaningfulOutcome && !meaningfulOutcome) {
-        setMeaningfulOutcome(data.meaningfulOutcome);
+      if (data.meaningfulOutcome) {
+        if (targetSlot === 1) setSlot1Outcome(data.meaningfulOutcome);
+        else setSlot2Outcome(data.meaningfulOutcome);
       }
       if (data.outcomeStatus) {
-        setOutcomeStatus(data.outcomeStatus);
+        if (targetSlot === 1) setSlot1OutcomeStatus(data.outcomeStatus);
+        else setSlot2OutcomeStatus(data.outcomeStatus);
       }
     } catch (err: any) {
       if (err.name === 'AbortError') {
-        setMessages([
-          ...chatHistory,
-          {
-            id: crypto.randomUUID(),
-            role: 'assistant',
-            content: '⏹ Response stopped by user.',
-          }
-        ]);
-        return;
-      }
-      setMessages([
-        ...chatHistory,
-        {
+        const abortedMsg: ChatMessage = {
           id: crypto.randomUUID(),
           role: 'assistant',
-          content: 'Not able to respond right now.',
-        }
-      ]);
+          content: '⏹ Response stopped by user.',
+        };
+        if (targetSlot === 1) setSlot1Messages([...chatHistory, abortedMsg]);
+        else setSlot2Messages([...chatHistory, abortedMsg]);
+        return;
+      }
+      const errorMsg: ChatMessage = {
+        id: crypto.randomUUID(),
+        role: 'assistant',
+        content: 'Not able to respond right now.',
+      };
+      if (targetSlot === 1) setSlot1Messages([...chatHistory, errorMsg]);
+      else setSlot2Messages([...chatHistory, errorMsg]);
     } finally {
-      setIsLoading(false);
-      abortControllerRef.current = null;
+      if (targetSlot === 1) {
+        setSlot1Loading(false);
+        slot1AbortControllerRef.current = null;
+      } else {
+        setSlot2Loading(false);
+        slot2AbortControllerRef.current = null;
+      }
     }
   }
 
@@ -2468,16 +2538,24 @@ export default function Home() {
         isDarkMode || isIncognito ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'
       }`}>
         <div className="max-w-3xl mx-auto flex flex-col gap-1.5">
-          {/* Locked Chat Context Migration Pill */}
+          {/* End of Chat Action Buttons */}
           {isChatLocked && (
-            <div className="flex justify-center pb-1">
+            <div className="flex items-center justify-center gap-3 pb-2 pt-1">
               <button
                 type="button"
                 onClick={handleTakeContextToNewChat}
-                className="px-4 py-1.5 rounded-full text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white shadow-md flex items-center gap-2 transition-all hover:scale-105 active:scale-95"
+                className="px-4 py-2 rounded-xl text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white shadow-md flex items-center gap-1.5 transition-all hover:scale-105 active:scale-95"
               >
                 <span>📄 Take context to new chat</span>
-                <span>→</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleStartNewChat}
+                className={`px-4 py-2 rounded-xl text-xs font-semibold border flex items-center gap-1.5 transition-all hover:scale-105 active:scale-95 ${
+                  isDarkMode ? 'border-zinc-700 bg-zinc-800 hover:bg-zinc-700 text-zinc-200' : 'border-zinc-300 bg-zinc-100 hover:bg-zinc-200 text-zinc-800'
+                }`}
+              >
+                <span>✨ New chat</span>
               </button>
             </div>
           )}
@@ -2548,149 +2626,188 @@ export default function Home() {
             </div>
           )}
 
-          {/* UNIFIED SLEEK ROW: SLIM INPUT PILL + DEDICATED MIC OUTSIDE */}
-          <div className="flex items-end gap-2 relative">
-            {/* Attach Popup Menu */}
-            {isAttachMenuOpen && (
-              <div className={`absolute bottom-full left-0 mb-2 p-1.5 rounded-2xl border shadow-xl flex flex-col gap-1 min-w-[175px] z-30 animate-in fade-in slide-in-from-bottom-2 ${
-                isDarkMode ? 'bg-zinc-900 border-zinc-800 text-zinc-200' : 'bg-white border-zinc-200 text-zinc-800 shadow-slate-200'
-              }`}>
-                <button
-                  type="button"
-                  onClick={() => { setIsAttachMenuOpen(false); cameraInputRef.current?.click(); }}
-                  className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium hover:bg-black/5 dark:hover:bg-white/10 transition-colors text-left"
-                >
-                  <svg className="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                  <span>Take / Attach Photo</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setIsAttachMenuOpen(false); fileInputRef.current?.click(); }}
-                  className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium hover:bg-black/5 dark:hover:bg-white/10 transition-colors text-left"
-                >
-                  <svg className="w-4 h-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-                  </svg>
-                  <span>Upload Files / Docs</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setIsAttachMenuOpen(false); fetchArchiveChats(); setIsAttachFromArchiveOpen(true); }}
-                  className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium hover:bg-black/5 dark:hover:bg-white/10 transition-colors text-left"
-                >
-                  <svg className="w-4 h-4 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-                  </svg>
-                  <span>From Chats Archive</span>
-                </button>
-              </div>
-            )}
-
-            {/* The single-row slim pill container */}
-            <div className={`flex-1 flex items-end gap-1.5 p-1.5 rounded-3xl border transition-all ${
-              isIncognito
-                ? 'bg-[#1a152e] border-purple-800/60 focus-within:border-purple-500 focus-within:ring-2 focus-within:ring-purple-500/20'
-                : isDarkMode
-                ? 'bg-slate-900 border-slate-700/80 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/20'
-                : 'bg-slate-100 border-slate-200 focus-within:bg-white focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-100'
+          {/* Q&A 1-QUESTION-AT-A-TIME PILL BUTTONS (Replaces input bar with options) */}
+          {currentQuestionOptions.length > 0 && !showTextInputOverride && !isChatLocked ? (
+            <div className={`p-3 rounded-2xl border flex flex-col items-center gap-2 transition-all ${
+              isDarkMode ? 'bg-slate-900/90 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
             }`}>
-              {/* Plus / Attach Action Button */}
+              <div className="flex items-center justify-center gap-2.5 flex-wrap w-full">
+                {currentQuestionOptions.map(opt => (
+                  <button
+                    key={opt.key}
+                    type="button"
+                    onClick={() => sendMessage(`Option ${opt.key}: ${opt.text}`)}
+                    className="px-5 py-2.5 rounded-xl font-bold text-sm bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-md hover:shadow-blue-500/25 transition-all hover:scale-105 active:scale-95 flex items-center gap-2 border border-blue-400/30"
+                  >
+                    <span className="w-5 h-5 rounded-md bg-white/20 flex items-center justify-center text-xs font-black">
+                      {opt.key}
+                    </span>
+                    <span className="text-xs font-semibold max-w-[200px] truncate hidden sm:inline">
+                      {opt.text}
+                    </span>
+                  </button>
+                ))}
+              </div>
               <button
                 type="button"
-                onClick={() => setIsAttachMenuOpen(!isAttachMenuOpen)}
-                disabled={isChatLocked}
-                title="Attach photo, file, or archive"
-                className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-all disabled:opacity-40 ${
-                  isAttachMenuOpen ? 'rotate-45 bg-slate-300 dark:bg-slate-700 text-slate-800 dark:text-white' : 'hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400'
-                }`}
+                onClick={() => setShowTextInputOverride(true)}
+                className="text-[11px] text-zinc-400 hover:text-blue-500 underline transition-colors pt-0.5"
               >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-                </svg>
+                Or type custom response
               </button>
+            </div>
+          ) : (
+            /* UNIFIED SLEEK ROW: SLIM INPUT PILL + DEDICATED MIC OUTSIDE */
+            <div className="flex items-end gap-2 relative w-full max-w-full min-w-0">
+              {/* Attach Popup Menu */}
+              {isAttachMenuOpen && (
+                <div className={`absolute bottom-full left-0 mb-2 p-1.5 rounded-2xl border shadow-xl flex flex-col gap-1 min-w-[175px] z-30 animate-in fade-in slide-in-from-bottom-2 ${
+                  isDarkMode ? 'bg-zinc-900 border-zinc-800 text-zinc-200' : 'bg-white border-zinc-200 text-zinc-800 shadow-slate-200'
+                }`}>
+                  <button
+                    type="button"
+                    onClick={() => { setIsAttachMenuOpen(false); cameraInputRef.current?.click(); }}
+                    className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium hover:bg-black/5 dark:hover:bg-white/10 transition-colors text-left"
+                  >
+                    <svg className="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    <span>Take / Attach Photo</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setIsAttachMenuOpen(false); fileInputRef.current?.click(); }}
+                    className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium hover:bg-black/5 dark:hover:bg-white/10 transition-colors text-left"
+                  >
+                    <svg className="w-4 h-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                    </svg>
+                    <span>Upload Files / Docs</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setIsAttachMenuOpen(false); window.location.href = '/archive'; }}
+                    className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium hover:bg-black/5 dark:hover:bg-white/10 transition-colors text-left"
+                  >
+                    <svg className="w-4 h-4 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                    </svg>
+                    <span>Chats Archive</span>
+                  </button>
+                </div>
+              )}
 
-              <input
-                ref={cameraInputRef}
-                type="file"
-                accept="image/*"
-                capture="environment"
-                onChange={handleFileChange}
-                className="hidden"
-              />
-              <input
-                ref={fileInputRef}
-                type="file"
-                multiple
-                onChange={handleFileChange}
-                className="hidden"
-              />
+              {/* The single-row slim pill container */}
+              <div className={`flex-1 min-w-0 flex items-end gap-1 sm:gap-1.5 p-1 sm:p-1.5 rounded-3xl border transition-all ${
+                isIncognito
+                  ? 'bg-[#1a152e] border-purple-800/60 focus-within:border-purple-500 focus-within:ring-2 focus-within:ring-purple-500/20'
+                  : isDarkMode
+                  ? 'bg-slate-900 border-slate-700/80 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/20'
+                  : 'bg-slate-100 border-slate-200 focus-within:bg-white focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-100'
+              }`}>
+                {/* Plus / Attach Action Button */}
+                <button
+                  type="button"
+                  onClick={() => setIsAttachMenuOpen(!isAttachMenuOpen)}
+                  disabled={isChatLocked}
+                  aria-label="Attach options"
+                  className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-all disabled:opacity-40 ${
+                    isAttachMenuOpen ? 'rotate-45 bg-slate-300 dark:bg-slate-700 text-slate-800 dark:text-white' : 'hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400'
+                  }`}
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                  </svg>
+                </button>
 
-              {/* Textarea - Auto-growing, thin starting line */}
-              <textarea
-                ref={textareaRef}
-                rows={1}
-                disabled={isChatLocked || isLoading}
-                value={input}
-                onChange={(e) => {
-                  handleComposerInputChange(e.target.value);
-                  e.target.style.height = 'auto';
-                  e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    sendMessage();
-                  }
-                }}
-                onPaste={(e) => {
-                  const items = e.clipboardData.items;
-                  if (items) {
-                    for (let i = 0; i < items.length; i++) {
-                      if (items[i].type.indexOf('image') !== -1) {
-                        const file = items[i].getAsFile();
-                        if (file && attachedFiles.length < 10) {
-                          const reader = new FileReader();
-                          reader.onload = (uploadEvent) => {
-                            const base64 = uploadEvent.target?.result as string;
-                            setAttachedFiles(prev => [...prev.slice(0, 9), {
-                              name: `pasted-image-${Date.now().toString().slice(-4)}.png`,
-                              size: `${(file.size / 1024).toFixed(1)} KB`,
-                              content: base64,
-                            }]);
-                          };
-                          reader.readAsDataURL(file);
+                <input
+                  ref={cameraInputRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  onChange={handleFileChange}
+                  className="hidden"
+                />
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  onChange={handleFileChange}
+                  className="hidden"
+                />
+
+                {/* Textarea - Auto-growing, NO placeholder */}
+                <textarea
+                  ref={textareaRef}
+                  rows={1}
+                  disabled={isChatLocked || isLoading}
+                  value={input}
+                  aria-label="Message Suchi"
+                  onChange={(e) => {
+                    handleComposerInputChange(e.target.value);
+                    e.target.style.height = 'auto';
+                    e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      sendMessage();
+                    }
+                  }}
+                  onPaste={(e) => {
+                    const items = e.clipboardData.items;
+                    if (items) {
+                      for (let i = 0; i < items.length; i++) {
+                        if (items[i].type.indexOf('image') !== -1) {
+                          const file = items[i].getAsFile();
+                          if (file && attachedFiles.length < 10) {
+                            const reader = new FileReader();
+                            reader.onload = (uploadEvent) => {
+                              const base64 = uploadEvent.target?.result as string;
+                              setAttachedFiles(prev => [...prev.slice(0, 9), {
+                                name: `pasted-image-${Date.now().toString().slice(-4)}.png`,
+                                size: `${(file.size / 1024).toFixed(1)} KB`,
+                                content: base64,
+                              }]);
+                            };
+                            reader.readAsDataURL(file);
+                          }
                         }
                       }
                     }
-                  }
-                  const text = e.clipboardData.getData('text');
-                  if (text && text.length > 500 && attachedFiles.length < 10) {
-                    const titleMatch = text.match(/^#\s+([^\n]+)/);
-                    const fileName = titleMatch ? `${titleMatch[1].slice(0, 20).trim()}.md` : `pasted-content-${Date.now().toString().slice(-4)}.md`;
-                    setAttachedFiles(prev => [...prev.slice(0, 9), {
-                      name: fileName,
-                      size: `${(text.length / 1024).toFixed(1)} KB`,
-                      content: text,
-                    }]);
-                  }
-                }}
-                placeholder={
-                  isChatLocked
-                    ? 'Chat locked. Use context in a new chat.'
-                    : 'Suchi suno...'
-                }
-                className={`flex-1 resize-none py-1.5 px-2 bg-transparent text-sm leading-relaxed max-h-[120px] focus:outline-none transition-colors ${
-                  isIncognito
-                    ? 'text-purple-100 placeholder-purple-400/60'
-                    : isDarkMode
-                    ? 'text-white placeholder-slate-400'
-                    : 'text-slate-900 placeholder-slate-400'
-                }`}
-                style={{ height: '32px' }}
-              />
+                    const text = e.clipboardData.getData('text');
+                    if (text && text.length > 500 && attachedFiles.length < 10) {
+                      const titleMatch = text.match(/^#\s+([^\n]+)/);
+                      const fileName = titleMatch ? `${titleMatch[1].slice(0, 20).trim()}.md` : `pasted-content-${Date.now().toString().slice(-4)}.md`;
+                      setAttachedFiles(prev => [...prev.slice(0, 9), {
+                        name: fileName,
+                        size: `${(text.length / 1024).toFixed(1)} KB`,
+                        content: text,
+                      }]);
+                    }
+                  }}
+                  className={`flex-1 resize-none py-1.5 px-2 bg-transparent text-sm leading-relaxed max-h-[120px] focus:outline-none transition-colors ${
+                    isIncognito
+                      ? 'text-purple-100'
+                      : isDarkMode
+                      ? 'text-white'
+                      : 'text-slate-900'
+                  }`}
+                  style={{ height: '32px' }}
+                />
+
+                {/* Show back-to-options toggle if currently in override mode */}
+                {currentQuestionOptions.length > 0 && showTextInputOverride && (
+                  <button
+                    type="button"
+                    onClick={() => setShowTextInputOverride(false)}
+                    className="px-2 py-1 rounded-md text-[10px] font-bold bg-blue-600 text-white hover:bg-blue-500"
+                    title="Return to option buttons"
+                  >
+                    Options
+                  </button>
+                )}
 
               {/* Compass Needle Skill Suggestion Button (Replaces Bulb) */}
               <button
@@ -2745,7 +2862,7 @@ export default function Home() {
               onClick={toggleVoiceTyping}
               disabled={isChatLocked}
               title={isVoiceTyping ? 'Stop voice typing' : 'Voice typing — tap to speak'}
-              className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 transition-all shadow-sm hover:scale-105 active:scale-95 disabled:opacity-40 ${
+              className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center flex-shrink-0 transition-all shadow-sm hover:scale-105 active:scale-95 disabled:opacity-40 ${
                 isVoiceTyping
                   ? 'bg-rose-500 text-white animate-pulse'
                   : isIncognito
@@ -2753,11 +2870,12 @@ export default function Home() {
                   : 'bg-blue-600 hover:bg-blue-500 text-white'
               }`}
             >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
               </svg>
             </button>
           </div>
+          )}
         </div>
       </footer>
       )}
@@ -2847,7 +2965,7 @@ export default function Home() {
             <div className="px-6 py-3 border-b border-gray-100 dark:border-zinc-800 flex flex-col sm:flex-row gap-2">
               <input
                 type="text"
-                placeholder="Search archive conversations..."
+                aria-label="Search archive conversations"
                 value={archiveSearch}
                 onChange={(e) => setArchiveSearch(e.target.value)}
                 className="flex-1 bg-gray-50 dark:bg-zinc-800/80 border border-gray-200 dark:border-zinc-700 rounded-lg px-3 py-1.5 text-xs text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -3073,11 +3191,11 @@ export default function Home() {
                 rows={3}
                 value={bugDescription}
                 onChange={(e) => setBugDescription(e.target.value)}
-                placeholder="e.g. I asked to create a spreadsheet but it stopped after 2 rows, or button did not respond..."
+                aria-label="What went wrong"
                 className={`w-full p-3 rounded-xl border text-xs resize-none focus:outline-none focus:ring-2 focus:ring-rose-500 ${
                   isDarkMode || isIncognito
-                    ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500'
-                    : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400'
+                    ? 'bg-gray-800 border-gray-700 text-white'
+                    : 'bg-gray-50 border-gray-200 text-gray-900'
                 }`}
               />
             </div>

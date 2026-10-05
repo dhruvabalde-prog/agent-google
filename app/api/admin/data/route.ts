@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminSession } from '@/lib/admin-auth';
 import { getAllUsers, getAllSkills, getAllSubscriptionTiers, getAllApiKeys, getAuditLogs, getAllApps } from '@/lib/db';
+import { GENERAL_PURPOSE_SKILL_PACKS } from '@/lib/skills-packs';
 
 export async function GET(request: NextRequest) {
   const session = await getAdminSession();
@@ -18,18 +19,17 @@ export async function GET(request: NextRequest) {
   ]);
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://agent-google-green.vercel.app';
-  const mcpEndpoint = `${appUrl}/api/mcp`;
   const oauthTestUsers = users.filter((u: any) => u.is_oauth_tester);
 
   return NextResponse.json({
     admin: session,
     users,
     skills,
+    skillPacks: GENERAL_PURPOSE_SKILL_PACKS,
     tiers,
     apiKeys,
     auditLogs,
     apps,
-    mcpEndpoint,
     cloudProject: {
       publishingStatus: 'Testing',
       maxTestUsers: 100,

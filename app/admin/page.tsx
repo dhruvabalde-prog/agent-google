@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { GENERAL_PURPOSE_SKILL_PACKS } from '@/lib/skills-packs';
 
 export interface AdminNoteItem {
   id: string;
@@ -119,8 +120,8 @@ export default function AdminPage() {
     } catch (e) {}
   }
 
-  // Tabs: dashboard, users, apps, tiers, skills, bulk-import, credentials, mcp, logs, notes, bugs
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'apps' | 'tiers' | 'skills' | 'bulk-import' | 'credentials' | 'mcp' | 'logs' | 'notes' | 'bugs'>('dashboard');
+  // Tabs: dashboard, users, packs, apps, tiers, skills, bulk-import, credentials, logs, notes, bugs
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'packs' | 'apps' | 'tiers' | 'skills' | 'bulk-import' | 'credentials' | 'logs' | 'notes' | 'bugs'>('dashboard');
   const [adminData, setAdminData] = useState<any>(null);
 
 
@@ -490,6 +491,30 @@ export default function AdminPage() {
     fetchAdminData();
   }
 
+  async function handleToggleUserPack(email: string, currentPacks: string[] = [], packId: string) {
+    const list = Array.isArray(currentPacks) ? currentPacks : [];
+    const hasPack = list.includes(packId);
+    const updated = hasPack ? list.filter(p => p !== packId) : [...list, packId];
+    try {
+      const res = await fetch('/api/admin/actions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'UPDATE_USER_PACKS',
+          payload: { email, packs: updated },
+        }),
+      });
+      if (res.ok) {
+        setAdminData((prev: any) => ({
+          ...prev,
+          users: (prev.users || []).map((u: any) => u.email === email ? { ...u, assigned_packs: updated } : u),
+        }));
+      }
+    } catch (e) {
+      console.error('Failed to update user packs:', e);
+    }
+  }
+
   async function handleDeleteUser(email: string) {
     if (!confirm(`Delete user ${email}?`)) return;
     await fetch('/api/admin/actions', {
@@ -649,8 +674,8 @@ export default function AdminPage() {
                 required
                 value={loginEmail}
                 onChange={(e) => setLoginEmail(e.target.value)}
-                placeholder="admin@suchi.ai"
-                className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-gray-500"
+                aria-label="Administrator Gmail"
+                className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>
 
@@ -663,7 +688,7 @@ export default function AdminPage() {
                 type="password"
                 required
                 maxLength={8}
-                placeholder="••••••"
+                aria-label="Security PIN"
                 value={loginPin}
                 onChange={(e) => setLoginPin(e.target.value)}
                 className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 tracking-widest text-center font-mono"
@@ -794,12 +819,12 @@ export default function AdminPage() {
         {[
           { id: 'dashboard', label: 'Dashboard' },
           { id: 'users', label: `Users & Cloud Testers (${adminData?.stats?.testUsersCount || adminData?.users?.length || 1})` },
+          { id: 'packs', label: 'Skill Packs (5)' },
           { id: 'apps', label: `Cloud APIs & Apps (${adminData?.apps?.length || 20})` },
           { id: 'tiers', label: 'Subscription Tiers' },
-          { id: 'skills', label: `100 Life OS Skills (${adminData?.skills?.length || 100})` },
+          { id: 'skills', label: `Life OS Skills (${adminData?.skills?.length || 100})` },
           { id: 'bulk-import', label: 'Bulk MD Import' },
-          { id: 'credentials', label: 'API Key Pool' },
-          { id: 'mcp', label: 'App MCP Server' },
+          { id: 'credentials', label: `API Key Pool (${adminData?.apiKeys?.length || 0})` },
           { id: 'logs', label: 'Audit Logs' },
           { id: 'notes', label: `Roadmap & Notes (${adminNotes?.length || 0})` },
           { id: 'bugs', label: `Bug Reports & Telemetry (${bugReports?.length || 0})` },
@@ -1077,7 +1102,7 @@ export default function AdminPage() {
                     <input
                       type="email"
                       required
-                      placeholder="user@gmail.com"
+                      aria-label="Gmail Address"
                       value={newUserEmail}
                       onChange={(e) => setNewUserEmail(e.target.value)}
                       className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
@@ -1087,7 +1112,7 @@ export default function AdminPage() {
                     <label className="block text-[11px] text-gray-400 mb-1">Full Name</label>
                     <input
                       type="text"
-                      placeholder="Jane Doe"
+                      aria-label="Full Name"
                       value={newUserName}
                       onChange={(e) => setNewUserName(e.target.value)}
                       className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
@@ -1159,6 +1184,7 @@ export default function AdminPage() {
                       <th className="px-4 sm:px-6 py-3">Gmail Address</th>
                       <th className="px-4 sm:px-6 py-3">Role</th>
                       <th className="px-4 sm:px-6 py-3">Subscription Tier</th>
+                      <th className="px-4 sm:px-6 py-3">Assigned Skill Packs</th>
                       <th className="px-4 sm:px-6 py-3">Cloud OAuth Tester</th>
                       <th className="px-4 sm:px-6 py-3">Action</th>
                     </tr>
@@ -1191,6 +1217,28 @@ export default function AdminPage() {
                           </select>
                         </td>
                         <td className="px-4 sm:px-6 py-3">
+                          <div className="flex flex-wrap gap-1 max-w-xs">
+                            {GENERAL_PURPOSE_SKILL_PACKS.map(pack => {
+                              const isAssigned = (u.assigned_packs || []).includes(pack.id);
+                              return (
+                                <button
+                                  key={pack.id}
+                                  type="button"
+                                  onClick={() => handleToggleUserPack(u.email, u.assigned_packs, pack.id)}
+                                  title={`${isAssigned ? 'Remove' : 'Assign'} ${pack.name}`}
+                                  className={`px-2 py-0.5 rounded text-[10px] font-semibold transition-all ${
+                                    isAssigned
+                                      ? 'bg-blue-600 text-white shadow-2xs'
+                                      : 'bg-gray-700/80 text-gray-400 hover:text-gray-200 hover:bg-gray-600'
+                                  }`}
+                                >
+                                  {isAssigned ? '✓ ' : '+ '}{pack.badge}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </td>
+                        <td className="px-4 sm:px-6 py-3">
                           <button
                             onClick={() => handleToggleTestUser(u.email, !u.is_oauth_tester)}
                             className={`text-xs px-2.5 py-1 rounded-full font-semibold transition-colors ${
@@ -1216,6 +1264,61 @@ export default function AdminPage() {
                     ))}
                   </tbody>
                 </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* SKILL PACKS TAB */}
+        {activeTab === 'packs' && (
+          <div className="space-y-6">
+            <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
+                <div>
+                  <h2 className="text-base font-bold text-white">General-Purpose Skill Packs ({GENERAL_PURPOSE_SKILL_PACKS.length})</h2>
+                  <p className="text-xs text-gray-400">Pre-orchestrated skill suites tailored for executive leadership, personal life OS, deep research, operations, and sales.</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {GENERAL_PURPOSE_SKILL_PACKS.map(pack => {
+                  const assignedUsers = (adminData?.users || []).filter((u: any) => (u.assigned_packs || []).includes(pack.id));
+                  return (
+                    <div key={pack.id} className="bg-gray-700/40 border border-gray-700 rounded-xl p-5 flex flex-col justify-between">
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-white">{pack.name}</span>
+                            <span className="text-[10px] bg-blue-900/60 text-blue-300 px-2 py-0.5 rounded-full font-semibold border border-blue-700/50">
+                              {pack.badge}
+                            </span>
+                          </div>
+                          <span className="text-[10px] text-gray-400 font-mono">
+                            {assignedUsers.length} users
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-300 leading-relaxed mb-3">
+                          {pack.description}
+                        </p>
+                        <div className="bg-gray-800/80 p-2.5 rounded-lg border border-gray-700/60 space-y-1.5 mb-3">
+                          <p className="text-[10px] text-gray-400 font-semibold uppercase">Target Audience: <span className="text-gray-200 normal-case">{pack.targetAudience}</span></p>
+                          <p className="text-[10px] text-gray-400 font-semibold uppercase">Included Skills: <span className="text-indigo-300 font-mono">{pack.skillIds.length} skills ({pack.skillIds.join(', ')})</span></p>
+                        </div>
+                      </div>
+
+                      <div className="pt-2 border-t border-gray-700/60 flex items-center justify-between text-xs">
+                        <span className="text-gray-400 text-[11px]">Recommended: {pack.recommendedRole}</span>
+                        <button
+                          type="button"
+                          onClick={() => setActiveTab('users')}
+                          className="text-xs text-blue-400 hover:text-blue-300 hover:underline font-semibold"
+                        >
+                          Manage Users →
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -1307,7 +1410,7 @@ export default function AdminPage() {
               <form onSubmit={handleSaveTier} className="grid grid-cols-1 sm:grid-cols-4 gap-3 bg-gray-700/30 p-4 rounded-xl border border-gray-700 mb-6">
                 <input
                   type="text"
-                  placeholder="Tier ID (e.g. PRO)"
+                  aria-label="Tier ID (e.g. PRO)"
                   value={tierId}
                   onChange={(e) => setTierId(e.target.value)}
                   className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white text-xs uppercase"
@@ -1315,7 +1418,7 @@ export default function AdminPage() {
                 />
                 <input
                   type="text"
-                  placeholder="Tier Display Name"
+                  aria-label="Tier Display Name"
                   value={tierName}
                   onChange={(e) => setTierName(e.target.value)}
                   className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white text-xs"
@@ -1323,7 +1426,7 @@ export default function AdminPage() {
                 />
                 <input
                   type="number"
-                  placeholder="Daily Token Limit"
+                  aria-label="Daily Token Limit"
                   value={tierLimit}
                   onChange={(e) => setTierLimit(Number(e.target.value))}
                   className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white text-xs"
@@ -1383,7 +1486,7 @@ export default function AdminPage() {
               <form onSubmit={handleSaveSkill} className="bg-gray-700/30 p-4 rounded-xl border border-gray-700 grid grid-cols-1 sm:grid-cols-4 gap-3 mb-6">
                 <input
                   type="text"
-                  placeholder="Skill ID (e.g. pitch-deck)"
+                  aria-label="Skill ID (e.g. pitch-deck)"
                   value={skillId}
                   onChange={(e) => setSkillId(e.target.value)}
                   className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white text-xs"
@@ -1391,7 +1494,7 @@ export default function AdminPage() {
                 />
                 <input
                   type="text"
-                  placeholder="Skill Name"
+                  aria-label="Skill Name"
                   value={skillName}
                   onChange={(e) => setSkillName(e.target.value)}
                   className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white text-xs"
@@ -1399,7 +1502,7 @@ export default function AdminPage() {
                 />
                 <input
                   type="text"
-                  placeholder="Department"
+                  aria-label="Department"
                   value={skillDept}
                   onChange={(e) => setSkillDept(e.target.value)}
                   className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white text-xs"
@@ -1486,7 +1589,7 @@ export default function AdminPage() {
               rows={12}
               value={bulkMarkdown}
               onChange={(e) => setBulkMarkdown(e.target.value)}
-              placeholder="Paste Master Skills Markdown content here..."
+              aria-label="Paste Master Skills Markdown content here"
               className="w-full bg-gray-900 border border-gray-700 rounded-xl p-4 font-mono text-xs text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-4"
             />
 
@@ -1505,29 +1608,39 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* API KEY POOL TAB */}
+        {/* API KEY POOL TAB (10 KEYS PER EACH OF THE 3 LLMs) */}
         {activeTab === 'credentials' && (
           <div className="space-y-6">
             <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
-              <h2 className="text-base font-bold text-white mb-2">API Key Pool Management</h2>
-              <p className="text-xs text-gray-400 mb-6">
-                Pool multiple Gemini, OpenAI, or Anthropic API keys. Maps keys by tier with automatic load balancing and rate-limit recovery.
-              </p>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                <div>
+                  <h2 className="text-base font-bold text-white mb-1">API Key Pool Management (10 Keys per LLM)</h2>
+                  <p className="text-xs text-gray-400">
+                    Add up to 10 API keys for each of the 3 LLM providers (Google Gemini, OpenAI, Anthropic Claude). Keys are encrypted in PostgreSQL with automatic load balancing and least-usage routing.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="px-3 py-1 rounded-full text-xs font-semibold bg-indigo-950 text-indigo-300 border border-indigo-800">
+                    {adminData?.apiKeys?.length || 0} Total Active Keys
+                  </span>
+                </div>
+              </div>
 
+              {/* Add Key Form */}
               <form onSubmit={handleAddKey} className="flex flex-col sm:flex-row gap-3 mb-6 bg-gray-700/30 p-4 rounded-xl border border-gray-700">
                 <select
                   value={newKeyProvider}
                   onChange={(e) => setNewKeyProvider(e.target.value)}
-                  className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white text-xs"
+                  className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white text-xs font-semibold"
                 >
-                  <option value="gemini">Google Gemini</option>
-                  <option value="openai">OpenAI</option>
-                  <option value="anthropic">Anthropic</option>
+                  <option value="gemini">Google Gemini (Max 10)</option>
+                  <option value="openai">OpenAI (Max 10)</option>
+                  <option value="anthropic">Anthropic Claude (Max 10)</option>
                 </select>
 
                 <input
                   type="password"
-                  placeholder="Paste API Key here..."
+                  aria-label="Paste API Key here"
                   value={newKeyValue}
                   onChange={(e) => setNewKeyValue(e.target.value)}
                   className="flex-1 bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white text-xs"
@@ -1552,56 +1665,56 @@ export default function AdminPage() {
                 </button>
               </form>
 
-              <div className="space-y-2">
-                {adminData?.apiKeys?.map((k: any) => (
-                  <div key={k.id} className="flex items-center justify-between p-3 bg-gray-700/30 rounded-lg border border-gray-700 text-xs">
-                    <div className="flex items-center gap-3">
-                      <span className="font-semibold uppercase text-indigo-400">{k.provider}</span>
-                      <span className="font-mono text-gray-300">{k.key_masked}</span>
-                      <span className="bg-gray-700 text-gray-300 px-2 py-0.5 rounded text-[10px]">Tier: {k.tier}</span>
+              {/* 3 LLM Provider Columns */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {[
+                  { id: 'gemini', name: 'Google Gemini', color: 'text-blue-400', badge: 'bg-blue-950/60 border-blue-800 text-blue-300' },
+                  { id: 'openai', name: 'OpenAI GPT', color: 'text-emerald-400', badge: 'bg-emerald-950/60 border-emerald-800 text-emerald-300' },
+                  { id: 'anthropic', name: 'Anthropic Claude', color: 'text-amber-400', badge: 'bg-amber-950/60 border-amber-800 text-amber-300' },
+                ].map((prov) => {
+                  const provKeys = (adminData?.apiKeys || []).filter((k: any) => k.provider?.toLowerCase() === prov.id);
+                  return (
+                    <div key={prov.id} className="bg-gray-900/60 border border-gray-700/80 rounded-xl p-4 flex flex-col justify-between">
+                      <div>
+                        <div className="flex items-center justify-between mb-3 pb-2 border-b border-gray-800">
+                          <span className={`font-bold text-sm ${prov.color}`}>{prov.name}</span>
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${prov.badge}`}>
+                            {provKeys.length} / 10 Keys
+                          </span>
+                        </div>
+
+                        {provKeys.length === 0 ? (
+                          <div className="py-6 text-center text-xs text-gray-500">
+                            No keys pooled yet. Add up to 10 keys above.
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            {provKeys.map((k: any) => (
+                              <div key={k.id} className="flex items-center justify-between p-2.5 bg-gray-800/80 rounded-lg border border-gray-700/60 text-xs">
+                                <div className="flex flex-col gap-0.5 truncate pr-2">
+                                  <span className="font-mono text-gray-200 text-[11px] truncate">{k.key_masked}</span>
+                                  <div className="flex items-center gap-2 text-[10px] text-gray-400">
+                                    <span className="bg-gray-700/60 px-1.5 py-0.5 rounded">Tier: {k.tier}</span>
+                                    <span>Reqs: {k.usage_count}</span>
+                                  </div>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteKey(k.id)}
+                                  className="text-red-400 hover:text-red-300 text-xs font-semibold p-1 hover:bg-red-950/30 rounded"
+                                  title="Delete key"
+                                >
+                                  ✕
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-4">
-                      <span className="text-gray-400">Requests: {k.usage_count}</span>
-                      <button
-                        onClick={() => handleDeleteKey(k.id)}
-                        className="text-red-400 hover:text-red-300"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
-            </div>
-          </div>
-        )}
-
-        {/* MCP TAB */}
-        {activeTab === 'mcp' && (
-          <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
-            <h2 className="text-base font-bold text-white mb-2">Model Context Protocol (MCP) Server Endpoint</h2>
-            <p className="text-xs text-gray-400 mb-6">
-              Connect external AI tools (Gemini Third-Party Apps, Claude Desktop, Antigravity) with standard OAuth 2.0 and Zero-Knowledge Data Firewall.
-            </p>
-
-            <div className="bg-gray-900 border border-gray-700 rounded-xl p-4 mb-4">
-              <label className="block text-xs font-semibold text-gray-400 uppercase mb-2">Public MCP Endpoint</label>
-              <div className="flex items-center justify-between bg-gray-800 px-3 py-2 rounded border border-gray-700 font-mono text-xs text-emerald-400">
-                <span className="truncate">{adminData?.mcpEndpoint}</span>
-                <button
-                  onClick={() => navigator.clipboard.writeText(adminData?.mcpEndpoint)}
-                  className="text-xs text-gray-300 hover:text-white ml-2 bg-gray-700 px-2 py-1 rounded"
-                >
-                  Copy
-                </button>
-              </div>
-            </div>
-
-            <div className="text-xs text-gray-400 space-y-2">
-              <p>• Auth Type: <span className="text-white font-semibold">Standard OAuth 2.0 (RFC 8414 Discovery Enabled)</span></p>
-              <p>• Authorize URL: <span className="text-white font-semibold">{adminData?.mcpEndpoint}/oauth/authorize</span></p>
-              <p>• Token URL: <span className="text-white font-semibold">{adminData?.mcpEndpoint}/oauth/token</span></p>
-              <p>• Data Firewall: <span className="text-emerald-400 font-semibold">Active (Zero personal details or tokens shared)</span></p>
             </div>
           </div>
         )}
@@ -1776,7 +1889,7 @@ export default function AdminPage() {
                       required
                       value={noteTitle}
                       onChange={(e) => setNoteTitle(e.target.value)}
-                      placeholder="e.g. Local LLM Fallback with Ollama on Mac/PC"
+                      aria-label="Note Title (e.g. Local LLM Fallback with Ollama on Mac/PC)"
                       className="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
                     />
                   </div>
@@ -1814,7 +1927,7 @@ export default function AdminPage() {
                       type="text"
                       value={noteDetails}
                       onChange={(e) => setNoteDetails(e.target.value)}
-                      placeholder="Executive summary of this architectural note"
+                      aria-label="Executive summary of this architectural note"
                       className="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
                     />
                   </div>
@@ -1828,7 +1941,7 @@ export default function AdminPage() {
                     rows={4}
                     value={noteSpecs}
                     onChange={(e) => setNoteSpecs(e.target.value)}
-                    placeholder="Enter technical specifications, endpoints, or required libraries (one per line)..."
+                    aria-label="Enter technical specifications, endpoints, or required libraries"
                     className="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
                   />
                 </div>

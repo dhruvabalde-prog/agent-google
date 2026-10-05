@@ -298,8 +298,8 @@ export default function HubPage() {
                   type="text"
                   value={newTaskTitle}
                   onChange={(e) => setNewTaskTitle(e.target.value)}
-                  placeholder="Add quick task (press Enter)..."
-                  className="w-full bg-transparent text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none"
+                  aria-label="Add quick task"
+                  className="w-full bg-transparent text-xs text-slate-900 dark:text-white focus:outline-none"
                   disabled={isAddingTask}
                 />
                 <button
@@ -587,7 +587,7 @@ export default function HubPage() {
                   required
                   value={goalOutcome}
                   onChange={(e) => setGoalOutcome(e.target.value)}
-                  placeholder="e.g. Build ₹50 Lakh Sovereign Wealth Reserve"
+                  aria-label="Target Outcome (e.g. Build ₹50 Lakh Sovereign Wealth Reserve)"
                   className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
                 />
               </div>
@@ -623,7 +623,7 @@ export default function HubPage() {
                   type="text"
                   value={goalNorthStar}
                   onChange={(e) => setGoalNorthStar(e.target.value)}
-                  placeholder="e.g. Total Liquid Fund: ₹50,00,000 / MRR: $20,000"
+                  aria-label="North Star Metric Target (e.g. Total Liquid Fund: ₹50,00,000 / MRR: $20,000)"
                   className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
                 />
               </div>
