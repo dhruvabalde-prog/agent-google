@@ -572,9 +572,9 @@ export default function Home() {
 
       const payload = {
         userEmail: user?.email || 'user@suchi.ai',
-        userName: user?.name || 'Suchi User',
+        userName: user?.name || 'Life OS User',
         issueType: bugIssueType,
-        summary: bugDescription.slice(0, 100) || (failedAction ? `Tool ${failedAction.tool} failed: ${failedAction.summary}` : 'Issue encountered in Suchi chat'),
+        summary: bugDescription.slice(0, 100) || (failedAction ? `Tool ${failedAction.tool} failed: ${failedAction.summary}` : 'Issue encountered in Life OS chat'),
         userDescription: bugDescription,
         lastUserMessage: messages.filter(m => m.role === 'user').slice(-1)[0]?.content || '',
         lastAssistantResponse: bugTargetMessage?.content || messages.filter(m => m.role === 'assistant').slice(-1)[0]?.content || '',
@@ -597,7 +597,7 @@ export default function Home() {
 
       if (res.ok) {
         setIsBugModalOpen(false);
-        setBugToast('Bug report sent to engineering. Thank you for helping Suchi get better!');
+        setBugToast('Bug report sent to engineering. Thank you for helping Life OS get better!');
         setTimeout(() => setBugToast(null), 5000);
       } else {
         alert('Could not submit bug report. Please try again.');
@@ -855,7 +855,7 @@ export default function Home() {
       }
     } else {
       alert(
-        'To install Suchi:\n\n' +
+        'To install Life OS:\n\n' +
         '• iPhone/iPad (Safari): Tap the Share icon, then select "Add to Home Screen".\n' +
         '• Android (Chrome): Tap the three-dot menu ⋮, then select "Install app" or "Add to Home screen".\n' +
         '• PC/Mac (Chrome/Edge): Click the install icon in the URL bar.'
@@ -1042,7 +1042,7 @@ export default function Home() {
       // Build markdown representation
       let md = `# ${meaningfulOutcome || 'Conversation Summary'}\n\n## Dialogue\n`;
       messages.forEach(m => {
-        md += `\n### ${m.role === 'user' ? 'User' : 'Suchi'}\n${m.content}\n`;
+        md += `\n### ${m.role === 'user' ? 'User' : 'Life OS'}\n${m.content}\n`;
       });
 
       await fetch(`/api/chats/${currentChatId}/lock`, {
@@ -2101,6 +2101,24 @@ export default function Home() {
                       <span className="text-[10px] text-zinc-400 font-medium">{isIncognito ? 'Active' : 'Off'}</span>
                     </button>
 
+                    {/* Admin Panel Link */}
+                    {(user.email === 'dhruvabalde@gmail.com' || user.email === 'ddhruva21balde@gmail.com') && (
+                      <Link
+                        href="/admin"
+                        className="w-full text-left px-3 py-2 hover:bg-zinc-100 dark:hover:bg-zinc-800/70 rounded-lg mx-auto flex items-center justify-between transition-colors border-t border-zinc-100 dark:border-zinc-800 mt-1"
+                        onClick={() => setIsSettingsOpen(false)}
+                      >
+                        <span className="flex items-center gap-2.5">
+                          <svg className="w-3.5 h-3.5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          </svg>
+                          <span className="text-emerald-600 dark:text-emerald-400 font-medium">Admin Portal</span>
+                        </span>
+                        <span className="text-slate-400 text-[10px]">↗</span>
+                      </Link>
+                    )}
+
                     {/* Delegation & Autonomy Settings */}
                     <button
                       type="button"
@@ -2135,7 +2153,7 @@ export default function Home() {
                     <button
                       type="button"
                       disabled
-                      title="Memory: Suchi securely stores context given by you across sessions. Management controls locked."
+                      title="Memory: Life OS securely stores context given by you across sessions. Management controls locked."
                       className="w-full text-left px-3 py-2 flex items-center justify-between text-zinc-400 dark:text-zinc-500 cursor-not-allowed"
                     >
                       <span className="flex items-center gap-2.5">
@@ -2587,7 +2605,7 @@ export default function Home() {
                             {isAssistant && (
                               <button
                                 onClick={() => handleOpenBugModal(msg)}
-                                title="Report bug or incomplete work to Suchi engineering"
+                                title="Report bug or incomplete work to Life OS engineering"
                                 className="p-1 rounded hover:bg-rose-50 dark:hover:bg-rose-950/40 text-gray-400 hover:text-rose-500 transition-colors inline-flex items-center gap-1 text-[11px] ml-auto"
                               >
                                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
@@ -2607,7 +2625,7 @@ export default function Home() {
                             <span className="text-base">⚠️</span>
                             <div className="text-left">
                               <span className="font-semibold block">Work could not be completed properly</span>
-                              <span className="text-[11px] text-rose-600 dark:text-rose-300">Suchi encountered a tool or permission failure</span>
+                              <span className="text-[11px] text-rose-600 dark:text-rose-300">Life OS encountered a tool or permission failure</span>
                             </div>
                           </div>
                           <button
@@ -2677,7 +2695,7 @@ export default function Home() {
                                 <div className="rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 bg-black/5 max-w-md shadow-sm">
                                   <img
                                     src={action.imageUrl}
-                                    alt="Generated by Suchi"
+                                    alt="Generated by Life OS"
                                     className="w-full h-auto object-cover max-h-96"
                                     loading="lazy"
                                   />
@@ -3612,7 +3630,7 @@ export default function Home() {
                 </span>
                 <div>
                   <h3 className="text-base font-bold text-gray-900 dark:text-gray-100">Send Bug Report to Engineering</h3>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Help Suchi get better by reporting errors and incomplete work</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Help Life OS get better by reporting errors and incomplete work</p>
                 </div>
               </div>
               <button

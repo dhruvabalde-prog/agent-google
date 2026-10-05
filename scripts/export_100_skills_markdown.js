@@ -3,17 +3,17 @@ const path = require('path');
 
 const skillsData = require('../lib/skills-data.json');
 
-let md = `# Navia / Life OS — Complete Master Catalog of 100 Autonomous Skills
+let md = `# Life OS / Life OS — Complete Master Catalog of 100 Autonomous Skills
 
 > **The Definitive Catalog of All 100 Curated, High-Yield Skills across Self, Home/Family, Work/Teams, and Meta Cognition.**  
 > *Format: Deterministic Execution Workflows, Parameter Schemas, Quick Questions, and Safety Guardrails.*  
-> *Platform: Navia Sovereign Operating System*
+> *Platform: Life OS Sovereign Operating System*
 
 ---
 
 ## Overview
 
-Unlike unconstrained prompt-based chatbots that guess how to perform tasks, Navia operates on a **finite, curated catalog of 100 high-yield deterministic skills**. 
+Unlike unconstrained prompt-based chatbots that guess how to perform tasks, Life OS operates on a **finite, curated catalog of 100 high-yield deterministic skills**. 
 
 Each skill is architected as an **audited operational routine** with:
 1. **Interactive Quick Questions**: User-friendly multi-choice prompts to subtract ambiguity in 10 seconds.

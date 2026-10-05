@@ -132,7 +132,7 @@ export default function ArchivePage() {
   // Export as Markdown file
   function handleExportMarkdown(chat: ArchiveChat) {
     const title = chat.title.replace(/[^a-zA-Z0-9_-]/g, '_');
-    const mdContent = chat.markdown_content || selectedChatMessages.map(m => `### ${m.role === 'user' ? 'User' : 'Suchi'}\n\n${m.content}`).join('\n\n---\n\n');
+    const mdContent = chat.markdown_content || selectedChatMessages.map(m => `### ${m.role === 'user' ? 'User' : 'Life OS'}\n\n${m.content}`).join('\n\n---\n\n');
     const fullDoc = `# ${chat.title}\n\n**Date**: ${new Date(chat.created_at).toLocaleString()}\n**Outcome**: ${chat.meaningful_outcome || 'None'}\n\n---\n\n${mdContent}`;
     const blob = new Blob([fullDoc], { type: 'text/markdown;charset=utf-8' });
     const url = URL.createObjectURL(blob);
@@ -473,7 +473,7 @@ export default function ArchivePage() {
                       >
                         <div className="flex items-center gap-1.5 mb-1 px-1">
                           <span className="text-[10px] font-semibold tracking-wider uppercase text-slate-500">
-                            {isUser ? 'User' : 'Suchi'}
+                            {isUser ? 'User' : 'Life OS'}
                           </span>
                         </div>
                         <div className={`p-4 rounded-2xl max-w-[90%] text-xs sm:text-sm leading-relaxed ${

@@ -131,7 +131,7 @@ export default function DelegationSettingsModal({
               ⚙️
             </span>
             <div>
-              <h2 className="text-sm sm:text-base font-bold">Suchi System Settings</h2>
+              <h2 className="text-sm sm:text-base font-bold">Life OS System Settings</h2>
               <p className="text-[11px] text-zinc-500 dark:text-zinc-400">Configure autonomy, voice engine, and background daemon</p>
             </div>
           </div>
@@ -248,7 +248,7 @@ export default function DelegationSettingsModal({
                 <div className="flex items-center justify-between py-1">
                   <div>
                     <p className="text-xs font-semibold">Inbox Sweeper & Task Extraction</p>
-                    <p className="text-[11px] text-zinc-500 dark:text-zinc-400">Scan emails to extract tasks for Suchi and you.</p>
+                    <p className="text-[11px] text-zinc-500 dark:text-zinc-400">Scan emails to extract tasks for Life OS and you.</p>
                   </div>
                   <button
                     type="button"
@@ -268,13 +268,13 @@ export default function DelegationSettingsModal({
             </div>
           )}
 
-          {/* TAB 2: LOCAL VOICE ENGINE ("Suchi suno") */}
+          {/* TAB 2: LOCAL VOICE ENGINE ("Life OS suno") */}
           {activeTab === 'voice' && (
             <div className="space-y-4">
               <div className="p-3.5 rounded-xl bg-gradient-to-r from-blue-900/20 to-indigo-900/20 border border-blue-800/40 text-blue-200">
                 <div className="flex items-center gap-2 mb-1">
                   <span className="text-base">🎙️</span>
-                  <span className="font-bold text-xs">Dedicated Local Wake-Word Engine ("Suchi suno")</span>
+                  <span className="font-bold text-xs">Dedicated Local Wake-Word Engine ("Life OS suno")</span>
                 </div>
                 <p className="text-[11px] text-zinc-400">
                   Runs on-device with 0ms latency. Discards all ambient noise until hotword matches. Zero cloud audio streaming without hotword match.
@@ -284,7 +284,7 @@ export default function DelegationSettingsModal({
               <div className="space-y-3">
                 <div className="flex items-center justify-between py-1.5 border-b border-zinc-200/50 dark:border-zinc-800/50">
                   <div>
-                    <p className="text-xs font-semibold">Wake-Word Detection ("Suchi suno")</p>
+                    <p className="text-xs font-semibold">Wake-Word Detection ("Life OS suno")</p>
                     <p className="text-[11px] text-zinc-500 dark:text-zinc-400">On-device acoustic model listening for hands-free prompt.</p>
                   </div>
                   <button
@@ -321,7 +321,7 @@ export default function DelegationSettingsModal({
                 <div className="flex items-center justify-between py-1.5 border-b border-zinc-200/50 dark:border-zinc-800/50">
                   <div>
                     <p className="text-xs font-semibold">iOS Action Button & Siri Shortcut</p>
-                    <p className="text-[11px] text-zinc-500 dark:text-zinc-400">Trigger hands-free prompt via "Hey Siri, Suchi suno".</p>
+                    <p className="text-[11px] text-zinc-500 dark:text-zinc-400">Trigger hands-free prompt via "Hey Siri, Life OS suno".</p>
                   </div>
                   <button
                     type="button"

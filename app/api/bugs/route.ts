@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
       userEmail: session?.email || body.userEmail || 'anonymous@suchi.ai',
       userName: session?.name || body.userName || 'Anonymous User',
       issueType: body.issueType || 'other',
-      summary: body.summary || 'User encountered an unexpected issue while using Suchi',
+      summary: body.summary || 'User encountered an unexpected issue while using Life OS',
       userDescription: body.userDescription || '',
       lastUserMessage: body.lastUserMessage || '',
       lastAssistantResponse: body.lastAssistantResponse || '',

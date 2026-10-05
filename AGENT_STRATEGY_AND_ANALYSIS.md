@@ -1,7 +1,7 @@
 # Agent — Vision, Industrial Strategy & Market Blueprint
 
 > **Confidential & Strategic Working Document**  
-> *Reference Name: Agent (formerly Suchi)*  
+> *Reference Name: Agent (formerly Life OS)*  
 > *Date: October 2026*
 
 ---
@@ -212,7 +212,7 @@ A clean, rich visual card delivered to the nearest screen (phone notification or
 ## Part 7: Future Architectural Roadmap: Autonomous Scheduling & Smart Home Bridge
 
 ### 1. The Autonomous Schedules & Recurring Automations Engine
-The next operational leap transforms Navia from an on-demand assistant into a **proactive 24/7 background operator**. 
+The next operational leap transforms Life OS from an on-demand assistant into a **proactive 24/7 background operator**. 
 
 ```
                                 [ SCHEDULE TRIGGER ENGINE ]
@@ -275,12 +275,12 @@ Extending the reach of the autonomous operating system beyond the screen and int
 ```
 
 #### Key Capabilities of the Smart Home Bridge:
-1. **In-App Device Control**: Users manage and trigger their smart home routines directly inside the Navia chat and action interface without switching between separate Google Home or Alexa apps.
+1. **In-App Device Control**: Users manage and trigger their smart home routines directly inside the Life OS chat and action interface without switching between separate Google Home or Alexa apps.
 2. **Context-Aware Environmental Adaptation**: 
-   * When Navia schedules a **2-hour Deep Work sprint**, it automatically dims ambient lights, sets the thermostat, and silences non-urgent speaker notifications.
-   * At **7:00 AM**, Navia broadcasts the morning briefing directly through the bedroom or kitchen speaker with a gentle chime.
+   * When Life OS schedules a **2-hour Deep Work sprint**, it automatically dims ambient lights, sets the thermostat, and silences non-urgent speaker notifications.
+   * At **7:00 AM**, Life OS broadcasts the morning briefing directly through the bedroom or kitchen speaker with a gentle chime.
 3. **Hands-Free Ambient Wake Command**:
-   * Works through your existing smart speakers: *"Alexa, ask Navia for my daily conflict brief"* or *"Hey Google, tell Navia to reschedule my afternoon."*
+   * Works through your existing smart speakers: *"Alexa, ask Life OS for my daily conflict brief"* or *"Hey Google, tell Life OS to reschedule my afternoon."*
 4. **Zero-Audio Hardware Privacy**:
    * Uses local Matter and Thread protocols wherever possible to ensure smart home command payloads remain local, encrypted, and free from third-party advertising tracking.
 
@@ -289,5 +289,5 @@ Extending the reach of the autonomous operating system beyond the screen and int
 ## Conclusion & Guiding North Star
 
 1. **Keep the software sovereign**: Own the context, reasoning, and execution layers across Google Workspace, Microsoft 365, and ambient smart devices.
-2. **Resist hardware manufacturing**: Let Amazon, Apple, and Google spend billions on smart speakers and screens; Navia acts as the sovereign intelligence that controls them all.
+2. **Resist hardware manufacturing**: Let Amazon, Apple, and Google spend billions on smart speakers and screens; Life OS acts as the sovereign intelligence that controls them all.
 3. **Monetize via Autonomous Leverage**: Tie subscription tiers directly to automation capacity and high-value background skills.

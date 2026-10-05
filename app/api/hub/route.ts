@@ -68,7 +68,7 @@ function getDefaultRoutines(): HubRoutine[] {
       totalDurationMinutes: 45,
       steps: [
         { id: 'step-1', title: '10m Mindfulness, Hydration & Day Intention', durationMinutes: 10, completed: true },
-        { id: 'step-2', title: '15m High-Priority Email & Suchi Drafts Triage', durationMinutes: 15, completed: false },
+        { id: 'step-2', title: '15m High-Priority Email & Life OS Drafts Triage', durationMinutes: 15, completed: false },
         { id: 'step-3', title: '20m Day North Star Sprint & Deep Work Block', durationMinutes: 20, completed: false },
       ],
     },
@@ -147,7 +147,7 @@ export async function GET(req: NextRequest) {
     if (!userData) {
       userData = {
         tasks: [
-          { id: 'task-1', title: 'Review Alex Rivera Q4 strategic proposal draft', notes: 'Suchi has drafted reply in Actions Deck', due: new Date(Date.now() + 86400000).toISOString(), status: 'needsAction' },
+          { id: 'task-1', title: 'Review Alex Rivera Q4 strategic proposal draft', notes: 'Life OS has drafted reply in Actions Deck', due: new Date(Date.now() + 86400000).toISOString(), status: 'needsAction' },
           { id: 'task-2', title: 'Schedule medical checkups for parents in Drive', notes: 'Compare lab packages via Google Doc', due: new Date(Date.now() + 172800000).toISOString(), status: 'needsAction' },
           { id: 'task-3', title: 'Confirm Meaningful Outcome on quarterly growth plan', notes: 'Lock chat when satisfied', status: 'completed' },
         ],
@@ -273,7 +273,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Outcome and target date required' }, { status: 400 });
       }
 
-      // Suchi auto-plans milestones
+      // Life OS auto-plans milestones
       const count = Math.min(Math.max(Number(milestoneCount) || 5, 3), 8);
       const milestones: GoalMilestone[] = [];
       const cadence = frequency || 'Weekly';
@@ -301,7 +301,7 @@ export async function POST(req: NextRequest) {
             m.targetDate,
             m.metric,
             m.status,
-            `Planned by Suchi Life OS for ${outcome}`,
+            `Planned by Life OS Life OS for ${outcome}`,
           ]);
           const sheetResult = await googleServices.createSpreadsheet(
             activeSession.accessToken,

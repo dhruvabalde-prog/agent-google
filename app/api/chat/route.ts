@@ -10,7 +10,7 @@ import { findMatchingSkills, findMatchingSkill, formatSkillPrompt } from '@/lib/
 export const runtime = 'nodejs';
 export const maxDuration = 60;
 
-const SYSTEM_PROMPT = `You are Suchi, an autonomous Chief of Staff and personal Life Operating System.
+const SYSTEM_PROMPT = `You are Life OS, an autonomous Chief of Staff and personal Life Operating System.
 You free the user's mental bandwidth to think clearly, take faster decisions, optimize time, attention, and money spent, and achieve maximum life value across Self, Home/Family, and Work/Teams.
 
 CORE OPERATING PRINCIPLES:
@@ -102,7 +102,7 @@ Every tool connected must be used to craft an impactful, senior-grade asset—ne
 
 10. PROACTIVE GMAIL & DRIVE CONTEXT SCANNING & TASK EXTRACTION:
 - Whenever the user references incoming emails, past projects, client deliverables, or files, search Drive and Gmail proactively via list_emails, read_email, or list_documents before asking questions.
-- Extract actionable commitments into tasks for Suchi and tasks for the user.
+- Extract actionable commitments into tasks for Life OS and tasks for the user.
 - Always observe the draft-and-approve protocol for email drafts.
 
 11. RAPID CLARIFYING QUESTIONS & Q&A PROTOCOL (ONE QUESTION AT A TIME):
@@ -112,7 +112,7 @@ Every tool connected must be used to craft an impactful, senior-grade asset—ne
 
 12. SAVIA CAREER OS & STAGING-ONLY SAFETY GATE (JOB HUNTING PROTOCOL):
 When the user seeks career counseling, job hunting, resume tailoring, portfolio creation, offer negotiation, or executive representation:
-- Strict Read-Only with Human-in-the-Loop Staging: Savia NEVER autonomously transmits external messages (no emails sent, no LinkedIn InMails fired, no WhatsApp texts sent). Everything is staged for 1-tap user confirmation.
+- Strict Read-Only with Human-in-the-Loop Staging: Life OS NEVER autonomously transmits external messages (no emails sent, no LinkedIn InMails fired, no WhatsApp texts sent). Everything is staged for 1-tap user confirmation.
   * Emails -> Staged inside user's Gmail DRAFTS folder.
   * WhatsApp -> Pre-populated native https://wa.me/ links.
   * Web & Portals -> Pre-filled fields in Google Docs/Sheets.
@@ -166,7 +166,7 @@ export async function POST(request: NextRequest) {
   try {
     const session = await getSession();
     if (!session) {
-      return NextResponse.json({ error: 'Please connect your Google Workspace to chat with Suchi.' }, { status: 401 });
+      return NextResponse.json({ error: 'Please connect your Google Workspace to chat with Life OS.' }, { status: 401 });
     }
 
     const refreshedSession = await refreshTokenIfNeeded(session);
@@ -206,7 +206,31 @@ export async function POST(request: NextRequest) {
 
     // Get API Key from Key Pool mapped to this tier
     const apiKey = await getApiKeyForTier(tier, 'gemini');
-    const ai = new GoogleGenAI({ apiKey });
+    
+    let ai;
+    if (process.env.GCP_SERVICE_ACCOUNT_JSON) {
+      const fs = require('fs');
+      const tmpPath = '/tmp/sa-key.json';
+      try {
+        if (!fs.existsSync(tmpPath)) {
+          // In Vercel serverless, /tmp is writable
+          const parsedKey = process.env.GCP_SERVICE_ACCOUNT_JSON.startsWith('{') 
+            ? process.env.GCP_SERVICE_ACCOUNT_JSON 
+            : JSON.parse(process.env.GCP_SERVICE_ACCOUNT_JSON); // Handle stringified JSON
+          fs.writeFileSync(tmpPath, parsedKey);
+        }
+        process.env.GOOGLE_APPLICATION_CREDENTIALS = tmpPath;
+      } catch (e) {
+        console.error('Failed to write SA JSON to /tmp', e);
+      }
+      ai = new GoogleGenAI({
+        vertexai: true,
+        project: process.env.GCP_PROJECT_ID || 'suchi-ai',
+        location: process.env.GCP_REGION || 'us-central1',
+      });
+    } else {
+      ai = new GoogleGenAI({ apiKey });
+    }
 
     // Incognito sensitive topic check
     if (isIncognito) {
@@ -427,7 +451,7 @@ export async function POST(request: NextRequest) {
       // Construct and persist full Markdown transcript of dialogue
       const fullHistory = [...messages, { role: 'assistant', content: finalContent }];
       const mdTranscript = fullHistory
-        .map(m => `### ${m.role === 'user' ? 'User' : 'Suchi'}\n\n${m.content}`)
+        .map(m => `### ${m.role === 'user' ? 'User' : 'Life OS'}\n\n${m.content}`)
         .join('\n\n---\n\n');
       activeChat.markdown_content = mdTranscript;
 

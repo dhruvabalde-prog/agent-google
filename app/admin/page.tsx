@@ -37,13 +37,13 @@ const DEFAULT_ADMIN_NOTES: AdminNoteItem[] = [
     id: 'note-smart-home-automation',
     category: 'Home Automation',
     title: 'Connect Devices & Smart Speakers for Home Automation',
-    details: 'Bridge Suchi with smart speakers and ambient IoT hardware for hands-free home and office automation.',
+    details: 'Bridge Life OS with smart speakers and ambient IoT hardware for hands-free home and office automation.',
     specs: [
       'Smart speakers integration: Google Nest Hub/Audio, Amazon Alexa Echo, and Apple HomePod.',
       'Universal Matter & Thread protocol bridge for direct, vendor-agnostic local smart home control.',
       'Voice-triggered smart home routines: lighting scenes (Philips Hue), climate/thermostats (Nest/Ecobee), door locks, and window shades.',
       'Home Assistant, Tuya, and Samsung SmartThings secure local webhook triggers with end-to-end payload encryption.',
-      'Context-aware proactive presence: Suchi prepares morning briefings, dims lights during work sprints, and notifies on upcoming tasks through ambient speaker chimes.'
+      'Context-aware proactive presence: Life OS prepares morning briefings, dims lights during work sprints, and notifies on upcoming tasks through ambient speaker chimes.'
     ],
     status: 'In Progress',
     priority: 'HIGH',
@@ -52,12 +52,12 @@ const DEFAULT_ADMIN_NOTES: AdminNoteItem[] = [
   {
     id: 'note-suchi-wake-word-assistant',
     category: 'Voice Assistant',
-    title: 'Suchi Voice Assistant — Wake Word "Suchi suno" & Default Agent',
-    details: 'Full voice assistant capability triggered by "Suchi suno" hotword, configurable as the default digital assistant across mobile and desktop devices.',
+    title: 'Life OS Voice Assistant — Wake Word "Life OS suno" & Default Agent',
+    details: 'Full voice assistant capability triggered by "Life OS suno" hotword, configurable as the default digital assistant across mobile and desktop devices.',
     specs: [
-      'Dedicated local on-device wake-word detection engine listening for "Suchi suno" (0ms latency, zero cloud audio streaming until hotword matches).',
+      'Dedicated local on-device wake-word detection engine listening for "Life OS suno" (0ms latency, zero cloud audio streaming until hotword matches).',
       'Configurable as Default Digital Assistant app on Android (android.service.voice.VoiceInteractionService) replacing Google Assistant on long-press home or power button.',
-      'iOS Action Button & Siri Shortcut integration: trigger hands-free voice prompt via "Hey Siri, Suchi suno".',
+      'iOS Action Button & Siri Shortcut integration: trigger hands-free voice prompt via "Hey Siri, Life OS suno".',
       'High-cadence natural voice streaming with real-time Speech-to-Text and Text-to-Speech audio response playback.',
       'Zero-audio privacy guarantee: local Voice Activity Detection (VAD) discards all ambient chatter; audio snippets are never retained or logged.'
     ],
@@ -120,8 +120,8 @@ export default function AdminPage() {
 
   const [adminData, setAdminData] = useState<any>(null);
 
-  // Expanded skills per user
-  const [expandedUserSkills, setExpandedUserSkills] = useState<Record<string, boolean>>({});
+  // Expanded skills per user (now tracks array of expanded pack IDs per user)
+  const [expandedUserSkills, setExpandedUserSkills] = useState<Record<string, string[]>>({});
 
   // Real Bug Reports & Telemetry State
   const [bugReports, setBugReports] = useState<any[]>([]);
@@ -1027,9 +1027,9 @@ export default function AdminPage() {
                       <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
                       <span className="text-xs font-bold text-purple-400 uppercase tracking-wider">Voice Defensibility Lab</span>
                     </div>
-                    <h2 className="text-lg font-bold text-white">Grill Navia (The Life OS Advocate)</h2>
+                    <h2 className="text-lg font-bold text-white">Grill Life OS (The Life OS Advocate)</h2>
                     <p className="text-xs text-gray-300 max-w-2xl leading-relaxed">
-                      Challenge Navia by voice or text on platform defensibility, security, API resilience, and 20x ROI. Steel-trap logic with real-time audio playback.
+                      Challenge Life OS by voice or text on platform defensibility, security, API resilience, and 20x ROI. Steel-trap logic with real-time audio playback.
                     </p>
                   </div>
                   <Link
@@ -1347,92 +1347,103 @@ export default function AdminPage() {
 
                       {/* Skill Packs Toggle Switches */}
                       <div>
-                        <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center justify-between mb-3">
                           <span className="text-xs font-bold text-gray-200 uppercase tracking-wider">
                             Assigned Skill Packs ({userPacks.length} / {GENERAL_PURPOSE_SKILL_PACKS.length})
                           </span>
-                          <button
-                            type="button"
-                            onClick={() => setExpandedUserSkills(prev => ({ ...prev, [u.email]: !isExpanded }))}
-                            className="text-xs text-indigo-400 hover:text-indigo-300 font-medium underline"
-                          >
-                            {isExpanded ? 'Hide Individual Skills ▲' : 'View Individual Skills ▼'}
-                          </button>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                        <div className="flex flex-col gap-3">
                           {GENERAL_PURPOSE_SKILL_PACKS.map(pack => {
                             const isAssigned = userPacks.includes(pack.id);
+                            const expandedPacksForUser = expandedUserSkills[u.email] || [];
+                            const isExpanded = expandedPacksForUser.includes(pack.id);
+
+                            const toggleExpand = () => {
+                              setExpandedUserSkills(prev => {
+                                const current = prev[u.email] || [];
+                                return {
+                                  ...prev,
+                                  [u.email]: isExpanded ? current.filter(id => id !== pack.id) : [...current, pack.id]
+                                };
+                              });
+                            };
+
                             return (
-                              <div
-                                key={pack.id}
-                                className={`p-2.5 rounded-xl border flex items-center justify-between gap-2 transition-all ${
-                                  isAssigned
-                                    ? 'bg-indigo-950/40 border-indigo-700/60 text-white'
-                                    : 'bg-gray-800/40 border-gray-800 text-gray-400'
-                                }`}
-                              >
-                                <div className="truncate pr-1">
-                                  <p className="text-xs font-bold truncate">{pack.name}</p>
-                                  <p className="text-[10px] text-gray-400">{pack.badge}</p>
+                              <div key={pack.id} className={`rounded-xl border transition-all ${isAssigned ? 'border-indigo-700/60 bg-indigo-950/20' : 'border-gray-800 bg-gray-900/40'}`}>
+                                <div className="p-3 flex items-start justify-between gap-3">
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <p className={`text-sm font-bold ${isAssigned ? 'text-white' : 'text-gray-400'}`}>{pack.name}</p>
+                                      <span className="text-[10px] text-gray-500 border border-gray-700 px-1.5 py-0.5 rounded">{pack.badge}</span>
+                                    </div>
+                                    <p className="text-xs text-gray-400 line-clamp-2 pr-4">{pack.description}</p>
+                                    
+                                    <button 
+                                      type="button" 
+                                      onClick={toggleExpand}
+                                      className="mt-2 text-[10px] text-indigo-400 hover:text-indigo-300 font-medium underline flex items-center gap-1"
+                                    >
+                                      {isExpanded ? 'Hide Skills ▲' : `View ${pack.skillIds.length} Skills ▼`}
+                                    </button>
+                                  </div>
+
+                                  {/* Toggle Switch for Pack */}
+                                  <button
+                                    type="button"
+                                    onClick={() => handleToggleUserPack(u.email, pack.id, !isAssigned)}
+                                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none mt-1 ${
+                                      isAssigned ? 'bg-indigo-600' : 'bg-gray-700'
+                                    }`}
+                                  >
+                                    <span
+                                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                                        isAssigned ? 'translate-x-5' : 'translate-x-0'
+                                      }`}
+                                    />
+                                  </button>
                                 </div>
 
-                                {/* Toggle Switch for Pack */}
-                                <button
-                                  type="button"
-                                  onClick={() => handleToggleUserPack(u.email, pack.id, !isAssigned)}
-                                  className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                                    isAssigned ? 'bg-indigo-600' : 'bg-gray-700'
-                                  }`}
-                                >
-                                  <span
-                                    className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                                      isAssigned ? 'translate-x-4' : 'translate-x-0'
-                                    }`}
-                                  />
-                                </button>
+                                {/* Expandable Individual Skills Section for this Pack */}
+                                {isExpanded && (
+                                  <div className="p-3 pt-0 border-t border-gray-800/60 mt-2 bg-black/20 rounded-b-xl">
+                                    <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-2">
+                                      {(adminData?.skills || [])
+                                        .filter((skill: any) => pack.skillIds.includes(skill.id))
+                                        .map((skill: any) => {
+                                          const isSkillActive = userSkills.includes(skill.id);
+                                          return (
+                                            <div
+                                              key={skill.id}
+                                              className={`p-2 rounded-lg border text-xs flex items-center justify-between ${
+                                                isSkillActive
+                                                  ? 'bg-emerald-950/30 border-emerald-700/50 text-emerald-200'
+                                                  : 'bg-gray-950/40 border-gray-800 text-gray-400'
+                                              }`}
+                                            >
+                                              <span className="font-medium truncate pr-2" title={skill.name}>{skill.name}</span>
+                                              <button
+                                                type="button"
+                                                onClick={() => handleToggleUserSkill(u.email, skill.id, !isSkillActive)}
+                                                className={`text-[10px] font-bold px-2 py-1 rounded transition-colors shrink-0 ${
+                                                  isSkillActive
+                                                    ? 'bg-emerald-600 text-white'
+                                                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                                                }`}
+                                              >
+                                                {isSkillActive ? 'ON' : 'OFF'}
+                                              </button>
+                                            </div>
+                                          );
+                                      })}
+                                    </div>
+                                  </div>
+                                )}
                               </div>
                             );
                           })}
                         </div>
                       </div>
-
-                      {/* Expandable Individual Skills Section */}
-                      {isExpanded && (
-                        <div className="pt-3 border-t border-gray-800 space-y-2">
-                          <span className="text-[11px] font-bold text-gray-300 uppercase tracking-wider block">
-                            Specific Skill Activations
-                          </span>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                            {(adminData?.skills || []).map((skill: any) => {
-                              const isSkillActive = userSkills.includes(skill.id);
-                              return (
-                                <div
-                                  key={skill.id}
-                                  className={`p-2 rounded-lg border text-xs flex items-center justify-between ${
-                                    isSkillActive
-                                      ? 'bg-emerald-950/30 border-emerald-700/50 text-emerald-200'
-                                      : 'bg-gray-950/40 border-gray-800 text-gray-400'
-                                  }`}
-                                >
-                                  <span className="font-medium truncate pr-2">{skill.name}</span>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleToggleUserSkill(u.email, skill.id, !isSkillActive)}
-                                    className={`text-[10px] font-bold px-2 py-0.5 rounded transition-colors ${
-                                      isSkillActive
-                                        ? 'bg-emerald-600 text-white'
-                                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                                    }`}
-                                  >
-                                    {isSkillActive ? 'ON' : 'OFF'}
-                                  </button>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      )}
                     </div>
                   );
                 })}

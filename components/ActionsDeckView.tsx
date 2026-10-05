@@ -89,13 +89,13 @@ export default function ActionsDeckView({
       advanceToNextCard('Discarded draft');
     } else if (optionKey === 'edit_draft' && item.draftInfo) {
       if (onOpenDraftInChat) onOpenDraftInChat(item.draftInfo);
-      advanceToNextCard('Draft opened in Suchi chat');
+      advanceToNextCard('Draft opened in Life OS chat');
     } else if (optionKey === 'open_link' && item.link) {
       window.open(item.link, '_blank');
       advanceToNextCard('Opened in Google Workspace');
     } else if (optionKey === 'request_revision') {
       if (onRequestRevision) onRequestRevision(item);
-      advanceToNextCard('Revision requested from Suchi');
+      advanceToNextCard('Revision requested from Life OS');
     } else if (optionKey === 'mark_finalized') {
       advanceToNextCard('✓ Marked as finalized');
     } else if (optionKey === 'complete_task') {
@@ -171,7 +171,7 @@ export default function ActionsDeckView({
             <span className="text-3xl">✨</span>
             <h3 className="text-sm font-bold text-slate-800 dark:text-zinc-100">All caught up!</h3>
             <p className="text-xs text-slate-400">
-              No pending action cards in this category. As Suchi generates drafts, documents, or scheduled tasks, they will appear here.
+              No pending action cards in this category. As Life OS generates drafts, documents, or scheduled tasks, they will appear here.
             </p>
           </div>
         ) : (
@@ -246,7 +246,7 @@ export default function ActionsDeckView({
                       onClick={() => handleOptionSelect('edit_draft', currentItem)}
                       className="flex-1 py-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-semibold text-xs transition-colors"
                     >
-                      Edit in Suchi ✎
+                      Edit in Life OS ✎
                     </button>
                     <button
                       type="button"

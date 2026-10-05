@@ -163,7 +163,7 @@ export default function HubPage() {
     }
   }
 
-  // Create Goal with Suchi planning & Google Sheets Project Tracker
+  // Create Goal with Life OS planning & Google Sheets Project Tracker
   async function handleCreateGoal(e: React.FormEvent) {
     e.preventDefault();
     if (!goalOutcome.trim() || !goalTargetDate) return;
@@ -212,7 +212,7 @@ export default function HubPage() {
               </svg>
             </span>
             <div className="flex items-baseline gap-1.5">
-              <span className="font-bold text-sm tracking-tight text-slate-900 dark:text-white">Suchi</span>
+              <span className="font-bold text-sm tracking-tight text-slate-900 dark:text-white">Life OS</span>
               <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.2 rounded">
                 Life OS Hub
               </span>
@@ -449,7 +449,7 @@ export default function HubPage() {
             </div>
           </section>
 
-          {/* COLUMN 3: GOALS & NORTH STARS (Suchi Planned + Google Sheets Trackers) */}
+          {/* COLUMN 3: GOALS & NORTH STARS (Life OS Planned + Google Sheets Trackers) */}
           <section className={`flex flex-col h-full rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 p-4 shadow-xl overflow-hidden ${
             mobileTab === 'goals' ? 'flex' : 'hidden sm:flex'
           }`}>
@@ -530,7 +530,7 @@ export default function HubPage() {
                   {/* Planned Milestones Timeline */}
                   <div className="space-y-1.5 pt-1">
                     <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block">
-                      Suchi Planned Milestones:
+                      Life OS Planned Milestones:
                     </span>
                     {goal.milestones.map((m) => (
                       <div
@@ -566,9 +566,9 @@ export default function HubPage() {
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-4">
             <div className="flex items-start justify-between">
               <div>
-                <h3 className="text-base font-bold text-slate-900 dark:text-white">Plan Goal & North Star with Suchi</h3>
+                <h3 className="text-base font-bold text-slate-900 dark:text-white">Plan Goal & North Star with Life OS</h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Suchi will auto-generate milestones and initialize a Google Sheet Project Tracker in your Drive.
+                  Life OS will auto-generate milestones and initialize a Google Sheet Project Tracker in your Drive.
                 </p>
               </div>
               <button
@@ -661,7 +661,7 @@ export default function HubPage() {
                   disabled={isCreatingGoal}
                   className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-colors shadow-md disabled:opacity-50"
                 >
-                  {isCreatingGoal ? 'Suchi Planning & Creating Sheets...' : 'Plan Goal & Initialize Sheets'}
+                  {isCreatingGoal ? 'Life OS Planning & Creating Sheets...' : 'Plan Goal & Initialize Sheets'}
                 </button>
               </div>
             </form>

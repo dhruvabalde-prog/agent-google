@@ -764,7 +764,7 @@ export async function scanInboxAndExtractTasks(
         const lowerSnippet = snippet.toLowerCase();
         const lowerSubj = subjectHeader.toLowerCase();
 
-        // Categorize into Suchi vs User tasks based on action keywords
+        // Categorize into Life OS vs User tasks based on action keywords
         if (
           lowerSnippet.includes('draft') ||
           lowerSnippet.includes('meeting') ||
@@ -830,7 +830,7 @@ export async function scanInboxAndExtractTasks(
       suchiTasks,
       userTasks,
       tasksCreated,
-      summary: `Scanned ${messages.length} email threads. Identified ${suchiTasks.length} tasks for Suchi and ${userTasks.length} tasks for User. Created ${tasksCreated} tasks in Google Tasks.`,
+      summary: `Scanned ${messages.length} email threads. Identified ${suchiTasks.length} tasks for Life OS and ${userTasks.length} tasks for User. Created ${tasksCreated} tasks in Google Tasks.`,
     };
   } catch (error: any) {
     return { error: error.message };
@@ -1016,7 +1016,7 @@ export async function createGoogleForm(
         info: {
           title,
           documentTitle: title,
-          description: description || 'Created by Suchi Life OS',
+          description: description || 'Created by Life OS Life OS',
         },
       },
     });
@@ -1101,7 +1101,7 @@ export async function createGeminiNotebook(
     const formattedContent = [
       `# 📓 GEMINI RESEARCH NOTEBOOK: ${title.toUpperCase()}\n`,
       `**Topic / Focus**: ${topic}`,
-      `**Compiled by**: Suchi Autonomous Chief of Staff`,
+      `**Compiled by**: Life OS Autonomous Chief of Staff`,
       `**Date**: ${new Date().toLocaleDateString('en-US', { dateStyle: 'full' })}\n`,
       `---\n`,
       ...sections.map(s => {
@@ -1114,7 +1114,7 @@ export async function createGeminiNotebook(
         }
         return sec;
       }),
-      `\n---\n*Notebook generated autonomously by Suchi Life OS.*`
+      `\n---\n*Notebook generated autonomously by Life OS Life OS.*`
     ].join('\n\n');
 
     const docResult = await createDocument(accessToken, `📓 ${title}`, formattedContent);
@@ -1151,7 +1151,7 @@ export async function createYouTubeMusicPlaylist(
         requestBody: {
           snippet: {
             title,
-            description: description || 'Curated by Suchi Life OS',
+            description: description || 'Curated by Life OS Life OS',
           },
           status: {
             privacyStatus: 'unlisted',

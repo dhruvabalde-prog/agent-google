@@ -1,14 +1,14 @@
-# Navia / Life OS — Complete Master Catalog of 100 Autonomous Skills
+# Life OS / Life OS — Complete Master Catalog of 100 Autonomous Skills
 
 > **The Definitive Catalog of All 100 Curated, High-Yield Skills across Self, Home/Family, Work/Teams, and Meta Cognition.**  
 > *Format: Deterministic Execution Workflows, Parameter Schemas, Quick Questions, and Safety Guardrails.*  
-> *Platform: Navia Sovereign Operating System*
+> *Platform: Life OS Sovereign Operating System*
 
 ---
 
 ## Overview
 
-Unlike unconstrained prompt-based chatbots that guess how to perform tasks, Navia operates on a **finite, curated catalog of 100 high-yield deterministic skills**. 
+Unlike unconstrained prompt-based chatbots that guess how to perform tasks, Life OS operates on a **finite, curated catalog of 100 high-yield deterministic skills**. 
 
 Each skill is architected as an **audited operational routine** with:
 1. **Interactive Quick Questions**: User-friendly multi-choice prompts to subtract ambiguity in 10 seconds.
@@ -68,7 +68,7 @@ Curates, schedules, and tracks comprehensive age-appropriate diagnostic screenin
 5. Provide clean file link and actionable booking checklist.
 
 #### Guardrails & Safety Protocols
-> ⚠️ **Guardrail**: Medical Disclaimer: Suchi provides screening guidelines and organization, not direct medical diagnosis. Consult a physician for diagnostic evaluation.
+> ⚠️ **Guardrail**: Medical Disclaimer: Life OS provides screening guidelines and organization, not direct medical diagnosis. Consult a physician for diagnostic evaluation.
 > ⚠️ **Guardrail**: Ensure fast-tracking instructions (e.g. 10-12 hour fasting protocols) are highlighted in the generated checklist.
 
 ---
@@ -1376,7 +1376,7 @@ Scans consulting agreements, client Master Service Agreements (MSAs), and non-co
 4. Draft professional negotiation email to client counsel.
 
 #### Guardrails & Safety Protocols
-> ⚠️ **Guardrail**: State clearly that Suchi provides business analysis, not attorney-client legal representation.
+> ⚠️ **Guardrail**: State clearly that Life OS provides business analysis, not attorney-client legal representation.
 
 ---
 
@@ -3114,7 +3114,7 @@ Synthesizes your upcoming schedule, unread high-priority emails, pending task de
 - **Briefing Delivery Time**: *"When do you want your morning Chief of Staff digest ready?"*
   - [A] Early Morning (6:30 AM - 7:30 AM)
   - [B] Workday Start (8:30 AM - 9:00 AM)
-  - [C] On-demand when I open Suchi
+  - [C] On-demand when I open Life OS
   - [D] Evening before (planning next day)
 
 #### Configurable Parameters

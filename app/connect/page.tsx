@@ -45,7 +45,7 @@ export default function ConnectPage() {
 
   const handleInstallApp = async () => {
     if (!deferredPrompt) {
-      alert('To install Suchi, tap Share / Settings in your browser and select "Add to Home Screen".');
+      alert('To install Life OS, tap Share / Settings in your browser and select "Add to Home Screen".');
       return;
     }
     deferredPrompt.prompt();
@@ -109,7 +109,7 @@ export default function ConnectPage() {
         <div className="inline-block px-2.5 py-0.5 mb-2 rounded-full bg-indigo-50 dark:bg-indigo-950/80 border border-indigo-200 dark:border-indigo-700/50 text-[10px] font-bold text-indigo-600 dark:text-indigo-300 uppercase tracking-widest">
           LIFE OPERATING SYSTEM
         </div>
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Welcome to Suchi</h1>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Welcome to Life OS</h1>
         <p className="text-xs text-slate-500 dark:text-slate-400 mb-6 max-w-xs">
           Your autonomous Chief of Staff. Directing your attention to what matters, automating the rest.
         </p>
@@ -157,7 +157,7 @@ export default function ConnectPage() {
               href="/"
               className="w-full py-3.5 px-4 bg-blue-600 hover:bg-blue-500 rounded-xl shadow text-sm font-semibold text-white flex items-center justify-center gap-2 transition-all hover:scale-[1.01] active:scale-[0.99]"
             >
-              <span>Open Suchi Chat →</span>
+              <span>Open Life OS Chat →</span>
             </Link>
 
             <button
@@ -200,7 +200,7 @@ export default function ConnectPage() {
               {showAdvancedPermissions && (
                 <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-800 space-y-2.5 text-[11px] text-slate-600 dark:text-slate-400">
                   <p className="text-[10px] text-slate-500">
-                    Select strictly the tools you wish Suchi to access. Admin & cloud infrastructure APIs are never requested from you.
+                    Select strictly the tools you wish Life OS to access. Admin & cloud infrastructure APIs are never requested from you.
                   </p>
                   <label className="flex items-center gap-2 cursor-pointer hover:text-slate-900 dark:hover:text-slate-200">
                     <input
@@ -242,7 +242,7 @@ export default function ConnectPage() {
               )}
             </div>
 
-            {/* Help Suchi Get Better (Optional Tick Mark) */}
+            {/* Help Life OS Get Better (Optional Tick Mark) */}
             <label className="flex items-start gap-2.5 p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 cursor-pointer transition-colors text-left">
               <input
                 type="checkbox"
@@ -257,11 +257,11 @@ export default function ConnectPage() {
               />
               <div className="flex-1">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-xs font-semibold text-white">Help Suchi get better</span>
+                  <span className="text-xs font-semibold text-white">Help Life OS get better</span>
                   <span className="text-[9px] bg-slate-800 text-slate-400 px-1.5 py-0.2 rounded font-medium">Optional</span>
                 </div>
                 <p className="text-[10px] text-slate-400 leading-normal mt-0.5">
-                  Share anonymous telemetry and bug diagnostics to help our engineering team continuously train and improve Suchi's reasoning.
+                  Share anonymous telemetry and bug diagnostics to help our engineering team continuously train and improve Life OS's reasoning.
                 </p>
               </div>
             </label>
@@ -288,7 +288,7 @@ export default function ConnectPage() {
               <svg className="w-4 h-4 text-blue-500 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
               </svg>
-              <span>Install Suchi App (PWA)</span>
+              <span>Install Life OS App (PWA)</span>
               {isInstallable && <span className="bg-blue-600 text-white text-[9px] px-1.5 py-0.2 rounded font-bold">READY</span>}
             </button>
           </div>

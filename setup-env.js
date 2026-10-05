@@ -1,0 +1,1 @@
+const fs = require('fs'); const key = fs.readFileSync('sa-key.json', 'utf8'); let env = fs.existsSync('.env.local') ? fs.readFileSync('.env.local', 'utf8') : ''; if(!env.includes('GCP_SERVICE_ACCOUNT_JSON')) { env += '\n\nGCP_SERVICE_ACCOUNT_JSON=' + JSON.stringify(key) + '\nGCP_PROJECT_ID=suchi-ai\nGCP_REGION=us-central1\n'; fs.writeFileSync('.env.local', env); }  

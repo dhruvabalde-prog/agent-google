@@ -129,7 +129,7 @@ Every name in this index meets six non-negotiable criteria:
 | 62 | **Neeva** | 2 | *NEE-vah* | "Hey Neeva" | Hindi/Sanskrit **Neev** (Foundation) + Lyrical suffix *-a*. | The living, breathing foundation of your daily operating rhythm. |
 | 63 | **Kaelo** | 2 | *KAY-loh* | "Hey Kaelo" | Ancient Celtic *Kael* (slender, sharp) + Sanskrit vowel balance. | Sleek, fast, unburdened executive partner. |
 | 64 | **Tara** | 2 | *TAH-rah* | "Hey Tara" | Sanskrit **Tara (तारा)** — *The Pole Star; The Deliverer*. | The unchanging navigational star steering teams safely to shore. |
-| 65 | **Navia** | 3 | *NAH-vee-ah* | "Hey Navia" | Sanskrit **Navya** (New/Fresh) + Latin *Navis* (Navigation). | Fresh, modern navigation through stormy data oceans. |
+| 65 | **Life OS** | 3 | *NAH-vee-ah* | "Hey Life OS" | Sanskrit **Navya** (New/Fresh) + Latin *Navis* (Navigation). | Fresh, modern navigation through stormy data oceans. |
 | 66 | **Ziva** | 2 | *ZEE-vah* | "Hey Ziva" | Sanskrit/Hebrew *Radiance, light, life*. | Radiant operational clarity cutting through bureaucratic fog. |
 | 67 | **Ziven** | 2 | *ZEE-ven* | "Hey Ziven" | Slavic root *Ziv* (alive/active) + Sanskrit neutral *-en*. | Tireless autonomous vitality working in the background. |
 | 68 | **Avani** | 3 | *ah-VAH-nee* | "Hey Avani" | Sanskrit **Avani (अवनी)** — *The Earth / Solid Ground*. | Grounding the business in bedrock operational reality. |

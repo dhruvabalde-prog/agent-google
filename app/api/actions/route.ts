@@ -38,7 +38,7 @@ const INITIAL_ACTION_CARDS: ServerActionCard[] = [
     type: 'draft_reply',
     title: 'Gmail Reply Drafted: Q4 Roadmap & Strategic Deliverables',
     subtitle: 'Email received from Alex Rivera (VP Product) • 12m ago',
-    description: 'Alex requested the updated timeline for Q4 deliverables and presentation deck. Suchi analyzed your calendar, notes, and Drive files, and drafted a reply ready for your approval.',
+    description: 'Alex requested the updated timeline for Q4 deliverables and presentation deck. Life OS analyzed your calendar, notes, and Drive files, and drafted a reply ready for your approval.',
     timestamp: 'While you were away • 12m ago',
     status: 'NEEDS_APPROVAL',
     priority: 'HIGH',

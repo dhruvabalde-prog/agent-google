@@ -47,7 +47,7 @@ const SKILLS_DATA = [
       "Provide clean file link and actionable booking checklist."
     ],
     guardrails: [
-      "Medical Disclaimer: Suchi provides screening guidelines and organization, not direct medical diagnosis. Consult a physician for diagnostic evaluation.",
+      "Medical Disclaimer: Life OS provides screening guidelines and organization, not direct medical diagnosis. Consult a physician for diagnostic evaluation.",
       "Ensure fast-tracking instructions (e.g. 10-12 hour fasting protocols) are highlighted in the generated checklist."
     ]
   },
@@ -1333,7 +1333,7 @@ const REMAINING_SKILLS = [
     ],
     parameters: [{ name: "{{LIABILITY_CAP}}", description: "Liability limit clause", validChoices: "12 months fees / Total fees paid / Uncapped (Dangerous)", defaultFallback: "Capped at fees paid in past 12 months" }],
     workflow: ["Review contract clauses against commercial standards in Google Docs.", "Highlight dangerous provisions: unlimited liability, broad IP assignment, restrictive non-competes.", "Provide revised clause counter-proposals in Google Docs.", "Draft professional negotiation email to client counsel."],
-    guardrails: ["State clearly that Suchi provides business analysis, not attorney-client legal representation."]
+    guardrails: ["State clearly that Life OS provides business analysis, not attorney-client legal representation."]
   },
   {
     num: 44,
@@ -2159,7 +2159,7 @@ const FINAL_SKILLS = [
     description: "Synthesizes your upcoming schedule, unread high-priority emails, pending task deadlines, and strategic priorities into a 2-minute morning briefing.",
     enabled: true, allowedTiers: ["BEGINNER", "INTERMEDIATE", "ADVANCED", "ADMIN"],
     quickQuestions: [
-      { title: "Briefing Delivery Time", prompt: "When do you want your morning Chief of Staff digest ready?", options: ["[A] Early Morning (6:30 AM - 7:30 AM)", "[B] Workday Start (8:30 AM - 9:00 AM)", "[C] On-demand when I open Suchi", "[D] Evening before (planning next day)"] }
+      { title: "Briefing Delivery Time", prompt: "When do you want your morning Chief of Staff digest ready?", options: ["[A] Early Morning (6:30 AM - 7:30 AM)", "[B] Workday Start (8:30 AM - 9:00 AM)", "[C] On-demand when I open Life OS", "[D] Evening before (planning next day)"] }
     ],
     parameters: [{ name: "{{BRIEFING_FORMAT}}", description: "Format of digest", validChoices: "Concise bulleted action items / Structured 3-section memo", defaultFallback: "Top 3 Priorities + Calendar Overview + Red Flags" }],
     workflow: ["Scan Google Calendar for today's schedule and conflict overlaps.", "Scan unread Gmail for urgent stakeholder requests.", "Pull highest-priority Google Tasks due today.", "Synthesize a 1-page Action Digest in Google Docs.", "Deliver brief, empowering summary in chat."],

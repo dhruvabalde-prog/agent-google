@@ -403,7 +403,7 @@ export const functionDeclarations: FunctionDeclaration[] = [
   },
   {
     name: 'scan_inbox_and_extract_tasks',
-    description: 'Proactively scans recent Gmail threads, extracts commitments and deliverables, categorizes into tasks Suchi can execute immediately vs tasks for the user, and auto-syncs them into Google Tasks.',
+    description: 'Proactively scans recent Gmail threads, extracts commitments and deliverables, categorizes into tasks Life OS can execute immediately vs tasks for the user, and auto-syncs them into Google Tasks.',
     parameters: {
       type: Type.OBJECT,
       properties: {

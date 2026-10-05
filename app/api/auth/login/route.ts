@@ -10,7 +10,7 @@ export async function GET(request: Request) {
     'openid',
     'email',
     'profile',
-    'https://www.googleapis.com/auth/drive.file', // Only files opened or created by Suchi
+    'https://www.googleapis.com/auth/drive.file', // Only files opened or created by Life OS
   ];
 
   // If specific tools requested, only include those

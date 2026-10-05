@@ -19,11 +19,11 @@ export async function GET(request: NextRequest) {
   return new NextResponse(`
     <!DOCTYPE html>
     <html>
-      <head><title>Authorize Suchi Life OS MCP</title></head>
+      <head><title>Authorize Life OS Life OS MCP</title></head>
       <body style="font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #0f172a; color: #fff;">
         <div style="background: #1e293b; border: 1px solid #334155; padding: 32px; border-radius: 16px; max-width: 400px; text-align: center;">
-          <h2 style="margin-top: 0; color: #38bdf8;">Authorize Suchi MCP</h2>
-          <p style="color: #94a3b8; font-size: 14px;">Connect Suchi Life OS MCP Server with standard zero-data leakage firewall.</p>
+          <h2 style="margin-top: 0; color: #38bdf8;">Authorize Life OS MCP</h2>
+          <p style="color: #94a3b8; font-size: 14px;">Connect Life OS Life OS MCP Server with standard zero-data leakage firewall.</p>
           <p style="color: #34d399; font-weight: bold;">Connection Approved ✓</p>
         </div>
       </body>

@@ -192,7 +192,7 @@ export default function VoiceSparringPage() {
       {
         id: 'msg-0',
         role: 'agent',
-        content: `I am ready. I am Suchi, your Sovereign Life & Work Operating System.\n\nGrill me on my defensibility, my unit economics, my security architecture, or why Google and Apple won't kill me. Speak freely into your mic or choose a challenge below.`,
+        content: `I am ready. I am Life OS, your Sovereign Life & Work Operating System.\n\nGrill me on my defensibility, my unit economics, my security architecture, or why Google and Apple won't kill me. Speak freely into your mic or choose a challenge below.`,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       }
     ]);
@@ -429,7 +429,7 @@ export default function VoiceSparringPage() {
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-purple-500 animate-pulse"></span>
             <div>
-              <h1 className="font-semibold text-sm text-slate-900 dark:text-white leading-tight">Suchi Voice Sparring</h1>
+              <h1 className="font-semibold text-sm text-slate-900 dark:text-white leading-tight">Life OS Voice Sparring</h1>
               <p className="text-[10px] text-slate-500 dark:text-gray-400 hidden sm:block">Executive Life & Work OS Defensibility Arena</p>
             </div>
           </div>
@@ -505,7 +505,7 @@ export default function VoiceSparringPage() {
             className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}
           >
             <div className="flex items-center gap-1.5 mb-1 px-1 text-[11px] text-slate-500 dark:text-gray-400 font-medium">
-              <span>{msg.role === 'user' ? '🥊 You' : '🛡️ Suchi (Chief of Staff)'}</span>
+              <span>{msg.role === 'user' ? '🥊 You' : '🛡️ Life OS (Chief of Staff)'}</span>
               <span>•</span>
               <span className="text-[10px] text-slate-400 dark:text-gray-500">{msg.timestamp}</span>
             </div>
@@ -547,7 +547,7 @@ export default function VoiceSparringPage() {
         {isProcessing && (
           <div className="flex flex-col items-start">
             <div className="flex items-center gap-1.5 mb-1 px-1 text-[11px] text-slate-500 dark:text-gray-400">
-              <span>🛡️ Suchi</span>
+              <span>🛡️ Life OS</span>
             </div>
             <div className="p-3.5 rounded-2xl bg-white dark:bg-gray-900 border border-slate-200 dark:border-gray-800 rounded-bl-sm flex items-center gap-2 shadow-sm">
               <div className="w-2 h-2 rounded-full bg-purple-500 dark:bg-purple-400 animate-bounce" style={{ animationDelay: '0ms' }} />
