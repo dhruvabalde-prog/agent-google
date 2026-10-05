@@ -4,11 +4,14 @@ import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import Link from 'next/link';
-import { ChatMessage, ActionResult, DraftInfo } from '@/lib/types';
+import { ChatMessage, ActionResult, DraftInfo, UserProfile, AppMode } from '@/lib/types';
 import ActionCardsDeck, { ActionCardItem } from '@/components/ActionCardsDeck';
 import MyDayView, { CalendarEvent, TaskItem, GoalItem } from '@/components/MyDayView';
 import ActionsDeckView, { ActionDeckItem } from '@/components/ActionsDeckView';
-
+import DashboardsView from '@/components/DashboardsView';
+import ChatsCollaborationView from '@/components/ChatsCollaborationView';
+import OnboardingFlowModal from '@/components/OnboardingFlowModal';
+import LifeOSLiveVoiceModal from '@/components/SuchiLiveVoiceModal';
 import { RoutineItem } from '@/components/RoutinePlayerModal';
 import DelegationSettingsModal, { DelegationSettings, DEFAULT_DELEGATION_SETTINGS } from '@/components/DelegationSettingsModal';
 
@@ -43,8 +46,8 @@ const AGENT_SUGGESTIONS_POOL = [
   'Tip: Confirm the meaningful outcome at the top when you are happy with the draft.',
 ];
 
-const LIFE_MODE_CAPABILITY_POOL = [
-  'Generate 1-tap WhatsApp message to follow up on client invoice',
+const WORK_MODE_CAPABILITY_POOL = [
+  'Generate 1-tap WhatsApp Business message to follow up on client invoice',
   'Prepare pre-call briefing & dialer for upcoming vendor negotiation',
   'Draft RFQ & compare 3 development vendors in Google Sheets',
   'Launch B2B customer connect outreach pipeline with 3-touch sequence',
@@ -65,7 +68,7 @@ const HOME_MODE_CAPABILITY_POOL = [
   'Review personal goals & habit tracker for this month',
 ];
 
-const CAPABILITY_POOL = [...LIFE_MODE_CAPABILITY_POOL, ...HOME_MODE_CAPABILITY_POOL];
+const CAPABILITY_POOL = [...WORK_MODE_CAPABILITY_POOL, ...HOME_MODE_CAPABILITY_POOL];
 
 const EXECUTIVE_SKILL_SUGGESTIONS = [
   'Generate 1-tap WhatsApp message to follow up on client invoice or agreement.',
@@ -201,65 +204,153 @@ function extractQuestionOptions(text: string): QuestionOption[] {
 }
 
 export default function Home() {
-  // Two Parallel Chat Slots (Only 2 chats at a time)
+  // 4 Air-Gapped Chat Slots (2 for Home Mode, 2 for Work Mode)
   const [activeSlot, setActiveSlot] = useState<1 | 2>(1);
-  const [slot1Messages, setSlot1Messages] = useState<ChatMessage[]>([]);
-  const [slot2Messages, setSlot2Messages] = useState<ChatMessage[]>([]);
-  const [slot1Id, setSlot1Id] = useState<string>(() => crypto.randomUUID());
-  const [slot2Id, setSlot2Id] = useState<string>(() => crypto.randomUUID());
-  const [slot1Outcome, setSlot1Outcome] = useState<string>('');
-  const [slot2Outcome, setSlot2Outcome] = useState<string>('');
-  const [slot1OutcomeStatus, setSlot1OutcomeStatus] = useState<string>('NONE');
-  const [slot2OutcomeStatus, setSlot2OutcomeStatus] = useState<string>('NONE');
-  const [slot1Locked, setSlot1Locked] = useState<boolean>(false);
-  const [slot2Locked, setSlot2Locked] = useState<boolean>(false);
+  const [chatMode, setChatMode] = useState<AppMode>('work');
+
+  // Home Slots
+  const [homeSlot1Messages, setHomeSlot1Messages] = useState<ChatMessage[]>([]);
+  const [homeSlot2Messages, setHomeSlot2Messages] = useState<ChatMessage[]>([]);
+  const [homeSlot1Id, setHomeSlot1Id] = useState<string>(() => crypto.randomUUID());
+  const [homeSlot2Id, setHomeSlot2Id] = useState<string>(() => crypto.randomUUID());
+  const [homeSlot1Outcome, setHomeSlot1Outcome] = useState<string>('');
+  const [homeSlot2Outcome, setHomeSlot2Outcome] = useState<string>('');
+  const [homeSlot1OutcomeStatus, setHomeSlot1OutcomeStatus] = useState<string>('NONE');
+  const [homeSlot2OutcomeStatus, setHomeSlot2OutcomeStatus] = useState<string>('NONE');
+  const [homeSlot1Locked, setHomeSlot1Locked] = useState<boolean>(false);
+  const [homeSlot2Locked, setHomeSlot2Locked] = useState<boolean>(false);
+  const [homeSlot1Loading, setHomeSlot1Loading] = useState(false);
+  const [homeSlot2Loading, setHomeSlot2Loading] = useState(false);
+
+  // Work Slots
+  const [workSlot1Messages, setWorkSlot1Messages] = useState<ChatMessage[]>([]);
+  const [workSlot2Messages, setWorkSlot2Messages] = useState<ChatMessage[]>([]);
+  const [workSlot1Id, setWorkSlot1Id] = useState<string>(() => crypto.randomUUID());
+  const [workSlot2Id, setWorkSlot2Id] = useState<string>(() => crypto.randomUUID());
+  const [workSlot1Outcome, setWorkSlot1Outcome] = useState<string>('');
+  const [workSlot2Outcome, setWorkSlot2Outcome] = useState<string>('');
+  const [workSlot1OutcomeStatus, setWorkSlot1OutcomeStatus] = useState<string>('NONE');
+  const [workSlot2OutcomeStatus, setWorkSlot2OutcomeStatus] = useState<string>('NONE');
+  const [workSlot1Locked, setWorkSlot1Locked] = useState<boolean>(false);
+  const [workSlot2Locked, setWorkSlot2Locked] = useState<boolean>(false);
+  const [workSlot1Loading, setWorkSlot1Loading] = useState(false);
+  const [workSlot2Loading, setWorkSlot2Loading] = useState(false);
+
   const [isRestored, setIsRestored] = useState<boolean>(false);
 
-  // Active slot proxies
-  const messages = activeSlot === 1 ? slot1Messages : slot2Messages;
+  // User Profile & Onboarding State
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [showOnboardingModal, setShowOnboardingModal] = useState<boolean>(false);
+
+  // Active slot proxies based on chatMode ('home' | 'work') and activeSlot (1 | 2)
+  const isHome = chatMode === 'home';
+  const messages = isHome
+    ? (activeSlot === 1 ? homeSlot1Messages : homeSlot2Messages)
+    : (activeSlot === 1 ? workSlot1Messages : workSlot2Messages);
+
   const setMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>> = (val) => {
-    if (activeSlot === 1) setSlot1Messages(val);
-    else setSlot2Messages(val);
+    if (isHome) {
+      if (activeSlot === 1) setHomeSlot1Messages(val);
+      else setHomeSlot2Messages(val);
+    } else {
+      if (activeSlot === 1) setWorkSlot1Messages(val);
+      else setWorkSlot2Messages(val);
+    }
   };
-  const currentChatId = activeSlot === 1 ? slot1Id : slot2Id;
+
+  const currentChatId = isHome
+    ? (activeSlot === 1 ? homeSlot1Id : homeSlot2Id)
+    : (activeSlot === 1 ? workSlot1Id : workSlot2Id);
+
   const setCurrentChatId = (id: string) => {
-    if (activeSlot === 1) setSlot1Id(id);
-    else setSlot2Id(id);
+    if (isHome) {
+      if (activeSlot === 1) setHomeSlot1Id(id);
+      else setHomeSlot2Id(id);
+    } else {
+      if (activeSlot === 1) setWorkSlot1Id(id);
+      else setWorkSlot2Id(id);
+    }
   };
-  const meaningfulOutcome = activeSlot === 1 ? slot1Outcome : slot2Outcome;
+
+  const meaningfulOutcome = isHome
+    ? (activeSlot === 1 ? homeSlot1Outcome : homeSlot2Outcome)
+    : (activeSlot === 1 ? workSlot1Outcome : workSlot2Outcome);
+
   const setMeaningfulOutcome = (o: string) => {
-    if (activeSlot === 1) setSlot1Outcome(o);
-    else setSlot2Outcome(o);
+    if (isHome) {
+      if (activeSlot === 1) setHomeSlot1Outcome(o);
+      else setHomeSlot2Outcome(o);
+    } else {
+      if (activeSlot === 1) setWorkSlot1Outcome(o);
+      else setWorkSlot2Outcome(o);
+    }
   };
-  const outcomeStatus = activeSlot === 1 ? slot1OutcomeStatus : slot2OutcomeStatus;
+
+  const outcomeStatus = isHome
+    ? (activeSlot === 1 ? homeSlot1OutcomeStatus : homeSlot2OutcomeStatus)
+    : (activeSlot === 1 ? workSlot1OutcomeStatus : workSlot2OutcomeStatus);
+
   const setOutcomeStatus = (s: string) => {
-    if (activeSlot === 1) setSlot1OutcomeStatus(s);
-    else setSlot2OutcomeStatus(s);
+    if (isHome) {
+      if (activeSlot === 1) setHomeSlot1OutcomeStatus(s);
+      else setHomeSlot2OutcomeStatus(s);
+    } else {
+      if (activeSlot === 1) setWorkSlot1OutcomeStatus(s);
+      else setWorkSlot2OutcomeStatus(s);
+    }
   };
-  const isChatLocked = activeSlot === 1 ? slot1Locked : slot2Locked;
+
+  const isChatLocked = isHome
+    ? (activeSlot === 1 ? homeSlot1Locked : homeSlot2Locked)
+    : (activeSlot === 1 ? workSlot1Locked : workSlot2Locked);
+
   const setIsChatLocked = (l: boolean) => {
-    if (activeSlot === 1) setSlot1Locked(l);
-    else setSlot2Locked(l);
+    if (isHome) {
+      if (activeSlot === 1) setHomeSlot1Locked(l);
+      else setHomeSlot2Locked(l);
+    } else {
+      if (activeSlot === 1) setWorkSlot1Locked(l);
+      else setWorkSlot2Locked(l);
+    }
   };
+
+  const slot1Loading = isHome ? homeSlot1Loading : workSlot1Loading;
+  const slot2Loading = isHome ? homeSlot2Loading : workSlot2Loading;
+  const setSlot1Loading = isHome ? setHomeSlot1Loading : setWorkSlot1Loading;
+  const setSlot2Loading = isHome ? setHomeSlot2Loading : setWorkSlot2Loading;
+  const isLoading = activeSlot === 1 ? slot1Loading : slot2Loading;
+
+  // Cross-slot lock rule: Cannot message in Chat 2 if Chat 1 is actively working
+  const isOtherSlotWorking = activeSlot === 1 ? slot2Loading : slot1Loading;
 
   // Voice Typing (Speech-to-Text dictation)
   const [isVoiceTyping, setIsVoiceTyping] = useState(false);
   const speechRecognitionRef = useRef<any>(null);
+
   // Delegation & Autonomy Settings
   const [isDelegationModalOpen, setIsDelegationModalOpen] = useState(false);
   const [delegationSettings, setDelegationSettings] = useState<DelegationSettings>(DEFAULT_DELEGATION_SETTINGS);
 
   useEffect(() => {
     try {
-      const stored = localStorage.getItem('suchi_delegation_settings_v1');
+      const stored = localStorage.getItem('lifeos_delegation_settings_v1') || localStorage.getItem('suchi_delegation_settings_v1');
       if (stored) {
         setDelegationSettings({ ...DEFAULT_DELEGATION_SETTINGS, ...JSON.parse(stored) });
       }
     } catch (e) {}
+
+    // Load User Profile
+    try {
+      const savedProfile = localStorage.getItem('lifeos_user_profile');
+      if (savedProfile) {
+        setUserProfile(JSON.parse(savedProfile));
+      } else {
+        // Trigger onboarding for new users
+        setShowOnboardingModal(true);
+      }
+    } catch (e) {}
   }, []);
 
-  // Dual Mode: Home Mode vs Life Mode (Right Top Corner Drawer)
-  const [chatMode, setChatMode] = useState<'home' | 'life'>('life');
   const [isModeDrawerOpen, setIsModeDrawerOpen] = useState(false);
 
   // Quick Tools State for Right Drawer
@@ -271,32 +362,36 @@ export default function Home() {
 
   useEffect(() => {
     try {
-      const savedMode = localStorage.getItem('suchi_chat_mode');
-      if (savedMode === 'home' || savedMode === 'life') {
-        setChatMode(savedMode);
+      const savedMode = localStorage.getItem('lifeos_chat_mode');
+      if (savedMode === 'home' || savedMode === 'work') {
+        setChatMode(savedMode as AppMode);
       }
     } catch (e) {}
   }, []);
 
-  function handleModeChange(mode: 'home' | 'life') {
+  function handleModeChange(mode: AppMode) {
     setChatMode(mode);
     try {
-      localStorage.setItem('suchi_chat_mode', mode);
+      localStorage.setItem('lifeos_chat_mode', mode);
+    } catch (e) {}
+  }
+
+  function handleSaveUserProfile(profile: UserProfile) {
+    setUserProfile(profile);
+    try {
+      localStorage.setItem('lifeos_user_profile', JSON.stringify(profile));
     } catch (e) {}
   }
 
   const [welcomeCapabilities, setWelcomeCapabilities] = useState<string[]>([]);
 
   useEffect(() => {
-    const pool = chatMode === 'home' ? HOME_MODE_CAPABILITY_POOL : LIFE_MODE_CAPABILITY_POOL;
+    const pool = chatMode === 'home' ? HOME_MODE_CAPABILITY_POOL : WORK_MODE_CAPABILITY_POOL;
     const shuffled = [...pool].sort(() => 0.5 - Math.random());
     setWelcomeCapabilities(shuffled.slice(0, 5));
   }, [currentChatId, activeSlot, chatMode]);
 
   const [input, setInput] = useState('');
-  const [slot1Loading, setSlot1Loading] = useState(false);
-  const [slot2Loading, setSlot2Loading] = useState(false);
-  const isLoading = activeSlot === 1 ? slot1Loading : slot2Loading;
   const [progressIndex, setProgressIndex] = useState(0);
   const [user, setUser] = useState<{ email: string; name: string; picture: string } | null>(null);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
@@ -433,8 +528,8 @@ export default function Home() {
   const [actionCards, setActionCards] = useState<ActionCardItem[]>([]);
   const [unreadActionsCount, setUnreadActionsCount] = useState<number>(0);
 
-  // Bottom Navigation Tabs: 'my_day' (left) | 'suchi' (center) | 'actions' (right)
-  const [activeAppTab, setActiveAppTab] = useState<'my_day' | 'suchi' | 'actions'>('suchi');
+  // Bottom Navigation Tabs: 'dashboards' | 'today' | 'chat' | 'actions' | 'chats'
+  const [activeAppTab, setActiveAppTab] = useState<'dashboards' | 'today' | 'chat' | 'actions' | 'chats'>('chat');
 
   // My Day state (tasks, routines, goals)
   const [hubTasks, setHubTasks] = useState<any[]>([]);
@@ -608,31 +703,64 @@ export default function Home() {
   useEffect(() => {
     let loadedFromLocal = false;
     try {
-      const raw = localStorage.getItem('suchi_active_session_v2');
+      const raw = localStorage.getItem('lifeos_active_session_v3') || localStorage.getItem('suchi_active_session_v2');
       if (raw) {
         const saved = JSON.parse(raw);
-        if (saved && (saved.slot1?.messages?.length > 0 || saved.slot2?.messages?.length > 0)) {
+        if (saved) {
           if (saved.activeSlot === 1 || saved.activeSlot === 2) {
             setActiveSlot(saved.activeSlot);
           }
-          if (saved.slot1) {
-            setSlot1Id(saved.slot1.id || crypto.randomUUID());
-            setSlot1Messages(saved.slot1.messages || []);
-            setSlot1Outcome(saved.slot1.outcome || '');
-            setSlot1OutcomeStatus(saved.slot1.outcomeStatus || 'NONE');
-            setSlot1Locked(Boolean(saved.slot1.locked));
+          if (saved.chatMode === 'home' || saved.chatMode === 'work') {
+            setChatMode(saved.chatMode);
           }
-          if (saved.slot2) {
-            setSlot2Id(saved.slot2.id || crypto.randomUUID());
-            setSlot2Messages(saved.slot2.messages || []);
-            setSlot2Outcome(saved.slot2.outcome || '');
-            setSlot2OutcomeStatus(saved.slot2.outcomeStatus || 'NONE');
-            setSlot2Locked(Boolean(saved.slot2.locked));
+          // Home slots
+          if (saved.homeSlot1) {
+            setHomeSlot1Id(saved.homeSlot1.id || crypto.randomUUID());
+            setHomeSlot1Messages(saved.homeSlot1.messages || []);
+            setHomeSlot1Outcome(saved.homeSlot1.outcome || '');
+            setHomeSlot1OutcomeStatus(saved.homeSlot1.outcomeStatus || 'NONE');
+            setHomeSlot1Locked(Boolean(saved.homeSlot1.locked));
+          }
+          if (saved.homeSlot2) {
+            setHomeSlot2Id(saved.homeSlot2.id || crypto.randomUUID());
+            setHomeSlot2Messages(saved.homeSlot2.messages || []);
+            setHomeSlot2Outcome(saved.homeSlot2.outcome || '');
+            setHomeSlot2OutcomeStatus(saved.homeSlot2.outcomeStatus || 'NONE');
+            setHomeSlot2Locked(Boolean(saved.homeSlot2.locked));
+          }
+          // Work slots
+          if (saved.workSlot1) {
+            setWorkSlot1Id(saved.workSlot1.id || crypto.randomUUID());
+            setWorkSlot1Messages(saved.workSlot1.messages || []);
+            setWorkSlot1Outcome(saved.workSlot1.outcome || '');
+            setWorkSlot1OutcomeStatus(saved.workSlot1.outcomeStatus || 'NONE');
+            setWorkSlot1Locked(Boolean(saved.workSlot1.locked));
+          }
+          if (saved.workSlot2) {
+            setWorkSlot2Id(saved.workSlot2.id || crypto.randomUUID());
+            setWorkSlot2Messages(saved.workSlot2.messages || []);
+            setWorkSlot2Outcome(saved.workSlot2.outcome || '');
+            setWorkSlot2OutcomeStatus(saved.workSlot2.outcomeStatus || 'NONE');
+            setWorkSlot2Locked(Boolean(saved.workSlot2.locked));
+          }
+          // Migration from legacy v2 slot1 / slot2
+          if (!saved.workSlot1 && saved.slot1) {
+            setWorkSlot1Id(saved.slot1.id || crypto.randomUUID());
+            setWorkSlot1Messages(saved.slot1.messages || []);
+            setWorkSlot1Outcome(saved.slot1.outcome || '');
+            setWorkSlot1OutcomeStatus(saved.slot1.outcomeStatus || 'NONE');
+            setWorkSlot1Locked(Boolean(saved.slot1.locked));
+          }
+          if (!saved.workSlot2 && saved.slot2) {
+            setWorkSlot2Id(saved.slot2.id || crypto.randomUUID());
+            setWorkSlot2Messages(saved.slot2.messages || []);
+            setWorkSlot2Outcome(saved.slot2.outcome || '');
+            setWorkSlot2OutcomeStatus(saved.slot2.outcomeStatus || 'NONE');
+            setWorkSlot2Locked(Boolean(saved.slot2.locked));
           }
           loadedFromLocal = true;
           setIsRestored(true);
 
-          // Scroll immediately to the last message sent
           setTimeout(() => {
             messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
           }, 80);
@@ -654,16 +782,16 @@ export default function Home() {
               if (chatRes.ok) {
                 const chatData = await chatRes.json();
                 if (chatData.messages && chatData.messages.length > 0) {
-                  setSlot1Id(latestChat.id);
-                  setSlot1Messages(chatData.messages.map((m: any) => ({
+                  setWorkSlot1Id(latestChat.id);
+                  setWorkSlot1Messages(chatData.messages.map((m: any) => ({
                     id: m.id,
                     role: m.role,
                     content: m.content,
                     actions: m.actions,
                   })));
-                  setSlot1Outcome(latestChat.meaningful_outcome || '');
-                  setSlot1OutcomeStatus(latestChat.outcome_status || 'NONE');
-                  setSlot1Locked(Boolean(latestChat.is_locked));
+                  setWorkSlot1Outcome(latestChat.meaningful_outcome || '');
+                  setWorkSlot1OutcomeStatus(latestChat.outcome_status || 'NONE');
+                  setWorkSlot1Locked(Boolean(latestChat.is_locked));
 
                   setTimeout(() => {
                     messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
@@ -677,7 +805,7 @@ export default function Home() {
         } finally {
           setIsRestored(true);
         }
-      }
+      };
       restoreLatestFromDb();
     }
   }, []);
@@ -688,14 +816,23 @@ export default function Home() {
     try {
       const payload = {
         activeSlot,
-        slot1: { id: slot1Id, messages: slot1Messages, outcome: slot1Outcome, outcomeStatus: slot1OutcomeStatus, locked: slot1Locked },
-        slot2: { id: slot2Id, messages: slot2Messages, outcome: slot2Outcome, outcomeStatus: slot2OutcomeStatus, locked: slot2Locked },
+        chatMode,
+        homeSlot1: { id: homeSlot1Id, messages: homeSlot1Messages, outcome: homeSlot1Outcome, outcomeStatus: homeSlot1OutcomeStatus, locked: homeSlot1Locked },
+        homeSlot2: { id: homeSlot2Id, messages: homeSlot2Messages, outcome: homeSlot2Outcome, outcomeStatus: homeSlot2OutcomeStatus, locked: homeSlot2Locked },
+        workSlot1: { id: workSlot1Id, messages: workSlot1Messages, outcome: workSlot1Outcome, outcomeStatus: workSlot1OutcomeStatus, locked: workSlot1Locked },
+        workSlot2: { id: workSlot2Id, messages: workSlot2Messages, outcome: workSlot2Outcome, outcomeStatus: workSlot2OutcomeStatus, locked: workSlot2Locked },
       };
-      localStorage.setItem('suchi_active_session_v2', JSON.stringify(payload));
+      localStorage.setItem('lifeos_active_session_v3', JSON.stringify(payload));
     } catch (e) {
       console.warn('Failed to save chat session:', e);
     }
-  }, [activeSlot, slot1Messages, slot2Messages, slot1Id, slot2Id, slot1Outcome, slot2Outcome, slot1OutcomeStatus, slot2OutcomeStatus, slot1Locked, slot2Locked, isRestored]);
+  }, [
+    activeSlot,
+    chatMode,
+    homeSlot1Messages, homeSlot2Messages, homeSlot1Id, homeSlot2Id, homeSlot1Outcome, homeSlot2Outcome, homeSlot1OutcomeStatus, homeSlot2OutcomeStatus, homeSlot1Locked, homeSlot2Locked,
+    workSlot1Messages, workSlot2Messages, workSlot1Id, workSlot2Id, workSlot1Outcome, workSlot2Outcome, workSlot1OutcomeStatus, workSlot2OutcomeStatus, workSlot1Locked, workSlot2Locked,
+    isRestored
+  ]);
 
   // PWA beforeinstallprompt handler
   useEffect(() => {
@@ -1104,7 +1241,10 @@ export default function Home() {
   async function sendMessage(textToSend?: string) {
     const currentSlot = activeSlot;
     const isCurrentSlotLoading = currentSlot === 1 ? slot1Loading : slot2Loading;
-    const isCurrentSlotLocked = currentSlot === 1 ? slot1Locked : slot2Locked;
+    // Compute locked state per slot (mode-aware)
+    const isCurrentSlotLocked = isHome
+      ? (currentSlot === 1 ? homeSlot1Locked : homeSlot2Locked)
+      : (currentSlot === 1 ? workSlot1Locked : workSlot2Locked);
     const promptText = (textToSend || input).trim();
     if ((!promptText && attachedFiles.length === 0 && !recordedAudioUrl) || isCurrentSlotLoading || isCurrentSlotLocked) return;
 
@@ -1126,10 +1266,18 @@ export default function Home() {
       content: fullPrompt || 'Attached voice note',
     };
 
-    const currentHistory = currentSlot === 1 ? slot1Messages : slot2Messages;
+    // Get current slot messages (mode-aware)
+    const currentHistory = isHome
+      ? (currentSlot === 1 ? homeSlot1Messages : homeSlot2Messages)
+      : (currentSlot === 1 ? workSlot1Messages : workSlot2Messages);
     const newHistory = [...currentHistory, userMessage];
-    if (currentSlot === 1) setSlot1Messages(newHistory);
-    else setSlot2Messages(newHistory);
+    if (isHome) {
+      if (currentSlot === 1) setHomeSlot1Messages(newHistory);
+      else setHomeSlot2Messages(newHistory);
+    } else {
+      if (currentSlot === 1) setWorkSlot1Messages(newHistory);
+      else setWorkSlot2Messages(newHistory);
+    }
 
     setInput('');
     try {
@@ -1179,8 +1327,42 @@ export default function Home() {
     if (targetSlot === 1) slot1AbortControllerRef.current = controller;
     else slot2AbortControllerRef.current = controller;
 
-    const slotChatId = targetSlot === 1 ? slot1Id : slot2Id;
-    const slotOutcome = targetSlot === 1 ? slot1Outcome : slot2Outcome;
+    const slotChatId = isHome
+      ? (targetSlot === 1 ? homeSlot1Id : homeSlot2Id)
+      : (targetSlot === 1 ? workSlot1Id : workSlot2Id);
+    const slotOutcome = isHome
+      ? (targetSlot === 1 ? homeSlot1Outcome : homeSlot2Outcome)
+      : (targetSlot === 1 ? workSlot1Outcome : workSlot2Outcome);
+
+    const setTargetSlotMsgs = (msgs: ChatMessage[]) => {
+      if (isHome) {
+        if (targetSlot === 1) setHomeSlot1Messages(msgs);
+        else setHomeSlot2Messages(msgs);
+      } else {
+        if (targetSlot === 1) setWorkSlot1Messages(msgs);
+        else setWorkSlot2Messages(msgs);
+      }
+    };
+
+    const setTargetSlotOutcome = (outcome: string) => {
+      if (isHome) {
+        if (targetSlot === 1) setHomeSlot1Outcome(outcome);
+        else setHomeSlot2Outcome(outcome);
+      } else {
+        if (targetSlot === 1) setWorkSlot1Outcome(outcome);
+        else setWorkSlot2Outcome(outcome);
+      }
+    };
+
+    const setTargetSlotOutcomeStatus = (status: string) => {
+      if (isHome) {
+        if (targetSlot === 1) setHomeSlot1OutcomeStatus(status);
+        else setHomeSlot2OutcomeStatus(status);
+      } else {
+        if (targetSlot === 1) setWorkSlot1OutcomeStatus(status);
+        else setWorkSlot2OutcomeStatus(status);
+      }
+    };
 
     try {
       const res = await fetch('/api/chat', {
@@ -1209,16 +1391,34 @@ export default function Home() {
       };
 
       const finalHistory = [...chatHistory, assistantMessage];
-      if (targetSlot === 1) setSlot1Messages(finalHistory);
-      else setSlot2Messages(finalHistory);
+      setTargetSlotMsgs(finalHistory);
 
       if (data.meaningfulOutcome) {
-        if (targetSlot === 1) setSlot1Outcome(data.meaningfulOutcome);
-        else setSlot2Outcome(data.meaningfulOutcome);
+        setTargetSlotOutcome(data.meaningfulOutcome);
       }
       if (data.outcomeStatus) {
-        if (targetSlot === 1) setSlot1OutcomeStatus(data.outcomeStatus);
-        else setSlot2OutcomeStatus(data.outcomeStatus);
+        setTargetSlotOutcomeStatus(data.outcomeStatus);
+      }
+
+      // Auto-save chat to persistent archive /api/chats
+      if (!isIncognito) {
+        try {
+          const firstUser = finalHistory.find(m => m.role === 'user');
+          const title = firstUser ? firstUser.content.slice(0, 50) : `Chat (${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})`;
+          fetch('/api/chats', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              id: slotChatId,
+              title,
+              meaningful_outcome: data.meaningfulOutcome || slotOutcome || null,
+              outcome_status: data.outcomeStatus || 'NONE',
+              is_locked: false,
+              message_count: finalHistory.length,
+              markdown_content: finalHistory.map(m => `### ${m.role === 'user' ? 'User' : 'Life OS'}\n${m.content}\n`).join('\n\n'),
+            }),
+          }).catch(() => {});
+        } catch (e) {}
       }
     } catch (err: any) {
       if (err.name === 'AbortError') {
@@ -1227,8 +1427,7 @@ export default function Home() {
           role: 'assistant',
           content: '⏹ Response stopped by user.',
         };
-        if (targetSlot === 1) setSlot1Messages([...chatHistory, abortedMsg]);
-        else setSlot2Messages([...chatHistory, abortedMsg]);
+        setTargetSlotMsgs([...chatHistory, abortedMsg]);
         return;
       }
       const errorMsg: ChatMessage = {
@@ -1236,8 +1435,7 @@ export default function Home() {
         role: 'assistant',
         content: 'Not able to respond right now.',
       };
-      if (targetSlot === 1) setSlot1Messages([...chatHistory, errorMsg]);
-      else setSlot2Messages([...chatHistory, errorMsg]);
+      setTargetSlotMsgs([...chatHistory, errorMsg]);
     } finally {
       if (targetSlot === 1) {
         setSlot1Loading(false);
@@ -1391,7 +1589,7 @@ export default function Home() {
       const params = new URLSearchParams(window.location.search);
       const tab = params.get('tab');
       if (tab === 'my_day' || tab === 'myday' || tab === 'hub') {
-        setActiveAppTab('my_day');
+        setActiveAppTab('today');
       } else if (tab === 'actions') {
         setActiveAppTab('actions');
       }
@@ -1562,7 +1760,7 @@ export default function Home() {
     }
     summary += `## Key Discussion & Decisions:\n`;
     messages.forEach(m => {
-      summary += `- **${m.role === 'user' ? 'User' : 'Suchi'}**: ${m.content.slice(0, 200).replace(/\n/g, ' ')}\n`;
+      summary += `- **${m.role === 'user' ? 'User' : 'Life OS'}**: ${m.content.slice(0, 200).replace(/\n/g, ' ')}\n`;
     });
 
     setMessages([]);
@@ -1582,8 +1780,10 @@ export default function Home() {
 
   // Two-Chat Switch or New Handler
   function handleChatSwitchOrNew() {
-    const slot1HasHistory = slot1Messages.length > 0;
-    const slot2HasHistory = slot2Messages.length > 0;
+    const s1Msgs = isHome ? homeSlot1Messages : workSlot1Messages;
+    const s2Msgs = isHome ? homeSlot2Messages : workSlot2Messages;
+    const slot1HasHistory = s1Msgs.length > 0;
+    const slot2HasHistory = s2Msgs.length > 0;
 
     if (slot1HasHistory && slot2HasHistory) {
       setActiveSlot(prev => (prev === 1 ? 2 : 1));
@@ -1597,7 +1797,7 @@ export default function Home() {
         triggerToast('Switched to Chat 1');
       }
     }
-    setActiveAppTab('suchi');
+    setActiveAppTab('chat');
     setTimeout(() => {
       messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
     }, 60);
@@ -1747,9 +1947,14 @@ export default function Home() {
           ? 'bg-[#111827]/90 border-slate-800/80 backdrop-blur-md text-slate-100'
           : 'bg-white/90 border-slate-200/80 backdrop-blur-md text-slate-800 shadow-xs'
       }`}>
-        {/* Left: Brand - Suchi with Compass Needle */}
-        <div className="flex items-center gap-2.5 flex-shrink-0">
-          <span className={`w-8 h-8 rounded-xl flex items-center justify-center p-1.5 shadow-sm transition-all ${
+        {/* Left: Brand - Life OS Logo (Tapping opens Right Drawer) */}
+        <button
+          type="button"
+          onClick={() => setIsModeDrawerOpen(true)}
+          title="Open Life OS Navigation & Toolkit Drawer"
+          className="flex items-center gap-2 sm:gap-2.5 flex-shrink-0 group cursor-pointer text-left focus:outline-none"
+        >
+          <span className={`w-8 h-8 rounded-xl flex items-center justify-center p-1.5 shadow-sm transition-all group-hover:scale-105 active:scale-95 ${
             isIncognito
               ? 'bg-purple-950 border border-purple-700/60 shadow-purple-950/50'
               : isDarkMode
@@ -1764,61 +1969,54 @@ export default function Home() {
             </svg>
           </span>
           <div className="flex items-baseline gap-1.5">
-            <span className="font-bold text-base tracking-tight">Suchi</span>
+            <span className="font-bold text-base tracking-tight">Life OS</span>
             <span className={`text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded-full border ${
-              isIncognito
-                ? 'text-purple-400 bg-purple-500/10 border-purple-500/20'
+              chatMode === 'home'
+                ? 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20'
                 : 'text-blue-500 bg-blue-500/10 border-blue-500/20'
             }`}>
-              Life OS
+              {chatMode === 'home' ? 'Home' : 'Work'}
             </span>
           </div>
-          {isIncognito && (
-            <span className="text-[10px] bg-purple-500/15 text-purple-300 font-semibold px-2 py-0.5 rounded-full border border-purple-500/30">
-              Incognito
-            </span>
-          )}
-        </div>
+        </button>
 
-        {/* Right: Dual Chat Switch / New Chat & Settings */}
-        <div className="flex items-center gap-2 sm:gap-2.5">
-          {activeAppTab === 'suchi' && (
+        {/* Center: 2 Chat Slots Selector (Visible when on Chat Tab) */}
+        {activeAppTab === 'chat' && (
+          <div className="flex items-center gap-1 p-0.5 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
             <button
               type="button"
-              onClick={handleChatSwitchOrNew}
-              title={
-                slot1Messages.length > 0 && slot2Messages.length > 0
-                  ? `Switch between active chats (Currently Chat ${activeSlot})`
-                  : 'New Chat'
-              }
-              className={`h-9 w-9 rounded-xl border text-xs font-semibold transition-all flex items-center justify-center hover:scale-105 active:scale-95 ${
-                isIncognito
-                  ? 'border-purple-800/60 bg-purple-950/60 text-purple-200'
-                  : isDarkMode
-                  ? 'border-zinc-800 bg-zinc-900 text-zinc-200'
-                  : 'border-zinc-200 bg-white text-zinc-700 shadow-2xs hover:bg-zinc-50'
+              onClick={() => setActiveSlot(1)}
+              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                activeSlot === 1
+                  ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-2xs'
+                  : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
               }`}
             >
-              {slot1Messages.length > 0 && slot2Messages.length > 0 ? (
-                /* Switch icon: 2 arrows going in different directions ⇄ */
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-                </svg>
-              ) : (
-                /* Only + icon */
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-                </svg>
-              )}
+              Chat 1
+              {slot1Loading && <span className="ml-1 w-1.5 h-1.5 rounded-full bg-blue-500 inline-block animate-ping" />}
             </button>
-          )}
+            <button
+              type="button"
+              onClick={() => setActiveSlot(2)}
+              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                activeSlot === 2
+                  ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-2xs'
+                  : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+              }`}
+            >
+              Chat 2
+              {slot2Loading && <span className="ml-1 w-1.5 h-1.5 rounded-full bg-blue-500 inline-block animate-ping" />}
+            </button>
+          </div>
+        )}
 
-
-          {/* Mode Switcher Drawer Trigger (Right Top Corner) */}
+        {/* Right: Mode Switcher & DP Dropdown */}
+        <div className="flex items-center gap-2 sm:gap-2.5">
+          {/* Mode Switcher Toggle Button (Home vs Work) */}
           <button
             type="button"
-            onClick={() => setIsModeDrawerOpen(true)}
-            title={`Switch Operating Mode (Currently in ${chatMode === 'home' ? 'Home Mode' : 'Life Mode'})`}
+            onClick={() => handleModeChange(chatMode === 'home' ? 'work' : 'home')}
+            title={`Switch Operating Mode (Currently in ${chatMode === 'home' ? 'Home Mode' : 'Work Mode'})`}
             className={`h-9 px-2.5 sm:px-3 rounded-xl border text-xs font-bold transition-all flex items-center gap-1.5 hover:scale-105 active:scale-95 shadow-2xs ${
               chatMode === 'home'
                 ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
@@ -1826,10 +2024,7 @@ export default function Home() {
             }`}
           >
             <span>{chatMode === 'home' ? '🏠' : '💼'}</span>
-            <span className="capitalize hidden xs:inline">{chatMode}</span>
-            <svg className="w-3 h-3 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-            </svg>
+            <span className="capitalize font-bold text-[11px] hidden xs:inline">{chatMode}</span>
           </button>
 
           {/* Settings Trigger with Click-Outside Ref */}
@@ -2028,7 +2223,7 @@ export default function Home() {
                         <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                         </svg>
-                        <span>Install Suchi App</span>
+                        <span>Install Life OS App</span>
                       </span>
                       {isInstallable && <span className="bg-blue-100 text-blue-700 text-[9px] px-1.5 py-0.5 rounded font-bold">READY</span>}
                     </button>
@@ -2047,8 +2242,22 @@ export default function Home() {
 
       </header>
 
-      {/* 1. MY DAY TAB VIEW (Calendar, Tasks, Routines, Goals - Add/Edit/Delete enabled) */}
-      {activeAppTab === 'my_day' && (
+      {/* 1. DASHBOARDS TAB VIEW (Dynamic per user persona and Home vs Work mode) */}
+      {activeAppTab === 'dashboards' && (
+        <DashboardsView
+          mode={chatMode}
+          profile={userProfile}
+          onNavigateToTab={(tab) => setActiveAppTab(tab)}
+          onLaunchPrompt={(prompt) => {
+            setInput(prompt);
+            setActiveAppTab('chat');
+          }}
+          isDarkMode={isDarkMode}
+        />
+      )}
+
+      {/* 2. TODAY TAB VIEW (Calendar, Tasks, Routines, Goals - Add/Edit/Delete enabled) */}
+      {activeAppTab === 'today' && (
         <MyDayView
           tasks={hubTasks}
           routines={hubRoutines}
@@ -2074,7 +2283,7 @@ export default function Home() {
         />
       )}
 
-      {/* 2. ACTIONS TAB VIEW (1 card per viewport, no scroll, auto swipe-up/in) */}
+      {/* 3. ACTIONS TAB VIEW (Deep Action Cards with Context & Rationale) */}
       {activeAppTab === 'actions' && (
         <ActionsDeckView
           items={deckActions}
@@ -2082,11 +2291,11 @@ export default function Home() {
           onRejectDraft={handleRejectDraft}
           onOpenDraftInChat={(draftInfo) => {
             setInput(`Review draft to ${draftInfo.to}: "${draftInfo.subject}"`);
-            setActiveAppTab('suchi');
+            setActiveAppTab('chat');
           }}
           onRequestRevision={(item) => {
             setInput(`Revise draft "${item.title}": `);
-            setActiveAppTab('suchi');
+            setActiveAppTab('chat');
           }}
           onCompleteTask={async (taskId) => {
             await handleToggleHubTask(taskId, 'needsAction');
@@ -2095,8 +2304,21 @@ export default function Home() {
         />
       )}
 
-      {/* 3. SUCHI CHAT TAB VIEW (MESSAGES SCROLL AREA) */}
-      {activeAppTab === 'suchi' && (
+      {/* 4. CHATS COLLABORATION TAB VIEW (Teams & Family Hub, Google Chat spaces, WhatsApp) */}
+      {activeAppTab === 'chats' && (
+        <ChatsCollaborationView
+          mode={chatMode}
+          profile={userProfile}
+          onLaunchPrompt={(prompt) => {
+            setInput(prompt);
+            setActiveAppTab('chat');
+          }}
+          isDarkMode={isDarkMode}
+        />
+      )}
+
+      {/* 5. LIFE OS CHAT TAB VIEW (MESSAGES SCROLL AREA) */}
+      {activeAppTab === 'chat' && (
         <div className="flex-1 flex flex-col overflow-hidden relative">
           {/* Pinned Meaningful Outcome right below header in chatbox itself */}
           {meaningfulOutcome && (
@@ -2719,26 +2941,34 @@ export default function Home() {
         </div>
       )}
 
-      {/* INPUT BAR (LOCKED RIGHT ABOVE FOOTER WHEN IN SUCHI TAB) */}
-      {activeAppTab === 'suchi' && (
-      <footer className={`border-t px-3 py-2 sm:py-2.5 relative z-10 transition-colors ${
+      {/* INPUT BAR (LOCKED RIGHT ABOVE FOOTER WHEN IN CHAT TAB) */}
+      {activeAppTab === 'chat' && (
+      <footer className={`border-t px-2 sm:px-3 py-2 sm:py-2.5 relative z-10 transition-colors ${
         isDarkMode || isIncognito ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'
       }`}>
         <div className="max-w-3xl mx-auto flex flex-col gap-1.5">
+          {/* Cross-Slot Active Lock Notification */}
+          {isOtherSlotWorking && (
+            <div className="p-2 sm:p-2.5 rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300 text-xs font-medium flex items-center gap-2 animate-pulse">
+              <span className="w-2 h-2 rounded-full bg-amber-500 flex-shrink-0" />
+              <span>Life OS is currently working in Chat {activeSlot === 1 ? '2' : '1'}. Messaging is locked here until it completes.</span>
+            </div>
+          )}
+
           {/* End of Chat Action Buttons */}
-          {isChatLocked && (
-            <div className="flex items-center justify-center gap-3 pb-2 pt-1">
+          {(isChatLocked || (messages.length > 1 && !isLoading && !isOtherSlotWorking)) && (
+            <div className="flex items-center justify-center gap-2.5 pb-1 pt-0.5">
               <button
                 type="button"
                 onClick={handleTakeContextToNewChat}
-                className="px-4 py-2 rounded-xl text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white shadow-md flex items-center gap-1.5 transition-all hover:scale-105 active:scale-95"
+                className="px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white shadow-sm flex items-center gap-1.5 transition-all hover:scale-105 active:scale-95"
               >
-                <span>📄 Take context to new chat</span>
+                <span>📥 Take context to new chat</span>
               </button>
               <button
                 type="button"
                 onClick={handleStartNewChat}
-                className={`px-4 py-2 rounded-xl text-xs font-semibold border flex items-center gap-1.5 transition-all hover:scale-105 active:scale-95 ${
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold border flex items-center gap-1.5 transition-all hover:scale-105 active:scale-95 ${
                   isDarkMode ? 'border-zinc-700 bg-zinc-800 hover:bg-zinc-700 text-zinc-200' : 'border-zinc-300 bg-zinc-100 hover:bg-zinc-200 text-zinc-800'
                 }`}
               >
@@ -2813,25 +3043,21 @@ export default function Home() {
             </div>
           )}
 
-          {/* Q&A 1-QUESTION-AT-A-TIME PILL BUTTONS (Replaces input bar with options) */}
-          {currentQuestionOptions.length > 0 && !showTextInputOverride && !isChatLocked ? (
-            <div className={`p-3 rounded-2xl border flex flex-col items-center gap-2 transition-all ${
+          {/* Q&A 1-QUESTION-AT-A-TIME PILL BUTTONS (Only option letters A, B, C, D in bottom bar) */}
+          {currentQuestionOptions.length > 0 && !showTextInputOverride && !isChatLocked && !isOtherSlotWorking ? (
+            <div className={`p-2.5 rounded-2xl border flex flex-col items-center gap-2 transition-all ${
               isDarkMode ? 'bg-slate-900/90 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
             }`}>
-              <div className="flex items-center justify-center gap-2.5 flex-wrap w-full">
+              <div className="flex items-center justify-center gap-2.5 sm:gap-3 flex-wrap w-full py-1">
                 {currentQuestionOptions.map(opt => (
                   <button
                     key={opt.key}
                     type="button"
                     onClick={() => sendMessage(`Option ${opt.key}: ${opt.text}`)}
-                    className="px-5 py-2.5 rounded-xl font-bold text-sm bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-md hover:shadow-blue-500/25 transition-all hover:scale-105 active:scale-95 flex items-center gap-2 border border-blue-400/30"
+                    className="min-w-14 sm:min-w-16 h-11 px-4 rounded-xl font-black text-sm bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-md hover:shadow-blue-500/25 transition-all hover:scale-105 active:scale-95 flex items-center justify-center border border-blue-400/30"
+                    title={`Option ${opt.key}: ${opt.text}`}
                   >
-                    <span className="w-5 h-5 rounded-md bg-white/20 flex items-center justify-center text-xs font-black">
-                      {opt.key}
-                    </span>
-                    <span className="text-xs font-semibold max-w-[200px] truncate hidden sm:inline">
-                      {opt.text}
-                    </span>
+                    <span>{opt.key}</span>
                   </button>
                 ))}
               </div>
@@ -2928,9 +3154,9 @@ export default function Home() {
                 <textarea
                   ref={textareaRef}
                   rows={1}
-                  disabled={isChatLocked || isLoading}
+                  disabled={isChatLocked || isLoading || isOtherSlotWorking}
                   value={input}
-                  aria-label="Message Suchi"
+                  aria-label="Message Life OS"
                   onChange={(e) => {
                     handleComposerInputChange(e.target.value);
                     e.target.style.height = 'auto';
@@ -2989,7 +3215,7 @@ export default function Home() {
                   <button
                     type="button"
                     onClick={() => setShowTextInputOverride(false)}
-                    className="px-2 py-1 rounded-md text-[10px] font-bold bg-blue-600 text-white hover:bg-blue-500"
+                    className="px-2 py-1 rounded-md text-[10px] font-bold bg-blue-600 text-white hover:bg-blue-500 flex-shrink-0"
                     title="Return to option buttons"
                   >
                     Options
@@ -3000,7 +3226,7 @@ export default function Home() {
               <button
                 type="button"
                 onClick={handleCompassSuggestion}
-                disabled={isChatLocked}
+                disabled={isChatLocked || isOtherSlotWorking}
                 title="Executive Strategy & Skill Suggestion"
                 className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-blue-500 hover:bg-blue-100 dark:hover:bg-blue-950/40 transition-colors disabled:opacity-40"
               >
@@ -3028,7 +3254,7 @@ export default function Home() {
                 <button
                   type="button"
                   onClick={() => sendMessage()}
-                  disabled={isChatLocked || (!input.trim() && attachedFiles.length === 0 && !recordedAudioUrl)}
+                  disabled={isChatLocked || isOtherSlotWorking || (!input.trim() && attachedFiles.length === 0 && !recordedAudioUrl)}
                   title="Send message"
                   className={`w-8 h-8 rounded-full shadow-xs transition-transform flex-shrink-0 flex items-center justify-center disabled:opacity-40 active:scale-95 ${
                     isIncognito
@@ -3047,9 +3273,9 @@ export default function Home() {
             <button
               type="button"
               onClick={toggleVoiceTyping}
-              disabled={isChatLocked}
+              disabled={isChatLocked || isOtherSlotWorking}
               title={isVoiceTyping ? 'Stop voice typing' : 'Voice typing — tap to speak'}
-              className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center flex-shrink-0 transition-all shadow-sm hover:scale-105 active:scale-95 disabled:opacity-40 ${
+              className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center flex-shrink-0 transition-all shadow-sm hover:scale-105 active:scale-95 disabled:opacity-40 ${
                 isVoiceTyping
                   ? 'bg-rose-500 text-white animate-pulse'
                   : isIncognito
@@ -3068,51 +3294,67 @@ export default function Home() {
       )}
 
 
-      {/* BOTTOM FOOTER NAVIGATION TABS (From Left to Right: My Day, Suchi, Actions) */}
-      <nav className={`h-14 sm:h-16 border-t px-6 flex items-center justify-around z-20 flex-shrink-0 transition-colors ${
+      {/* BOTTOM FOOTER NAVIGATION TABS (5 Tabs: Dashboards, Today, Life OS, Actions, Chats) */}
+      <nav className={`h-14 sm:h-16 border-t px-2 sm:px-4 flex items-center justify-around z-20 flex-shrink-0 transition-colors ${
         isDarkMode || isIncognito
           ? 'bg-slate-950/95 border-slate-800/80 backdrop-blur text-slate-400'
           : 'bg-white/95 border-slate-200 backdrop-blur text-slate-600 shadow-xs'
       }`}>
-        {/* Tab 1: My Day (Left) */}
+        {/* Tab 1: Dashboards */}
         <button
           type="button"
-          onClick={() => setActiveAppTab('my_day')}
-          className={`flex flex-col items-center justify-center gap-1 flex-1 py-1 transition-all ${
-            activeAppTab === 'my_day'
+          onClick={() => setActiveAppTab('dashboards')}
+          className={`flex flex-col items-center justify-center gap-0.5 flex-1 py-1 transition-all ${
+            activeAppTab === 'dashboards'
               ? 'text-blue-600 dark:text-blue-400 font-bold scale-105'
               : 'text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 font-medium'
           }`}
         >
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={activeAppTab === 'my_day' ? 2.3 : 1.8}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={activeAppTab === 'dashboards' ? 2.3 : 1.8}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M4 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM14 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zM14 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
           </svg>
-          <span className="text-[11px] tracking-tight">My Day</span>
+          <span className="text-[10px] sm:text-[11px] tracking-tight">Dashboards</span>
         </button>
 
-        {/* Tab 2: Suchi (Center) */}
+        {/* Tab 2: Today */}
         <button
           type="button"
-          onClick={() => setActiveAppTab('suchi')}
-          className={`flex flex-col items-center justify-center gap-1 flex-1 py-1 transition-all ${
-            activeAppTab === 'suchi'
+          onClick={() => setActiveAppTab('today')}
+          className={`flex flex-col items-center justify-center gap-0.5 flex-1 py-1 transition-all ${
+            activeAppTab === 'today'
               ? 'text-blue-600 dark:text-blue-400 font-bold scale-105'
               : 'text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 font-medium'
           }`}
         >
-          <div className={`relative ${activeAppTab === 'suchi' ? 'p-1 rounded-full bg-blue-50 dark:bg-blue-950/50' : ''}`}>
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={activeAppTab === 'suchi' ? 2.3 : 1.8}>
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={activeAppTab === 'today' ? 2.3 : 1.8}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+          <span className="text-[10px] sm:text-[11px] tracking-tight">Today</span>
+        </button>
+
+        {/* Tab 3: Life OS (Center) */}
+        <button
+          type="button"
+          onClick={() => setActiveAppTab('chat')}
+          className={`flex flex-col items-center justify-center gap-0.5 flex-1 py-1 transition-all ${
+            activeAppTab === 'chat'
+              ? 'text-blue-600 dark:text-blue-400 font-bold scale-105'
+              : 'text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 font-medium'
+          }`}
+        >
+          <div className={`relative ${activeAppTab === 'chat' ? 'p-1 rounded-full bg-blue-50 dark:bg-blue-950/50' : ''}`}>
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={activeAppTab === 'chat' ? 2.3 : 1.8}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
             </svg>
           </div>
-          <span className="text-[11px] tracking-tight">Suchi</span>
+          <span className="text-[10px] sm:text-[11px] tracking-tight">Life OS</span>
         </button>
 
-        {/* Tab 3: Actions (Right) */}
+        {/* Tab 4: Actions */}
         <button
           type="button"
           onClick={() => setActiveAppTab('actions')}
-          className={`flex flex-col items-center justify-center gap-1 flex-1 py-1 transition-all relative ${
+          className={`flex flex-col items-center justify-center gap-0.5 flex-1 py-1 transition-all relative ${
             activeAppTab === 'actions'
               ? 'text-blue-600 dark:text-blue-400 font-bold scale-105'
               : 'text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 font-medium'
@@ -3128,122 +3370,154 @@ export default function Home() {
               </span>
             )}
           </div>
-          <span className="text-[11px] tracking-tight">Actions</span>
+          <span className="text-[10px] sm:text-[11px] tracking-tight">Actions</span>
+        </button>
+
+        {/* Tab 5: Chats (Collaboration Hub) */}
+        <button
+          type="button"
+          onClick={() => setActiveAppTab('chats')}
+          className={`flex flex-col items-center justify-center gap-0.5 flex-1 py-1 transition-all relative ${
+            activeAppTab === 'chats'
+              ? 'text-blue-600 dark:text-blue-400 font-bold scale-105'
+              : 'text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 font-medium'
+          }`}
+        >
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={activeAppTab === 'chats' ? 2.3 : 1.8}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+          </svg>
+          <span className="text-[10px] sm:text-[11px] tracking-tight">Chats</span>
         </button>
       </nav>
 
 
-      {/* WHATSAPP-STYLE CHATS ARCHIVE MODAL */}
+      {/* FULL-PAGE CHATS ARCHIVE VIEW */}
       {isArchiveOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl max-w-2xl w-full h-[80vh] flex flex-col shadow-2xl overflow-hidden text-zinc-900 dark:text-zinc-100">
-            {/* Archive Header */}
-            <div className="px-6 py-4 border-b border-gray-100 dark:border-zinc-800 flex items-center justify-between">
+        <div className="fixed inset-0 z-50 bg-white dark:bg-zinc-950 flex flex-col text-zinc-900 dark:text-zinc-100 overflow-hidden">
+          {/* Full Page Header */}
+          <div className="px-4 sm:px-6 py-3.5 border-b border-gray-200 dark:border-zinc-800 flex items-center justify-between bg-zinc-50/80 dark:bg-zinc-900/80 backdrop-blur">
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setIsArchiveOpen(false)}
+                className="p-2 -ml-1 rounded-xl text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors"
+                title="Return to Life OS"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+              </button>
               <div>
-                <h2 className="text-base font-bold text-gray-900 dark:text-zinc-100">Chats Archive</h2>
-                <p className="text-xs text-gray-500 dark:text-zinc-400">Persistent conversation records & portable contexts</p>
+                <h1 className="text-base sm:text-lg font-bold text-gray-900 dark:text-zinc-100">Chats Archive</h1>
+                <p className="text-xs text-gray-500 dark:text-zinc-400">All saved conversations & strategic outcomes</p>
               </div>
-              <button onClick={() => setIsArchiveOpen(false)} className="text-gray-400 hover:text-gray-700 dark:hover:text-zinc-200 text-lg font-bold">
-                ✕
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setIsArchiveOpen(false)}
+                className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-xs transition-colors"
+              >
+                Back to Life OS
               </button>
             </div>
+          </div>
 
-            {/* Search & Filters */}
-            <div className="px-6 py-3 border-b border-gray-100 dark:border-zinc-800 flex flex-col sm:flex-row gap-2">
-              <input
-                type="text"
-                aria-label="Search archive conversations"
-                value={archiveSearch}
-                onChange={(e) => setArchiveSearch(e.target.value)}
-                className="flex-1 bg-gray-50 dark:bg-zinc-800/80 border border-gray-200 dark:border-zinc-700 rounded-lg px-3 py-1.5 text-xs text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              />
-              <div className="flex gap-1">
-                {(['all', 'starred', 'completed', 'active'] as const).map(tab => (
-                  <button
-                    key={tab}
-                    onClick={() => setArchiveFilter(tab)}
-                    className={`px-3 py-1 rounded-full text-xs font-semibold capitalize transition-colors ${
-                      archiveFilter === tab
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-zinc-300 hover:bg-gray-200 dark:hover:bg-zinc-700'
-                    }`}
-                  >
-                    {tab}
-                  </button>
-                ))}
-              </div>
+          {/* Search & Filters */}
+          <div className="px-4 sm:px-6 py-3 border-b border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 flex flex-col sm:flex-row gap-2">
+            <input
+              type="text"
+              aria-label="Search archive conversations"
+              value={archiveSearch}
+              onChange={(e) => setArchiveSearch(e.target.value)}
+              className="flex-1 bg-gray-50 dark:bg-zinc-800/80 border border-gray-200 dark:border-zinc-700 rounded-xl px-3.5 py-2 text-xs text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+            <div className="flex gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+              {(['all', 'starred', 'completed', 'active'] as const).map(tab => (
+                <button
+                  key={tab}
+                  onClick={() => setArchiveFilter(tab)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-semibold capitalize transition-colors flex-shrink-0 ${
+                    archiveFilter === tab
+                      ? 'bg-blue-600 text-white shadow-xs'
+                      : 'bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-zinc-300 hover:bg-gray-200 dark:hover:bg-zinc-700'
+                  }`}
+                >
+                  {tab}
+                </button>
+              ))}
             </div>
+          </div>
 
-            {/* Conversation Tiles List */}
-            <div className="flex-1 overflow-y-auto divide-y divide-gray-100 dark:divide-zinc-800">
-              {archiveChats
-                .filter(c => {
-                  if (archiveFilter === 'starred' && !c.is_starred) return false;
-                  if (archiveFilter === 'completed' && !c.is_locked) return false;
-                  if (archiveFilter === 'active' && c.is_locked) return false;
-                  if (archiveSearch) {
-                    const q = archiveSearch.toLowerCase();
-                    return c.title.toLowerCase().includes(q) || (c.meaningful_outcome && c.meaningful_outcome.toLowerCase().includes(q));
-                  }
-                  return true;
-                })
-                .sort((a, b) => (b.is_starred ? 1 : 0) - (a.is_starred ? 1 : 0))
-                .map(chat => (
-                  <div
-                    key={chat.id}
-                    onClick={() => handleOpenPastChat(chat)}
-                    className="p-4 hover:bg-gray-50 dark:hover:bg-zinc-800/50 cursor-pointer flex items-center justify-between group transition-colors"
-                  >
-                    <div className="flex-1 min-w-0 pr-4">
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={(e) => handleToggleStar(chat.id, e)}
-                          title="Star mark chat (pin to top)"
-                          className={`text-base ${chat.is_starred ? 'text-amber-500' : 'text-gray-300 dark:text-zinc-600 hover:text-amber-500'}`}
-                        >
-                          ★
-                        </button>
-                        <h3 className="font-semibold text-sm text-gray-900 dark:text-zinc-100 truncate">{chat.title}</h3>
-                        {chat.is_locked && (
-                          <span className="text-[10px] bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-zinc-400 px-1.5 py-0.5 rounded border border-gray-200 dark:border-zinc-700">
-                            Locked
-                          </span>
-                        )}
-                      </div>
-                      {chat.meaningful_outcome && (
-                        <p className="text-xs text-blue-600 dark:text-blue-400 truncate mt-1">🎯 {chat.meaningful_outcome}</p>
-                      )}
-                    </div>
-
+          {/* Conversation Tiles List */}
+          <div className="flex-1 overflow-y-auto divide-y divide-gray-100 dark:divide-zinc-800/80 max-w-5xl mx-auto w-full px-4 sm:px-6 py-2">
+            {archiveChats
+              .filter(c => {
+                if (archiveFilter === 'starred' && !c.is_starred) return false;
+                if (archiveFilter === 'completed' && !c.is_locked) return false;
+                if (archiveFilter === 'active' && c.is_locked) return false;
+                if (archiveSearch) {
+                  const q = archiveSearch.toLowerCase();
+                  return c.title.toLowerCase().includes(q) || (c.meaningful_outcome && c.meaningful_outcome.toLowerCase().includes(q));
+                }
+                return true;
+              })
+              .sort((a, b) => (b.is_starred ? 1 : 0) - (a.is_starred ? 1 : 0))
+              .map(chat => (
+                <div
+                  key={chat.id}
+                  onClick={() => handleOpenPastChat(chat)}
+                  className="py-4 hover:bg-gray-50 dark:hover:bg-zinc-800/40 cursor-pointer flex items-center justify-between group transition-colors rounded-xl px-3 my-1"
+                >
+                  <div className="flex-1 min-w-0 pr-4">
                     <div className="flex items-center gap-2">
                       <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleUseContextInNewChat(chat);
-                        }}
-                        className="px-2.5 py-1 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/60 rounded text-xs font-semibold transition-colors"
+                        onClick={(e) => handleToggleStar(chat.id, e)}
+                        title="Star mark chat (pin to top)"
+                        className={`text-base ${chat.is_starred ? 'text-amber-500' : 'text-gray-300 dark:text-zinc-600 hover:text-amber-500'}`}
                       >
-                        Use in New Chat
+                        ★
                       </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          const blob = new Blob([chat.markdown_content || `# ${chat.title}`], { type: 'text/markdown' });
-                          const url = URL.createObjectURL(blob);
-                          const a = document.createElement('a');
-                          a.href = url;
-                          a.download = `${chat.title.replace(/\s+/g, '_')}.md`;
-                          a.click();
-                        }}
-                        className="p-1 text-gray-400 hover:text-gray-700 dark:hover:text-zinc-200 text-xs"
-                        title="Download Markdown"
-                      >
-                        ⬇ .md
-                      </button>
+                      <h3 className="font-semibold text-sm text-gray-900 dark:text-zinc-100 truncate">{chat.title}</h3>
+                      {chat.is_locked && (
+                        <span className="text-[10px] bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-zinc-400 px-1.5 py-0.5 rounded border border-gray-200 dark:border-zinc-700">
+                          Locked
+                        </span>
+                      )}
                     </div>
+                    {chat.meaningful_outcome && (
+                      <p className="text-xs text-blue-600 dark:text-blue-400 truncate mt-1">🎯 {chat.meaningful_outcome}</p>
+                    )}
                   </div>
-                ))}
-            </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleUseContextInNewChat(chat);
+                      }}
+                      className="px-2.5 py-1 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/60 rounded-lg text-xs font-semibold transition-colors"
+                    >
+                      Use in New Chat
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const blob = new Blob([chat.markdown_content || `# ${chat.title}`], { type: 'text/markdown' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `${chat.title.replace(/\s+/g, '_')}.md`;
+                        a.click();
+                      }}
+                      className="p-1.5 text-gray-400 hover:text-gray-700 dark:hover:text-zinc-200 text-xs rounded-lg hover:bg-gray-100 dark:hover:bg-zinc-800"
+                      title="Download Markdown"
+                    >
+                      ⬇ .md
+                    </button>
+                  </div>
+                </div>
+              ))}
           </div>
         </div>
       )}
@@ -3504,15 +3778,15 @@ export default function Home() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleModeChange('life')}
+                  onClick={() => handleModeChange('work')}
                   className={`py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all ${
-                    chatMode === 'life'
+                    chatMode === 'work'
                       ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-sm border border-blue-500/20 scale-[1.02]'
                       : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
                   }`}
                 >
                   <span className="text-base">💼</span>
-                  <span>Life Mode</span>
+                  <span>Work Mode</span>
                 </button>
               </div>
 
@@ -3528,17 +3802,17 @@ export default function Home() {
                   </p>
                 ) : (
                   <p>
-                    <strong>💼 Life Mode:</strong> Powers salaried professionals, entrepreneurs & founders. Features 1-tap WhatsApp communication, direct call briefings, vendor search, and B2B customer outreach.
+                    <strong>💼 Work Mode:</strong> Powers salaried professionals, entrepreneurs &amp; founders. Features 1-tap WhatsApp communication, direct call briefings, vendor search, and B2B customer outreach.
                   </p>
                 )}
               </div>
 
               {/* Mode-Specific Power Tools & Forms */}
-              {chatMode === 'life' ? (
+              {chatMode === 'work' ? (
                 <div className="flex flex-col gap-3">
                   <div className="flex items-center justify-between">
                     <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                      ⚡ Quick Action Tools (Life Mode)
+                      ⚡ Quick Action Tools (Work Mode)
                     </span>
                   </div>
 
@@ -3748,6 +4022,17 @@ export default function Home() {
         }}
         isDarkMode={isDarkMode}
         isIncognito={isIncognito}
+      />
+
+      {/* Onboarding Flow Modal for New / Switching Users */}
+      <OnboardingFlowModal
+        isOpen={showOnboardingModal}
+        onClose={() => setShowOnboardingModal(false)}
+        onSaveProfile={(profile: UserProfile) => {
+          handleSaveUserProfile(profile);
+          setShowOnboardingModal(false);
+          triggerToast(`Profile configured for ${profile.name}`);
+        }}
       />
     </div>
   );

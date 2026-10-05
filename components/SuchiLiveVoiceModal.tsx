@@ -2,22 +2,22 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 
-interface SuchiLiveVoiceModalProps {
+interface LifeOSLiveVoiceModalProps {
   isOpen: boolean;
   onClose: () => void;
   onUserMessage: (text: string) => Promise<string>;
   isDarkMode?: boolean;
 }
 
-export default function SuchiLiveVoiceModal({
+export default function LifeOSLiveVoiceModal({
   isOpen,
   onClose,
   onUserMessage,
   isDarkMode = false,
-}: SuchiLiveVoiceModalProps) {
+}: LifeOSLiveVoiceModalProps) {
   const [status, setStatus] = useState<'listening' | 'thinking' | 'speaking'>('listening');
   const [liveTranscript, setLiveTranscript] = useState('');
-  const [suchiReply, setSuchiReply] = useState('Listening... Speak naturally.');
+  const [voiceReply, setVoiceReply] = useState('Listening... Speak naturally.');
   const recognitionRef = useRef<any>(null);
   const isListeningRef = useRef(false);
   const synthRef = useRef<SpeechSynthesis | null>(null);
@@ -78,8 +78,8 @@ export default function SuchiLiveVoiceModal({
 
     synthRef.current = typeof window !== 'undefined' ? window.speechSynthesis : null;
 
-    // Initial greeting from Suchi
-    speakWithFemaleVoice("Hi! Suchi here. I'm ready, what's on your mind?", () => {
+    // Initial greeting from Life OS
+    speakWithFemaleVoice("Hi! Life OS here. I'm ready, what's on your mind?", () => {
       startListening();
     });
 
@@ -129,15 +129,15 @@ export default function SuchiLiveVoiceModal({
         }
 
         if (finalChunk.trim()) {
-          // User spoke a complete sentence, send to Suchi
+          // User spoke a complete sentence, send to Life OS
           try {
             recognition.stop();
             isListeningRef.current = false;
             setStatus('thinking');
-            setSuchiReply('Suchi is processing your request...');
+            setVoiceReply('Life OS is processing your request...');
 
             const reply = await onUserMessage(finalChunk.trim());
-            setSuchiReply(reply);
+            setVoiceReply(reply);
             speakWithFemaleVoice(reply, () => {
               // Automatically resume listening for conversational flow
               setTimeout(() => {
@@ -193,7 +193,7 @@ export default function SuchiLiveVoiceModal({
         <div className="flex items-center gap-2">
           <span className="w-2.5 h-2.5 rounded-full bg-purple-400 animate-ping" />
           <span className="text-xs font-bold uppercase tracking-wider text-purple-300">
-            Suchi Live Voice
+            Life OS Live Voice
           </span>
         </div>
         <button
@@ -234,7 +234,7 @@ export default function SuchiLiveVoiceModal({
         {/* Live Status Label */}
         <div className="text-center space-y-1">
           <div className="text-xs font-bold uppercase tracking-widest text-purple-300">
-            {status === 'speaking' ? 'Suchi Speaking' : status === 'thinking' ? 'Suchi Thinking...' : 'Listening to You...'}
+            {status === 'speaking' ? 'Life OS Speaking' : status === 'thinking' ? 'Life OS Thinking...' : 'Listening to You...'}
           </div>
           <p className="text-xs text-white/60">
             {status === 'speaking' ? 'Voice: Strictly Female' : 'Speak naturally. Everything is saved to chat.'}
@@ -244,7 +244,7 @@ export default function SuchiLiveVoiceModal({
         {/* Live Subtitle Transcript */}
         <div className="max-w-md w-full p-4 rounded-2xl bg-white/5 border border-white/10 text-center min-h-[70px] flex items-center justify-center">
           <p className="text-xs sm:text-sm text-white/90 leading-relaxed font-medium">
-            {liveTranscript ? `"${liveTranscript}"` : suchiReply}
+            {liveTranscript ? `"${liveTranscript}"` : voiceReply}
           </p>
         </div>
       </div>

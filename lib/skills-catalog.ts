@@ -282,17 +282,17 @@ const BASE_APP_AND_CAREER_SKILLS: SkillDefinition[] = [
     id: 'meta-inbox-sweeper-tasks',
     name: 'Gmail & Workspace Proactive Task Extractor',
     department: 'Autonomous Operations',
-    description: 'Scans recent emails and workspace records to intuitively extract tasks for Suchi (to execute autonomously) and tasks for the user, organizing them systematically with deadlines.',
+    description: 'Scans recent emails and workspace records to intuitively extract tasks for Life OS (to execute autonomously) and tasks for the user, organizing them systematically with deadlines.',
     enabled: true,
     allowedTiers: ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'ADMIN'],
     workflow: [
       'Execute list_emails with query for unread or high-priority messages.',
       'Analyze email threads for deliverables, action items, dates, and outstanding requests.',
-      'Categorize tasks into: (1) Tasks Suchi can execute immediately, and (2) Tasks requiring User decision.',
+      'Categorize tasks into: (1) Tasks Life OS can execute immediately, and (2) Tasks requiring User decision.',
       'Sync tasks into Google Tasks via create_task or note them in Keep Notes.'
     ],
     guardrails: [
-      'Clearly delineate what Suchi has handled vs what the user needs to sign off on.',
+      'Clearly delineate what Life OS has handled vs what the user needs to sign off on.',
       'Preserve the original email subject and sender in task notes for instant context.'
     ]
   },
@@ -330,7 +330,7 @@ const BASE_APP_AND_CAREER_SKILLS: SkillDefinition[] = [
     ],
     guardrails: [
       'Be direct and constructive; focus on preventing friction and saving time.',
-      'Always offer a concrete action Suchi can execute immediately to resolve the blind spot.'
+      'Always offer a concrete action Life OS can execute immediately to resolve the blind spot.'
     ]
   },
   {
@@ -483,7 +483,7 @@ const BASE_APP_AND_CAREER_SKILLS: SkillDefinition[] = [
       'Diagnose the target company\'s single biggest operational or technical friction point.',
       'Build concrete artifact: 30-60-90 Day Plan, Product Spec, or Financial Unit Economics Model.',
       'Execute create_document or create_spreadsheet.',
-      'Stage review card in Suchi center cockpit for human confirmation before release.'
+      'Stage review card in Life OS center cockpit for human confirmation before release.'
     ],
     guardrails: ['Approval safeguard: artifact is strictly staged and released only upon human confirmation.']
   },
@@ -671,7 +671,7 @@ const BASE_APP_AND_CAREER_SKILLS: SkillDefinition[] = [
     id: 'stealth-application-and-read-only-safety-gate',
     name: 'Stealth Application & Read-Only Safety Gate',
     department: 'Foundational Safety Gatekeeper',
-    description: 'FOUNDATIONAL GATEKEEPER. Enforces the inviolable safety constraint: No automated external communication. Protocol & Enforcement: Intercepts any proposed external send action and diverts output into local staging environments (Emails -> Gmail DRAFTS folder, WhatsApp -> Native https://wa.me/ URI ready for phone launch, Portals -> Pre-filled fields in Portal_Application_Brief.gdoc). Renders an interactive Action Card in Suchi\'s Center Cockpit: [ Review & Open Draft ] / [ Reject ].',
+    description: 'FOUNDATIONAL GATEKEEPER. Enforces the inviolable safety constraint: No automated external communication. Protocol & Enforcement: Intercepts any proposed external send action and diverts output into local staging environments (Emails -> Gmail DRAFTS folder, WhatsApp -> Native https://wa.me/ URI ready for phone launch, Portals -> Pre-filled fields in Portal_Application_Brief.gdoc). Renders an interactive Action Card in Life OS Center Cockpit: [ Review & Open Draft ] / [ Reject ].',
     enabled: true,
     allowedTiers: ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'ADMIN'],
     workflow: [
@@ -681,7 +681,7 @@ const BASE_APP_AND_CAREER_SKILLS: SkillDefinition[] = [
       'Wait for human 1-tap approval before candidate transmits externally.'
     ],
     guardrails: [
-      'Zero Autonomous Transmission: Savia will never independently transmit messages externally.',
+      'Zero Autonomous Transmission: Life OS will never independently transmit messages externally.',
       'Mandatory Human-in-the-Loop Approval for every outbound communication.'
     ]
   }
@@ -811,26 +811,208 @@ export const BUSINESS_AND_PROFESSIONAL_SKILLS: SkillDefinition[] = [
   }
 ];
 
-// --- 100 LIFE OS SKILLS (Imported from JSON) ---
-export const LIFE_OS_100_SKILLS: SkillDefinition[] = (rawLifeOsSkills as any[]).map((s, idx) => ({
-  num: (s.num || (idx + 43)),
-  id: s.id,
-  name: s.name,
-  department: s.department,
-  description: s.description,
-  enabled: s.enabled ?? true,
-  allowedTiers: s.allowedTiers || ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'ADMIN'],
-  quickQuestions: s.quickQuestions,
-  parameters: s.parameters,
-  workflow: s.workflow,
-  guardrails: s.guardrails,
-}));
+// --- 10 SPECIALIZED PERSONA SKILLS (Students, Professionals, Seniors, Admins) ---
+export const SPECIALIZED_PERSONA_SKILLS: SkillDefinition[] = [
+  {
+    num: 143,
+    id: 'student-concept-synthesizer',
+    name: 'Student Concept Synthesizer & Feynman Explainer',
+    department: 'Education & Academia',
+    description: 'Breaks down complex academic subjects, college STEM theories, and dense textbooks using the Feynman technique, analogies, and active-recall flashcard summaries in Google Keep or Docs.',
+    enabled: true,
+    allowedTiers: ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'ADMIN'],
+    workflow: [
+      'Analyze student topic, syllabus level, and specific concept bottleneck.',
+      'Explain core principles using intuitive real-world analogies (no academic jargon).',
+      'Generate 5 active-recall Q&A flashcards and a 1-page visual study summary.',
+      'Optionally export to Google Docs or create revision tasks in Google Tasks with spaced repetition dates.'
+    ],
+    guardrails: [
+      'Never copy-paste raw definitions; rephrase with intuitive first-principles explanations.',
+      'Keep study summaries structured with bullet points and bold terminology.'
+    ]
+  },
+  {
+    num: 144,
+    id: 'student-exam-strategy-and-mock-analyzer',
+    name: 'Competitive Exam Strategy & Mock Error Analyzer',
+    department: 'Education & Exam Prep',
+    description: 'Analyzes mock test scores, diagnostic question logs, and negative marking patterns for competitive exams (UPSC, JEE, NEET, GRE, GMAT, CAT). Creates targeted remedial revision schedules in Google Calendar.',
+    enabled: true,
+    allowedTiers: ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'ADMIN'],
+    workflow: [
+      'Review mock test score breakdown, accuracy percentage, and time spent per section.',
+      'Isolate recurring error categories: Conceptual gaps vs Calculation slips vs Time panic.',
+      'Build remedial action plan in Google Sheets (Weak topic, Revision source, Next mock target).',
+      'Schedule dedicated 90-minute deep-focus revision blocks in Google Calendar.'
+    ],
+    guardrails: [
+      'Focus ruthlessly on reducing negative marking and unforced errors.',
+      'Ensure revision blocks have clear stop times to prevent student burnout.'
+    ]
+  },
+  {
+    num: 145,
+    id: 'preschool-and-franchise-operations',
+    name: 'Pre-School & Franchise Operations Manager',
+    department: 'Business & Franchise Operations',
+    description: 'Manages early-childhood academy, daycare, and franchise branch operations: parent communication circulars, monthly fee reconciliation ledgers in Google Sheets, teacher staffing schedules, and regulatory compliance checklists.',
+    enabled: true,
+    allowedTiers: ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'ADMIN'],
+    workflow: [
+      'Assess operational inquiry: Parent notices, fee rosters, nutrition menus, or event logistics.',
+      'Draft warm, reassuring, professional parent broadcasts ready for WhatsApp or email distribution.',
+      'Maintain fee dues, admissions pipeline, and petty cash logs in Google Sheets.',
+      'Create safety compliance inspection checklists in Google Tasks.'
+    ],
+    guardrails: [
+      'Tone must always be warm, empathetic, and reassuring when addressing parents.',
+      'Strictly anonymize child medical and identifying information in shared logs.'
+    ]
+  },
+  {
+    num: 146,
+    id: 'stock-trader-journal-and-risk-ledger',
+    name: 'Stock Trader Trade Journal & Risk Capital Desk',
+    department: 'Finance & Trading',
+    description: 'Logs trading entries, setups, risk-reward ratios, stop-losses, and psychological notes in Google Sheets. Enforces strict 1-2% capital risk rules and calculates expectancy metrics.',
+    enabled: true,
+    allowedTiers: ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'ADMIN'],
+    workflow: [
+      'Record trade details: Ticker, Position (Long/Short), Entry, Target, Stop-Loss, Position Size.',
+      'Calculate Capital at Risk %, Risk-to-Reward ratio (R:R), and position expectancy in Google Sheets.',
+      'Log pre-trade rationale and emotional state (e.g. FOMO vs Disciplined Setup).',
+      'Highlight weekly win-rate, profit factor, and max drawdown trends.'
+    ],
+    guardrails: [
+      'Flag any trade risking >2% of total portfolio capital with high-priority risk warnings.',
+      'Never provide financial advice; enforce discipline, journaling, and mathematical risk management.'
+    ]
+  },
+  {
+    num: 147,
+    id: 'professional-services-client-desk',
+    name: 'Professional Practice Client Desk (CA, Legal, Medical, Architecture)',
+    department: 'Professional Practice',
+    description: 'Coordinates client retainers, filing deadlines (GST, ITR, court dates, patient consultations, blueprint milestones), engagement letters, and fee invoicing for self-employed professionals.',
+    enabled: true,
+    allowedTiers: ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'ADMIN'],
+    workflow: [
+      'Identify client domain: Tax/Audit (CA), Litigation/Corporate (Lawyer), Clinical (Doctor), Design (Architect).',
+      'Draft standardized engagement letter, NDA, or fee retainer quotation in Google Docs.',
+      'Log statutory filing deadlines and hearing/appointment dates into Google Calendar and Tasks.',
+      'Track client deliverables, document submissions, and billing status in Google Sheets.'
+    ],
+    guardrails: [
+      'Always maintain client confidentiality and professional ethical disclaimer headers.',
+      'Include statutory deadline buffer of at least 48 hours in calendar reminders.'
+    ]
+  },
+  {
+    num: 148,
+    id: 'content-creator-growth-and-sponsorship-engine',
+    name: 'Content Creator Sponsorship & Audience Engine',
+    department: 'Freelance & Creator Economy',
+    description: 'Orchestrates content calendars, YouTube/Instagram/LinkedIn script outlines, brand sponsorship pitch decks in Google Slides, rate card negotiation briefs, and deliverable tracking ledgers.',
+    enabled: true,
+    allowedTiers: ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'ADMIN'],
+    workflow: [
+      'Define content niche, platform format (Shorts, Long-form, Newsletter), and target audience demographic.',
+      'Structure high-retention video/post scripts with 3-second hook, body value spikes, and engaging CTA.',
+      'Generate brand sponsorship rate card proposals and outreach pitches for PR managers.',
+      'Track sponsored deliverables, view milestones, and payment disbursements in Google Sheets.'
+    ],
+    guardrails: [
+      'Ensure script hooks hook the audience within the first 15 words.',
+      'Include standard FTC/ASC sponsorship disclosure reminders in all promotional scripts.'
+    ]
+  },
+  {
+    num: 149,
+    id: 'senior-vitality-and-medication-guardian',
+    name: 'Senior Vitality, Medication & Daily Check-in Guardian',
+    department: 'Senior Life & Vitality',
+    description: 'Provides ultra-simple, high-contrast, uncluttered reminders for prescription medicines, doctor appointments, daily walks, and family check-in notifications. Designed with zero confusion.',
+    enabled: true,
+    allowedTiers: ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'ADMIN'],
+    workflow: [
+      'Log senior prescription schedule: Dosage, timing (morning/afternoon/night), and food instructions.',
+      'Set gentle, loud, clear recurring reminders in Google Calendar and Tasks.',
+      'Draft 1-tap WhatsApp "I am doing well today" reassurance updates to send to family members.',
+      'Organize upcoming medical checkups and diagnostic lab tests with simple checklists.'
+    ],
+    guardrails: [
+      'Use ultra-simple, polite, large-print clear instructions without medical or tech jargon.',
+      'Never modify medication dosages autonomously; always confirm with family or doctor.'
+    ]
+  },
+  {
+    num: 150,
+    id: 'admin-system-auto-healer',
+    name: 'Admin System Self-Healer & Bug Diagnostic Sentinel',
+    department: 'Admin & DevOps Governance',
+    description: 'Monitors real-time API error rates, broken tool executions, token exhaustion, and client exceptions. Automatically diagnoses root cause, recommends code fixes, and prompts admin for 1-tap approval.',
+    enabled: true,
+    allowedTiers: ['ADMIN'],
+    workflow: [
+      'Aggregate system logs, API status codes, and user error telemetry.',
+      'Isolate failure domain: OAuth expiry, quota limit, malformed JSON, or UI crash.',
+      'Generate root-cause analysis report with precise fix recommendations.',
+      'Present 1-tap approval card to admin to execute healing rollback or key rotation.'
+    ],
+    guardrails: [
+      'Admin approval is strictly required before any state-altering remediation is executed.',
+      'All diagnostic logs must be sanitized of PII and private user tokens.'
+    ]
+  },
+  {
+    num: 151,
+    id: 'admin-business-strategist-and-market-intel',
+    name: 'Admin Business Growth Strategist & Market Intelligence Desk',
+    department: 'Admin Executive Intelligence',
+    description: 'Synthesizes platform user adoption, cohort retention, feature engagement, market competitor trends, pricing tier viability, and revenue forecasting into executive briefings in Google Slides & Sheets.',
+    enabled: true,
+    allowedTiers: ['ADMIN'],
+    workflow: [
+      'Ingest active user metrics, retention cohorts, and feature utilization patterns.',
+      'Scan market intelligence, competitor pricing shifts, and emerging enterprise AI needs.',
+      'Build executive financial forecast model and user acquisition funnel in Google Sheets.',
+      'Generate quarterly strategy pitch deck in Google Slides for founders and leadership.'
+    ],
+    guardrails: [
+      'Ensure forecasts distinguish between organic user growth and churn trends.',
+      'Provide actionable growth hypotheses with clear risk-adjusted downside scenarios.'
+    ]
+  },
+  {
+    num: 152,
+    id: 'admin-user-and-org-governance',
+    name: 'Admin User Governance, Skill Pack & Quota Allocator',
+    department: 'Admin Platform Governance',
+    description: 'Enables administrators to inspect users, assign or revoke specialized skill packs, adjust token rate limits, provision family/team seats, and enforce enterprise governance policies.',
+    enabled: true,
+    allowedTiers: ['ADMIN'],
+    workflow: [
+      'Inspect user account profile, assigned persona, and current skill pack entitlements.',
+      'Toggle active skill packs (e.g. Student Essentials, Executive Suite, Healthcare Practice).',
+      'Configure API key quotas, rate limits, and multi-tenant security boundaries.',
+      'Audit family and team member invitations and domain-level authentication rules.'
+    ],
+    guardrails: [
+      'Never expose raw API keys or passwords in the admin audit log.',
+      'Enforce least-privilege access; warn admin when granting platform-wide privileges.'
+    ]
+  }
+];
 
-// --- COMBINED MASTER CATALOG (142 SKILLS TOTAL) ---
+const LIFE_OS_100_SKILLS: SkillDefinition[] = rawLifeOsSkills as unknown as SkillDefinition[];
+
+// --- COMBINED MASTER CATALOG (152 SKILLS TOTAL) ---
 export const CORE_MASTER_SKILLS: SkillDefinition[] = [
   ...BASE_APP_AND_CAREER_SKILLS,
   ...BUSINESS_AND_PROFESSIONAL_SKILLS,
   ...LIFE_OS_100_SKILLS,
+  ...SPECIALIZED_PERSONA_SKILLS,
 ];
 
 export const INITIAL_100_SKILLS: SkillDefinition[] = CORE_MASTER_SKILLS;
@@ -893,6 +1075,18 @@ export function findMatchingSkills(userPrompt: string, skills: SkillDefinition[]
     if (s.id === 'b2b-customer-outreach-engine' && (lower.includes('outreach') || lower.includes('customer connect') || lower.includes('leads') || lower.includes('cold email') || lower.includes('prospect') || lower.includes('sales pipeline'))) score += 7;
     if (s.id === 'business-entity-and-compliance-setup' && (lower.includes('business setup') || lower.includes('incorporat') || lower.includes('llp') || lower.includes('pvt ltd') || lower.includes('gst') || lower.includes('company registration') || lower.includes('startup setup'))) score += 7;
     if (s.id === 'salaried-career-growth-and-appraisal-maximizer' && (lower.includes('appraisal') || lower.includes('promotion') || lower.includes('raise') || lower.includes('salaried') || lower.includes('performance review') || lower.includes('brag sheet') || lower.includes('skip-level'))) score += 7;
+
+    // SPECIALIZED PERSONA TRIGGER KEYWORDS
+    if (s.id === 'student-concept-synthesizer' && (lower.includes('feynman') || lower.includes('study concept') || lower.includes('textbook') || lower.includes('explain simply') || lower.includes('flashcard') || lower.includes('student'))) score += 7;
+    if (s.id === 'student-exam-strategy-and-mock-analyzer' && (lower.includes('mock') || lower.includes('exam') || lower.includes('upsc') || lower.includes('jee') || lower.includes('neet') || lower.includes('gre') || lower.includes('gmat') || lower.includes('cat') || lower.includes('negative marking'))) score += 8;
+    if (s.id === 'preschool-and-franchise-operations' && (lower.includes('preschool') || lower.includes('daycare') || lower.includes('franchise') || lower.includes('parent circular') || lower.includes('fee dues') || lower.includes('teacher staffing'))) score += 8;
+    if (s.id === 'stock-trader-journal-and-risk-ledger' && (lower.includes('trade journal') || lower.includes('trading') || lower.includes('stock') || lower.includes('risk reward') || lower.includes('stop loss') || lower.includes('capital at risk'))) score += 8;
+    if (s.id === 'professional-services-client-desk' && (lower.includes('retainer') || lower.includes('client desk') || lower.includes('lawyer') || lower.includes('doctor') || lower.includes('architect') || lower.includes('filing deadline') || lower.includes('hearing'))) score += 7;
+    if (s.id === 'content-creator-growth-and-sponsorship-engine' && (lower.includes('content creator') || lower.includes('youtube script') || lower.includes('sponsorship') || lower.includes('rate card') || lower.includes('creator economy') || lower.includes('brand deal'))) score += 8;
+    if (s.id === 'senior-vitality-and-medication-guardian' && (lower.includes('medicine') || lower.includes('prescription') || lower.includes('doctor appointment') || lower.includes('senior') || lower.includes('check-in') || lower.includes('health reminder'))) score += 8;
+    if (s.id === 'admin-system-auto-healer' && (lower.includes('auto heal') || lower.includes('bug report') || lower.includes('diagnostic') || lower.includes('api crash') || lower.includes('system error') || lower.includes('token exhausted'))) score += 8;
+    if (s.id === 'admin-business-strategist-and-market-intel' && (lower.includes('business strategy') || lower.includes('market intel') || lower.includes('cohort retention') || lower.includes('pricing tier') || lower.includes('growth forecast'))) score += 8;
+    if (s.id === 'admin-user-and-org-governance' && (lower.includes('user governance') || lower.includes('assign skill') || lower.includes('tenant') || lower.includes('admin quota') || lower.includes('rate limit'))) score += 8;
 
     // Description word matching
     const descWords = s.description.toLowerCase().split(/\s+/).filter(w => w.length > 5);

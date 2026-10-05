@@ -19,27 +19,27 @@ export default function PrivacyPolicyPage() {
                 <circle cx="16" cy="16" r="2.5" fill="#ffffff"/>
               </svg>
             </span>
-            <span className="font-bold text-lg tracking-tight">Suchi</span>
+            <span className="font-bold text-lg tracking-tight">Life OS</span>
           </Link>
 
           <Link
             href="/"
             className="text-xs bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-medium px-3 py-1.5 rounded-lg transition-colors"
           >
-            ← Back to App
+            ← Back to Life OS
           </Link>
         </div>
 
         {/* Header */}
         <div>
           <span className="text-[11px] font-bold text-blue-600 dark:text-blue-400 tracking-wider uppercase">
-            Data Sovereignty & Encryption Architecture
+            Data Sovereignty & Air-Gapped Architecture
           </span>
           <h1 className="text-2xl sm:text-3xl font-extrabold mt-1 text-gray-950 dark:text-white">
-            Suchi Privacy & Security Policy
+            Life OS Privacy & Security Policy
           </h1>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-            Last updated: October 2026 • Certified Zero-Knowledge Architecture
+            Last updated: October 2026 • Certified Zero-Leakage Air-Gap Architecture
           </p>
         </div>
 
@@ -47,87 +47,77 @@ export default function PrivacyPolicyPage() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className="p-4 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/50 rounded-xl">
             <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400 block mb-1">
-              ✓ AES-256-GCM Encryption
+              ✓ Home & Work Air-Gap
             </span>
             <p className="text-[11px] text-emerald-900/80 dark:text-emerald-300/80">
-              All conversations, transcripts, and meaningful outcomes are encrypted at rest with military-grade authenticated ciphers.
+              Personal health, routines, and family check-ins are cryptographically separated from professional client files and company data.
             </p>
           </div>
 
           <div className="p-4 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/50 rounded-xl">
             <span className="text-xs font-bold text-blue-700 dark:text-blue-400 block mb-1">
-              ✓ Zero PII Leakage
+              ✓ WhatsApp Isolation
             </span>
             <p className="text-[11px] text-blue-900/80 dark:text-blue-300/80">
-              Personal identity tokens, passwords, and sensitive keys are strictly scrubbed before any cross-service or model interaction.
+              WhatsApp Personal operates strictly in Home Mode; WhatsApp Business operates strictly in Work Mode. No cross-chatter leakage.
             </p>
           </div>
 
           <div className="p-4 bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800/50 rounded-xl">
             <span className="text-xs font-bold text-purple-700 dark:text-purple-400 block mb-1">
-              ✓ No AI Model Training
+              ✓ User-Controlled Execution
             </span>
             <p className="text-[11px] text-purple-900/80 dark:text-purple-300/80">
-              Your data, files, and email interactions are never retained or utilized to train Google, OpenAI, or any foundation AI models.
+              Emails, financial transactions, and calendar invites are staged as 1-tap review cards. Nothing executes without your human-in-the-loop consent.
             </p>
           </div>
         </div>
 
-        {/* Section 1 */}
-        <section className="space-y-3 text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-          <h2 className="text-base font-bold text-gray-900 dark:text-white">1. Principles of Sovereign Computing</h2>
-          <p>
-            Suchi was built from the ground up on a fundamental premise: your digital life, personal correspondence, finances, health, and family matters belong exclusively to you. We act purely as your client-side executive operating system. No advertising networks, trackers, or behavioral profiling are built into Suchi.
+        {/* Section 1: Data Isolation */}
+        <div className="space-y-3">
+          <h2 className="text-base font-bold text-gray-900 dark:text-white">
+            1. Dual-Mode Air-Gapped Context Architecture
+          </h2>
+          <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
+            Life OS utilizes strict parallel session isolation. When you operate in <strong>Home Mode</strong>, conversational memory, Google Keep checklists, and health blueprints are locked to your personal domain. When switching to <strong>Work Mode</strong>, professional tools (Google Docs, Sheets, Slides, B2B outreach, vendor RFQs) operate in an isolated enterprise container with zero cross-contamination.
           </p>
-        </section>
+        </div>
 
-        {/* Section 2 */}
-        <section className="space-y-3 text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-          <h2 className="text-base font-bold text-gray-900 dark:text-white">2. Google Workspace Scopes & Access</h2>
-          <p>
-            When you grant permissions through Google OAuth, Suchi receives short-lived, encrypted access tokens stored solely in your secure browser session cookie (JWE A256GCM). Suchi only accesses your Google Workspace resources (Docs, Sheets, Slides, Drive, Calendar, Tasks, Gmail) when you explicitly instruct it to execute a specific task or question.
+        {/* Section 2: Integrations & Authentication */}
+        <div className="space-y-3">
+          <h2 className="text-base font-bold text-gray-900 dark:text-white">
+            2. Google Workspace & Microsoft 365 Cryptographic Tokens
+          </h2>
+          <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
+            OAuth tokens for Google Workspace (Gmail, Calendar, Drive, Docs, Sheets, Slides, Tasks, Forms) and Microsoft 365 (Outlook, OneDrive) are encrypted using AES-256-GCM. Session tokens are delivered exclusively via HTTP-only, SameSite Secure cookies and refreshed automatically with zero client-side credential exposure.
           </p>
-          <ul className="list-disc pl-5 space-y-1 text-xs">
-            <li><strong>Draft Isolation:</strong> Suchi never sends emails autonomously. It creates a draft and demands your explicit <em>Approve & Send</em> tap.</li>
-            <li><strong>File Scoping:</strong> Suchi only alters files that you reference or direct it to create.</li>
-            <li><strong>Revocation:</strong> You can disconnect and revoke access at any second via the Settings dropdown or through your Google Account Permissions.</li>
-          </ul>
-        </section>
+        </div>
 
-        {/* Section 3 */}
-        <section className="space-y-3 text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-          <h2 className="text-base font-bold text-gray-900 dark:text-white">3. Incognito Mode & Transient Memory</h2>
-          <p>
-            When you activate <strong>Incognito Mode</strong> in Suchi, the application switches to transient RAM memory:
+        {/* Section 3: Family & Team Governance */}
+        <div className="space-y-3">
+          <h2 className="text-base font-bold text-gray-900 dark:text-white">
+            3. Family Members & Team Collaboration Governance
+          </h2>
+          <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
+            Family connections (max 2 seniors, max 2 students) only share explicit opted-in items (such as medical check-in confirmations and family calendar blocks). Team members receive only delegated task assignments and project milestones. Neither family members nor team members have access to your private chat slots or sovereign credentials.
           </p>
-          <ul className="list-disc pl-5 space-y-1 text-xs">
-            <li>Zero chat rows are written to the database.</li>
-            <li>Zero local storage keys are committed.</li>
-            <li>If your browser tab is closed or switched away, memory is instantly purged.</li>
-          </ul>
-        </section>
+        </div>
 
-        {/* Section 4 */}
-        <section className="space-y-3 text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-          <h2 className="text-base font-bold text-gray-900 dark:text-white">4. Model Context Protocol (MCP) & Third-Party Apps</h2>
-          <p>
-            Suchi exposes a secure RFC 8414 OAuth 2.0 endpoint for third-party assistants (like Gemini). The Zero-Knowledge Data Firewall intercepts every outbound MCP tool call, stripping user identity tokens, email addresses, and private file identifiers before passing only the minimal task payload needed to execute.
+        {/* Section 4: Data Deletion & Sovereign Export */}
+        <div className="space-y-3">
+          <h2 className="text-base font-bold text-gray-900 dark:text-white">
+            4. Sovereign Deletion & Instant Export
+          </h2>
+          <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
+            You retain absolute ownership of all generated content. You can export complete conversations as Markdown dossiers, archive chats to your local device, or trigger complete account purges from your user settings. Once purged, database records and encryption keys are irrecoverably deleted.
           </p>
-        </section>
-
-        {/* Section 5 */}
-        <section className="space-y-3 text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-          <h2 className="text-base font-bold text-gray-900 dark:text-white">5. Permanent Data Erasure</h2>
-          <p>
-            You hold complete deletion power. Clicking <em>Delete Chat</em> instantly and permanently deletes your conversation, messages, and transcripts from our database using cascading deletion. No shadow backups or soft-delete retention locks are maintained.
-          </p>
-        </section>
+        </div>
 
         {/* Footer */}
         <div className="pt-6 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between text-xs text-gray-500">
-          <span>Suchi Life Operating System</span>
+          <span>Life OS Data Protection Office</span>
           <Link href="/" className="text-blue-600 dark:text-blue-400 font-semibold hover:underline">
-            Launch Suchi →
+            Return to Dashboard →
           </Link>
         </div>
       </div>
