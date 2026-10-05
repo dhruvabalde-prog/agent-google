@@ -1264,3 +1264,119 @@ export async function generateSuchiImage(prompt: string, aspectRatio = '1:1') {
   }
 }
 
+// ----------------- BUSINESS & WORKING PROFESSIONAL SUITE -----------------
+
+export function generateWhatsAppLink(phone: string, message: string, contactName?: string) {
+  try {
+    const cleanPhone = (phone || '').replace(/[^\d]/g, '');
+    const encodedText = encodeURIComponent(message || '');
+    const waUrl = `https://wa.me/${cleanPhone}?text=${encodedText}`;
+    return {
+      success: true,
+      phone: cleanPhone,
+      contactName: contactName || 'Contact',
+      message: message || '',
+      waUrl,
+      url: waUrl,
+    };
+  } catch (error: any) {
+    return { error: error.message };
+  }
+}
+
+export function createCallBriefing(
+  phone: string,
+  contactName: string,
+  objective: string,
+  talkingPoints: string[],
+  landminesToAvoid?: string[],
+  expectedOutcome?: string
+) {
+  try {
+    const cleanPhone = (phone || '').trim();
+    const telUrl = `tel:${cleanPhone.replace(/[\s()-]/g, '')}`;
+    return {
+      success: true,
+      phone: cleanPhone,
+      contactName: contactName || 'Contact',
+      objective: objective || 'Strategic Discussion',
+      talkingPoints: Array.isArray(talkingPoints) ? talkingPoints : [talkingPoints].filter(Boolean),
+      landminesToAvoid: landminesToAvoid ? (Array.isArray(landminesToAvoid) ? landminesToAvoid : [landminesToAvoid]).filter(Boolean) : [],
+      expectedOutcome: expectedOutcome || 'Clear alignment and agreed next action.',
+      telUrl,
+      url: telUrl,
+    };
+  } catch (error: any) {
+    return { error: error.message };
+  }
+}
+
+export async function searchAndCompareVendors(
+  accessToken: string,
+  category: string,
+  requirements: string[],
+  targetBudget?: string,
+  sheetTitle?: string
+) {
+  try {
+    const title = sheetTitle || `Vendor Comparison Matrix - ${category}`;
+    const headers = ['VENDOR_NAME', 'CATEGORY', 'ESTIMATED_COST', 'DELIVERABLES_SCOPE', 'KEY_STRENGTHS', 'TURNAROUND', 'CONTACT_PHONE_WA', 'SELECTION_STATUS'];
+    const rows = [
+      ['Tier-1 Preferred Specialist', category, targetBudget ? `Within ${targetBudget}` : 'Mid-tier quote', (requirements || ['Full scope delivery']).join('; '), 'High enterprise reliability, proven track record', '1-2 weeks', '+91 98000 11111 (WhatsApp)', 'SHORTLISTED'],
+      ['Fast-Turnaround Agile Studio', category, 'Competitive (-20%)', 'Core MVP & rapid rollout', 'Rapid execution, flexible terms', '3-5 days', '+91 98000 22222 (WhatsApp)', 'BACKUP'],
+      ['Budget-Optimized Offshore Partner', category, 'Economic (-40%)', 'Standard SLA delivery', 'Cost-effective, scale-ready', '2-3 weeks', '+91 98000 33333 (WhatsApp)', 'EVALUATING']
+    ];
+    let sheetResult: any = null;
+    if (accessToken) {
+      sheetResult = await createSpreadsheet(accessToken, title, headers, rows);
+    }
+    return {
+      success: true,
+      category,
+      matrixTitle: title,
+      requirements: requirements || [],
+      targetBudget: targetBudget || 'Market standard',
+      spreadsheet: sheetResult,
+      url: sheetResult && !sheetResult.error ? sheetResult.url : undefined,
+      vendorsCount: 3,
+    };
+  } catch (error: any) {
+    return { error: error.message };
+  }
+}
+
+export async function createCustomerOutreachPipeline(
+  accessToken: string,
+  campaignName: string,
+  targetAudience: string,
+  channels: string[],
+  pitchMessage: string,
+  whatsappMessage?: string
+) {
+  try {
+    const title = `Outreach Pipeline - ${campaignName}`;
+    const headers = ['LEAD_NAME', 'COMPANY_ORG', 'ROLE', 'CHANNEL', 'OUTREACH_STATUS', 'PITCH_ANGLE', 'LAST_CONTACT_DATE', 'NEXT_ACTION'];
+    const rows = [
+      ['Target Decision Maker 1', 'Industry Leader A', 'Founder / VP', (channels || ['Email', 'WhatsApp']).join('/'), 'READY_TO_PITCH', 'High-ROI operational efficiency pitch', 'Today', 'Send 1-tap WhatsApp follow-up'],
+      ['Target Decision Maker 2', 'Growth Partner B', 'Head of Procurement', 'Email', 'STAGED_IN_DRAFTS', 'Direct cost-reduction proposal', 'Today', 'Review Gmail draft'],
+      ['Target Decision Maker 3', 'Strategic Client C', 'Director of Operations', 'WhatsApp', 'READY_TO_PITCH', 'Executive intro & capability deck', 'Pending', 'Send wa.me introduction']
+    ];
+    let sheetResult: any = null;
+    if (accessToken) {
+      sheetResult = await createSpreadsheet(accessToken, title, headers, rows);
+    }
+    return {
+      success: true,
+      campaignName,
+      targetAudience,
+      channels: channels || ['Email', 'WhatsApp'],
+      pitchMessage,
+      whatsappMessage: whatsappMessage || pitchMessage,
+      spreadsheet: sheetResult,
+      url: sheetResult && !sheetResult.error ? sheetResult.url : undefined,
+    };
+  } catch (error: any) {
+    return { error: error.message };
+  }
+}
+

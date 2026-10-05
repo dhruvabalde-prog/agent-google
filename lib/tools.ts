@@ -447,6 +447,80 @@ export const functionDeclarations: FunctionDeclaration[] = [
       required: ['prompt'],
     },
   },
+  {
+    name: 'generate_whatsapp_link',
+    description: 'Generates a 1-tap WhatsApp message launch link (https://wa.me/<phone>?text=...) with URL-encoded message for client follow-up, payment reminder, vendor outreach, or quick catch-up.',
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        phone: { type: Type.STRING, description: 'Recipient phone number with country code, e.g. 919876543210' },
+        message: { type: Type.STRING, description: 'Message text to send on WhatsApp' },
+        contactName: { type: Type.STRING, description: 'Optional name of the contact' },
+      },
+      required: ['phone', 'message'],
+    },
+  },
+  {
+    name: 'create_call_briefing',
+    description: 'Creates an executive pre-call briefing (talking points, objectives, leverage points, landmines to avoid) paired with 1-tap direct dialer (tel:<phone>) phone link.',
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        phone: { type: Type.STRING, description: 'Phone number to call (with country code or direct digits)' },
+        contactName: { type: Type.STRING, description: 'Name of the contact or organization' },
+        objective: { type: Type.STRING, description: 'Primary objective of the phone call' },
+        talkingPoints: {
+          type: Type.ARRAY,
+          items: { type: Type.STRING },
+          description: '3 concise strategic talking points for the call',
+        },
+        landminesToAvoid: {
+          type: Type.ARRAY,
+          items: { type: Type.STRING },
+          description: 'Potential traps, sensitive topics, or concessions to avoid during the call',
+        },
+        expectedOutcome: { type: Type.STRING, description: 'Target concrete next step or decision' },
+      },
+      required: ['phone', 'contactName', 'objective', 'talkingPoints'],
+    },
+  },
+  {
+    name: 'search_and_compare_vendors',
+    description: 'Discovers, compares, and evaluates vendors, contractors, or suppliers. Generates a side-by-side cost and deliverable comparison matrix in Google Sheets.',
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        category: { type: Type.STRING, description: 'Vendor service category (e.g. Legal Incorporation, Cloud Infra, UI/UX Agency, Logistics Partner)' },
+        requirements: {
+          type: Type.ARRAY,
+          items: { type: Type.STRING },
+          description: 'Key deliverables, SLA requirements, or scope items',
+        },
+        targetBudget: { type: Type.STRING, description: 'Target budget or price ceiling' },
+        sheetTitle: { type: Type.STRING, description: 'Optional custom title for the Google Sheet' },
+      },
+      required: ['category', 'requirements'],
+    },
+  },
+  {
+    name: 'create_customer_outreach_pipeline',
+    description: 'Creates a multi-touch B2B customer connect outreach pipeline with status tracking in Google Sheets and ready-to-send messages for Gmail and WhatsApp.',
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        campaignName: { type: Type.STRING, description: 'Campaign title or niche' },
+        targetAudience: { type: Type.STRING, description: 'Ideal customer profile (ICP) or industry persona' },
+        channels: {
+          type: Type.ARRAY,
+          items: { type: Type.STRING },
+          description: 'Outreach channels: Email, WhatsApp, Call',
+        },
+        pitchMessage: { type: Type.STRING, description: 'High-converting email pitch copy' },
+        whatsappMessage: { type: Type.STRING, description: 'Crisp WhatsApp follow-up copy' },
+      },
+      required: ['campaignName', 'targetAudience', 'channels', 'pitchMessage'],
+    },
+  },
 ];
 
 export async function executeFunction(
@@ -659,6 +733,54 @@ export async function executeFunction(
           action.imageUrl = resultData.imageUrl;
           action.link = resultData.imageUrl;
         }
+        break;
+      }
+      case 'generate_whatsapp_link': {
+        resultData = googleServices.generateWhatsAppLink(args.phone, args.message, args.contactName);
+        action.summary = `Generated 1-tap WhatsApp message to ${args.contactName || args.phone}`;
+        if (resultData.waUrl) action.link = resultData.waUrl;
+        action.data = resultData;
+        break;
+      }
+      case 'create_call_briefing': {
+        resultData = googleServices.createCallBriefing(
+          args.phone,
+          args.contactName,
+          args.objective,
+          args.talkingPoints || [],
+          args.landminesToAvoid || [],
+          args.expectedOutcome
+        );
+        action.summary = `Created direct call briefing for ${args.contactName} (${args.phone})`;
+        if (resultData.telUrl) action.link = resultData.telUrl;
+        action.data = resultData;
+        break;
+      }
+      case 'search_and_compare_vendors': {
+        resultData = await googleServices.searchAndCompareVendors(
+          accessToken,
+          args.category,
+          args.requirements || [],
+          args.targetBudget,
+          args.sheetTitle
+        );
+        action.summary = `Built vendor comparison matrix for ${args.category} in Google Sheets`;
+        if (resultData.url) action.link = resultData.url;
+        action.data = resultData;
+        break;
+      }
+      case 'create_customer_outreach_pipeline': {
+        resultData = await googleServices.createCustomerOutreachPipeline(
+          accessToken,
+          args.campaignName,
+          args.targetAudience,
+          args.channels || [],
+          args.pitchMessage,
+          args.whatsappMessage
+        );
+        action.summary = `Initialized customer connect outreach pipeline: "${args.campaignName}"`;
+        if (resultData.url) action.link = resultData.url;
+        action.data = resultData;
         break;
       }
       default:

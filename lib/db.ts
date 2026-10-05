@@ -1045,6 +1045,27 @@ export async function getAllSkills(): Promise<SkillDefinition[]> {
     try {
       const res = await pool.query('SELECT * FROM skills ORDER BY department ASC, name ASC');
       if (res.rows.length > 0) {
+        if (res.rows.length < CORE_MASTER_SKILLS.length) {
+          const existingIds = new Set(res.rows.map(r => r.id));
+          for (const s of CORE_MASTER_SKILLS) {
+            if (!existingIds.has(s.id)) {
+              await saveSkill(s);
+            }
+          }
+          const updatedRes = await pool.query('SELECT * FROM skills ORDER BY department ASC, name ASC');
+          return updatedRes.rows.map(r => ({
+            id: r.id,
+            name: r.name,
+            department: r.department,
+            description: r.description || '',
+            enabled: r.enabled ?? true,
+            allowedTiers: r.allowed_tiers || r.allowedTiers || ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'ADMIN'],
+            quickQuestions: r.quick_questions || r.quickQuestions,
+            parameters: r.parameters,
+            workflow: r.workflow,
+            guardrails: r.guardrails,
+          }));
+        }
         return res.rows.map(r => ({
           id: r.id,
           name: r.name,

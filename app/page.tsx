@@ -43,27 +43,38 @@ const AGENT_SUGGESTIONS_POOL = [
   'Tip: Confirm the meaningful outcome at the top when you are happy with the draft.',
 ];
 
-const CAPABILITY_POOL = [
-  'Draft executive reply to pending emails in Gmail',
-  'Create a formatted project brief in Google Docs',
-  'Build an OKR & deliverables tracker in Google Sheets',
-  'Schedule afternoon focus blocks in Google Calendar',
-  'Generate a 5-slide strategy deck in Google Slides',
-  'Audit my urgent Google Tasks due today',
-  'Summarize key action items from my unread threads',
-  'Prepare agenda for tomorrow\'s team sync',
-  'Draft an email update to project stakeholders',
-  'Organize my Google Drive project folders',
+const LIFE_MODE_CAPABILITY_POOL = [
+  'Generate 1-tap WhatsApp message to follow up on client invoice',
+  'Prepare pre-call briefing & dialer for upcoming vendor negotiation',
+  'Draft RFQ & compare 3 development vendors in Google Sheets',
+  'Launch B2B customer connect outreach pipeline with 3-touch sequence',
+  'Compile annual achievements brag sheet for promotion in Google Docs',
+  'Incorporate business entity: checklist & founder agreement in Keep',
+  'Build 5-slide executive update deck for leadership in Google Slides',
+  'Audit urgent tasks due today & sweep unread inbox threads',
 ];
 
+const HOME_MODE_CAPABILITY_POOL = [
+  'Create my Annual Preventive Health Checkup blueprint & schedule tests',
+  'Build a weekly grocery & healthy meal plan checklist in Google Keep',
+  'Organize medication schedule & doctor visits for aging parents',
+  'Track monthly household expenses & SIP savings in Google Sheets',
+  'Plan weekend family getaway itinerary with Google Maps places',
+  'Draft evening digital-sunset routine in Google Tasks',
+  'Organize insurance policies & property documents in Google Drive',
+  'Review personal goals & habit tracker for this month',
+];
+
+const CAPABILITY_POOL = [...LIFE_MODE_CAPABILITY_POOL, ...HOME_MODE_CAPABILITY_POOL];
+
 const EXECUTIVE_SKILL_SUGGESTIONS = [
-  'Prepare an executive summary of this week\'s key deliverables and progress.',
-  'Draft follow-up replies to high-priority pending emails in my inbox.',
-  'Analyze my Google Calendar for meeting conflicts and focus blocks tomorrow.',
-  'Set up a North Star OKR tracking sheet with milestones in Google Sheets.',
-  'Draft a 5-slide strategic update deck for leadership in Google Slides.',
-  'Organize my unread emails into actionable decisions vs informational.',
-  'Audit my pending Google Tasks and group them by strategic priority.',
+  'Generate 1-tap WhatsApp message to follow up on client invoice or agreement.',
+  'Prepare an executive pre-call briefing and dialer for my strategic discussion tomorrow.',
+  'Draft RFQ and compare 3 leading vendors side-by-side in Google Sheets.',
+  'Launch a multi-touch B2B customer connect campaign with email & WhatsApp copy.',
+  'Compile my annual impact brag sheet in Google Docs for upcoming appraisal reviews.',
+  'Draft a 5-slide strategic update deck for executive leadership in Google Slides.',
+  'Create my Annual Preventive Health Checkup blueprint and schedule diagnostic panels.',
 ];
 
 function extractOptions(text: string): { label: string; text: string }[] {
@@ -247,12 +258,40 @@ export default function Home() {
     } catch (e) {}
   }, []);
 
+  // Dual Mode: Home Mode vs Life Mode (Right Top Corner Drawer)
+  const [chatMode, setChatMode] = useState<'home' | 'life'>('life');
+  const [isModeDrawerOpen, setIsModeDrawerOpen] = useState(false);
+
+  // Quick Tools State for Right Drawer
+  const [quickWaPhone, setQuickWaPhone] = useState('');
+  const [quickWaMsg, setQuickWaMsg] = useState('');
+  const [quickCallContact, setQuickCallContact] = useState('');
+  const [quickCallPhone, setQuickCallPhone] = useState('');
+  const [quickCallObjective, setQuickCallObjective] = useState('');
+
+  useEffect(() => {
+    try {
+      const savedMode = localStorage.getItem('suchi_chat_mode');
+      if (savedMode === 'home' || savedMode === 'life') {
+        setChatMode(savedMode);
+      }
+    } catch (e) {}
+  }, []);
+
+  function handleModeChange(mode: 'home' | 'life') {
+    setChatMode(mode);
+    try {
+      localStorage.setItem('suchi_chat_mode', mode);
+    } catch (e) {}
+  }
+
   const [welcomeCapabilities, setWelcomeCapabilities] = useState<string[]>([]);
 
   useEffect(() => {
-    const shuffled = [...CAPABILITY_POOL].sort(() => 0.5 - Math.random());
+    const pool = chatMode === 'home' ? HOME_MODE_CAPABILITY_POOL : LIFE_MODE_CAPABILITY_POOL;
+    const shuffled = [...pool].sort(() => 0.5 - Math.random());
     setWelcomeCapabilities(shuffled.slice(0, 5));
-  }, [currentChatId, activeSlot]);
+  }, [currentChatId, activeSlot, chatMode]);
 
   const [input, setInput] = useState('');
   const [slot1Loading, setSlot1Loading] = useState(false);
@@ -1153,6 +1192,7 @@ export default function Home() {
           isIncognito,
           meaningfulOutcome: slotOutcome,
           delegationSettings,
+          mode: chatMode,
           messages: chatHistory.map(m => ({ role: m.role, content: m.content })),
         }),
       });
@@ -1773,6 +1813,24 @@ export default function Home() {
             </button>
           )}
 
+
+          {/* Mode Switcher Drawer Trigger (Right Top Corner) */}
+          <button
+            type="button"
+            onClick={() => setIsModeDrawerOpen(true)}
+            title={`Switch Operating Mode (Currently in ${chatMode === 'home' ? 'Home Mode' : 'Life Mode'})`}
+            className={`h-9 px-2.5 sm:px-3 rounded-xl border text-xs font-bold transition-all flex items-center gap-1.5 hover:scale-105 active:scale-95 shadow-2xs ${
+              chatMode === 'home'
+                ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                : 'border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-300'
+            }`}
+          >
+            <span>{chatMode === 'home' ? '🏠' : '💼'}</span>
+            <span className="capitalize hidden xs:inline">{chatMode}</span>
+            <svg className="w-3 h-3 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
 
           {/* Settings Trigger with Click-Outside Ref */}
           <div ref={settingsRef} className="relative">
@@ -2423,6 +2481,135 @@ export default function Home() {
                                 </div>
                               )}
 
+                              {/* Specialized WhatsApp 1-Tap Action Card */}
+                              {(action.tool === 'generate_whatsapp_link' || action.data?.waUrl) && (
+                                <div className="p-3.5 rounded-2xl border border-emerald-300 dark:border-emerald-800/80 bg-emerald-500/10 dark:bg-emerald-950/40 text-emerald-950 dark:text-emerald-100 flex flex-col gap-2 shadow-xs">
+                                  <div className="flex items-center justify-between text-xs font-bold text-emerald-800 dark:text-emerald-300">
+                                    <span className="flex items-center gap-1.5">
+                                      <span>💬</span> WhatsApp Action Card
+                                    </span>
+                                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300">
+                                      +{action.data?.phone || ''}
+                                    </span>
+                                  </div>
+                                  {action.data?.message && (
+                                    <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-emerald-200 dark:border-emerald-900/60 text-xs italic text-slate-700 dark:text-slate-300">
+                                      "{action.data.message}"
+                                    </div>
+                                  )}
+                                  <a
+                                    href={action.data?.waUrl || action.link}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="w-full py-2 rounded-xl bg-[#25D366] hover:bg-[#20ba59] text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all"
+                                  >
+                                    <span>Open WhatsApp Chat ↗</span>
+                                  </a>
+                                </div>
+                              )}
+
+                              {/* Specialized Direct Call & Briefing Card */}
+                              {(action.tool === 'create_call_briefing' || action.data?.telUrl) && (
+                                <div className="p-3.5 rounded-2xl border border-blue-300 dark:border-blue-800/80 bg-blue-500/10 dark:bg-blue-950/40 text-blue-950 dark:text-blue-100 flex flex-col gap-2.5 shadow-xs">
+                                  <div className="flex items-center justify-between text-xs font-bold text-blue-800 dark:text-blue-300">
+                                    <span className="flex items-center gap-1.5">
+                                      <span>📞</span> Direct Call Briefing
+                                    </span>
+                                    <span className="font-mono text-[10px] text-blue-700 dark:text-blue-300">
+                                      {action.data?.phone || ''}
+                                    </span>
+                                  </div>
+                                  <div className="text-xs">
+                                    <strong className="text-blue-900 dark:text-blue-200">Contact:</strong> {action.data?.contactName || 'Target Contact'}
+                                  </div>
+                                  <div className="text-xs">
+                                    <strong className="text-blue-900 dark:text-blue-200">Objective:</strong> {action.data?.objective || 'Strategic Alignment'}
+                                  </div>
+                                  {action.data?.talkingPoints && action.data.talkingPoints.length > 0 && (
+                                    <div className="p-2 rounded-xl bg-white/70 dark:bg-slate-900/70 border border-blue-200 dark:border-blue-900/60 text-[11px] space-y-1">
+                                      <strong className="block text-blue-800 dark:text-blue-300">Key Talking Points:</strong>
+                                      {action.data.talkingPoints.map((tp: string, tIdx: number) => (
+                                        <div key={tIdx} className="flex items-start gap-1">
+                                          <span className="text-blue-500">•</span>
+                                          <span>{tp}</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                  {action.data?.landminesToAvoid && action.data.landminesToAvoid.length > 0 && (
+                                    <div className="p-2 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/60 text-[11px] text-rose-800 dark:text-rose-300 space-y-0.5">
+                                      <strong className="block">⚠️ Landmines to Avoid:</strong>
+                                      {action.data.landminesToAvoid.map((lm: string, lIdx: number) => (
+                                        <div key={lIdx} className="flex items-start gap-1">
+                                          <span>•</span>
+                                          <span>{lm}</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                  <a
+                                    href={action.data?.telUrl || action.link}
+                                    className="w-full py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all"
+                                  >
+                                    <span>Call {action.data?.contactName || 'Now'} ({action.data?.phone || ''}) 📞</span>
+                                  </a>
+                                </div>
+                              )}
+
+                              {/* Specialized Vendor Comparison Card */}
+                              {action.tool === 'search_and_compare_vendors' && (
+                                <div className="p-3.5 rounded-2xl border border-indigo-300 dark:border-indigo-800/80 bg-indigo-500/10 dark:bg-indigo-950/40 text-indigo-950 dark:text-indigo-100 flex flex-col gap-2 shadow-xs">
+                                  <div className="flex items-center justify-between text-xs font-bold text-indigo-800 dark:text-indigo-300">
+                                    <span className="flex items-center gap-1.5">
+                                      <span>🏢</span> Vendor Comparison Matrix
+                                    </span>
+                                    <span className="text-[10px] font-semibold bg-indigo-500/20 px-2 py-0.5 rounded-full">
+                                      3 Evaluated
+                                    </span>
+                                  </div>
+                                  <p className="text-xs text-slate-600 dark:text-slate-300">
+                                    Side-by-side cost & deliverable comparison sheet built with quotes, SLA timelines, and phone contacts.
+                                  </p>
+                                  {action.link && (
+                                    <a
+                                      href={action.link}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="w-full py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all"
+                                    >
+                                      <span>Open Google Sheets Matrix ↗</span>
+                                    </a>
+                                  )}
+                                </div>
+                              )}
+
+                              {/* Specialized Customer Outreach Card */}
+                              {action.tool === 'create_customer_outreach_pipeline' && (
+                                <div className="p-3.5 rounded-2xl border border-violet-300 dark:border-violet-800/80 bg-violet-500/10 dark:bg-violet-950/40 text-violet-950 dark:text-violet-100 flex flex-col gap-2 shadow-xs">
+                                  <div className="flex items-center justify-between text-xs font-bold text-violet-800 dark:text-violet-300">
+                                    <span className="flex items-center gap-1.5">
+                                      <span>🎯</span> Customer Connect Pipeline
+                                    </span>
+                                    <span className="text-[10px] font-semibold bg-violet-500/20 px-2 py-0.5 rounded-full">
+                                      Email + WhatsApp
+                                    </span>
+                                  </div>
+                                  <p className="text-xs text-slate-600 dark:text-slate-300">
+                                    Multi-touch outreach sequence created with status tracking in Google Sheets and ready-to-send messages.
+                                  </p>
+                                  {action.link && (
+                                    <a
+                                      href={action.link}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="w-full py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all"
+                                    >
+                                      <span>Open Outreach Lead Tracker in Sheets ↗</span>
+                                    </a>
+                                  )}
+                                </div>
+                              )}
+
                               {/* Normal action badge */}
                               <div className="flex items-center gap-1.5 py-1 px-2.5 rounded-full border bg-gray-50 dark:bg-gray-800/80 border-gray-200 dark:border-gray-700 text-[11px] text-gray-600 dark:text-gray-300 w-fit">
                                 <span className={`w-1.5 h-1.5 rounded-full ${action.success ? 'bg-emerald-500' : 'bg-red-500'}`}></span>
@@ -2658,7 +2845,7 @@ export default function Home() {
             </div>
           ) : (
             /* UNIFIED SLEEK ROW: SLIM INPUT PILL + DEDICATED MIC OUTSIDE */
-            <div className="flex items-end gap-2 relative w-full max-w-full min-w-0">
+            <div className="flex items-end gap-1.5 sm:gap-2 relative w-full max-w-full min-w-0">
               {/* Attach Popup Menu */}
               {isAttachMenuOpen && (
                 <div className={`absolute bottom-full left-0 mb-2 p-1.5 rounded-2xl border shadow-xl flex flex-col gap-1 min-w-[175px] z-30 animate-in fade-in slide-in-from-bottom-2 ${
@@ -2862,7 +3049,7 @@ export default function Home() {
               onClick={toggleVoiceTyping}
               disabled={isChatLocked}
               title={isVoiceTyping ? 'Stop voice typing' : 'Voice typing — tap to speak'}
-              className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center flex-shrink-0 transition-all shadow-sm hover:scale-105 active:scale-95 disabled:opacity-40 ${
+              className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center flex-shrink-0 transition-all shadow-sm hover:scale-105 active:scale-95 disabled:opacity-40 ${
                 isVoiceTyping
                   ? 'bg-rose-500 text-white animate-pulse'
                   : isIncognito
@@ -3261,6 +3448,286 @@ export default function Home() {
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
           </svg>
           <span>{toastMessage}</span>
+        </div>
+      )}
+
+      {/* RIGHT TOP DRAWER: HOME & LIFE DUAL MODE COCKPIT */}
+      {isModeDrawerOpen && (
+        <div className="fixed inset-0 z-50 flex justify-end">
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-black/40 backdrop-blur-xs transition-opacity animate-in fade-in"
+            onClick={() => setIsModeDrawerOpen(false)}
+          />
+
+          {/* Drawer Panel */}
+          <div className={`relative w-full max-w-sm sm:max-w-md h-full shadow-2xl flex flex-col z-10 overflow-y-auto animate-in slide-in-from-right duration-200 border-l ${
+            isDarkMode || isIncognito
+              ? 'bg-slate-900 border-slate-800 text-slate-100'
+              : 'bg-white border-slate-200 text-slate-800'
+          }`}>
+            {/* Header */}
+            <div className="p-4 sm:p-5 border-b flex items-center justify-between flex-shrink-0">
+              <div className="flex items-center gap-2">
+                <span className="w-7 h-7 rounded-lg bg-blue-600/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-sm">
+                  🧭
+                </span>
+                <div>
+                  <h3 className="font-bold text-sm leading-tight">Operating Mode</h3>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">Toggle persona & quick toolkits</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsModeDrawerOpen(false)}
+                className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                title="Close drawer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Segmented Mode Switcher */}
+            <div className="p-4 sm:p-5 flex flex-col gap-4 flex-1">
+              <div className="p-1 rounded-2xl bg-slate-100 dark:bg-slate-800 grid grid-cols-2 gap-1 border border-slate-200/80 dark:border-slate-700/80">
+                <button
+                  type="button"
+                  onClick={() => handleModeChange('home')}
+                  className={`py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all ${
+                    chatMode === 'home'
+                      ? 'bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-400 shadow-sm border border-emerald-500/20 scale-[1.02]'
+                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+                  }`}
+                >
+                  <span className="text-base">🏠</span>
+                  <span>Home Mode</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleModeChange('life')}
+                  className={`py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all ${
+                    chatMode === 'life'
+                      ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-sm border border-blue-500/20 scale-[1.02]'
+                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+                  }`}
+                >
+                  <span className="text-base">💼</span>
+                  <span>Life Mode</span>
+                </button>
+              </div>
+
+              {/* Mode Context Description */}
+              <div className={`p-3 rounded-xl border text-xs leading-relaxed ${
+                chatMode === 'home'
+                  ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-800 dark:text-emerald-300'
+                  : 'bg-blue-500/10 border-blue-500/20 text-blue-800 dark:text-blue-300'
+              }`}>
+                {chatMode === 'home' ? (
+                  <p>
+                    <strong>🏠 Home Mode:</strong> Curates personal vitality, health diagnostics, aging parent care, grocery/packing checklists, family schedules, and household finances.
+                  </p>
+                ) : (
+                  <p>
+                    <strong>💼 Life Mode:</strong> Powers salaried professionals, entrepreneurs & founders. Features 1-tap WhatsApp communication, direct call briefings, vendor search, and B2B customer outreach.
+                  </p>
+                )}
+              </div>
+
+              {/* Mode-Specific Power Tools & Forms */}
+              {chatMode === 'life' ? (
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                      ⚡ Quick Action Tools (Life Mode)
+                    </span>
+                  </div>
+
+                  {/* WhatsApp Quick Launcher Box */}
+                  <div className="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 flex flex-col gap-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-xs flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
+                        <span>💬</span> 1-Tap WhatsApp Launcher
+                      </span>
+                      <span className="text-[9px] font-semibold bg-emerald-500/10 text-emerald-600 px-1.5 py-0.5 rounded-md">
+                        wa.me
+                      </span>
+                    </div>
+                    <label className="text-[11px] font-semibold text-slate-500">Phone with country code (e.g. 919876543210):</label>
+                    <input
+                      type="tel"
+                      value={quickWaPhone}
+                      onChange={(e) => setQuickWaPhone(e.target.value)}
+                      aria-label="Recipient Phone Number"
+                      className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                    />
+                    <div className="flex gap-1 flex-wrap">
+                      {[
+                        { label: 'Invoice', text: 'Hi, checking in on the status of our pending invoice. Please share an update!' },
+                        { label: 'RFQ Quote', text: 'Hi, sharing our scope requirements. Could you send your estimated quotation and turnaround time?' },
+                        { label: 'Catch up', text: 'Hi, had a quick question regarding our upcoming sync. Let me know when you are free for 5 mins!' }
+                      ].map(t => (
+                        <button
+                          key={t.label}
+                          type="button"
+                          onClick={() => setQuickWaMsg(t.text)}
+                          className="text-[10px] px-2 py-0.5 rounded-md bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-emerald-500 hover:text-white transition-colors"
+                        >
+                          {t.label}
+                        </button>
+                      ))}
+                    </div>
+                    <label className="text-[11px] font-semibold text-slate-500">Message:</label>
+                    <textarea
+                      rows={2}
+                      value={quickWaMsg}
+                      onChange={(e) => setQuickWaMsg(e.target.value)}
+                      aria-label="Message Text"
+                      className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500 resize-none"
+                    />
+                    <button
+                      type="button"
+                      disabled={!quickWaPhone.trim() || !quickWaMsg.trim()}
+                      onClick={() => {
+                        const cleanPhone = quickWaPhone.replace(/[^\d]/g, '');
+                        const url = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(quickWaMsg)}`;
+                        window.open(url, '_blank');
+                      }}
+                      className="w-full py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all disabled:opacity-40"
+                    >
+                      <span>Open WhatsApp Chat ↗</span>
+                    </button>
+                  </div>
+
+                  {/* Pre-Call Briefing Launcher */}
+                  <div className="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 flex flex-col gap-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-xs flex items-center gap-1.5 text-blue-600 dark:text-blue-400">
+                        <span>📞</span> Direct Call & Pre-Call Briefing
+                      </span>
+                      <span className="text-[9px] font-semibold bg-blue-500/10 text-blue-600 px-1.5 py-0.5 rounded-md">
+                        tel:
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-[10px] font-semibold text-slate-500 block mb-1">Contact Name:</label>
+                        <input
+                          type="text"
+                          value={quickCallContact}
+                          onChange={(e) => setQuickCallContact(e.target.value)}
+                          aria-label="Contact Name"
+                          className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-semibold text-slate-500 block mb-1">Phone Number:</label>
+                        <input
+                          type="tel"
+                          value={quickCallPhone}
+                          onChange={(e) => setQuickCallPhone(e.target.value)}
+                          aria-label="Phone Number"
+                          className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                      </div>
+                    </div>
+                    <label className="text-[10px] font-semibold text-slate-500 block">Call Objective:</label>
+                    <input
+                      type="text"
+                      value={quickCallObjective}
+                      onChange={(e) => setQuickCallObjective(e.target.value)}
+                      aria-label="Call Objective"
+                      className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        disabled={!quickCallPhone.trim()}
+                        onClick={() => {
+                          const tel = `tel:${quickCallPhone.replace(/[\s()-]/g, '')}`;
+                          window.location.href = tel;
+                        }}
+                        className="flex-1 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center justify-center gap-1 shadow-sm transition-all disabled:opacity-40"
+                      >
+                        <span>Call Now 📞</span>
+                      </button>
+                      <button
+                        type="button"
+                        disabled={!quickCallContact.trim()}
+                        onClick={() => {
+                          setIsModeDrawerOpen(false);
+                          sendMessage(`Prepare an executive pre-call briefing for my upcoming phone call with ${quickCallContact} (${quickCallPhone}). Objective: ${quickCallObjective || 'Strategic discussion'}. Include 3 punchy talking points, leverage points, and landmines to avoid.`);
+                        }}
+                        className="py-2 px-3 rounded-xl border border-blue-600 text-blue-600 dark:text-blue-400 font-bold text-xs hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-colors disabled:opacity-40"
+                      >
+                        Briefing in Chat
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* 1-Tap Trigger Chips */}
+                  <div className="flex flex-col gap-1.5">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 pt-1">
+                      💼 Instant Prompts
+                    </span>
+                    {[
+                      { icon: '🏢', title: 'Compare 3 Vendors in Sheets', prompt: 'Find and compare 3 leading vendors for my project in Google Sheets with side-by-side costs, turnaround times, and pros/cons.' },
+                      { icon: '🎯', title: 'Start B2B Customer Outreach', prompt: 'Create a B2B customer connect outreach pipeline with Gmail drafts, WhatsApp follow-ups, and a Google Sheets lead tracker.' },
+                      { icon: '📄', title: 'Build Appraisal Brag Sheet', prompt: 'Help me draft an executive performance brag sheet in Google Docs with measurable business outcomes and promotion talking points.' },
+                      { icon: '🏛️', title: 'Business Entity & GST Checklist', prompt: 'Provide a step-by-step business setup checklist (LLP vs Pvt Ltd, GST, founder agreement, banking) in Google Keep.' },
+                    ].map(item => (
+                      <button
+                        key={item.title}
+                        type="button"
+                        onClick={() => {
+                          setIsModeDrawerOpen(false);
+                          sendMessage(item.prompt);
+                        }}
+                        className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-blue-500/40 bg-white dark:bg-slate-800/60 hover:bg-blue-500/5 text-left flex items-center gap-2.5 transition-all text-xs"
+                      >
+                        <span className="text-sm">{item.icon}</span>
+                        <span className="font-semibold flex-1">{item.title}</span>
+                        <span className="text-slate-400">→</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                      🌿 Quick Action Tools (Home Mode)
+                    </span>
+                  </div>
+
+                  {/* 1-Tap Trigger Chips for Home Mode */}
+                  <div className="flex flex-col gap-1.5">
+                    {[
+                      { icon: '🩺', title: 'Annual Health Checkup Blueprint', prompt: 'Create my Annual Preventive Health Checkup blueprint and schedule comprehensive age-appropriate diagnostic blood panels.' },
+                      { icon: '📝', title: 'Keep Grocery & Meal Checklist', prompt: 'Create a healthy weekly grocery and meal planning checklist in Google Keep.' },
+                      { icon: '👴', title: 'Aging Parents Medication & Doctor Hub', prompt: 'Organize a medical schedule, doctor appointment log, and medication tracker for aging parents in Google Tasks and Keep.' },
+                      { icon: '💰', title: 'Personal Balance Sheet in Sheets', prompt: 'Build a monthly household expense budget and SIP investment tracker with automated formulas in Google Sheets.' },
+                      { icon: '🧳', title: 'Travel Packing Master List', prompt: 'Generate an organized travel packing checklist in Google Keep grouped by essentials, electronics, and documents.' },
+                      { icon: '🌅', title: 'Evening Wind-down Routine', prompt: 'Set up an evening digital-sunset and habit routine in Google Tasks to protect mental bandwidth.' },
+                    ].map(item => (
+                      <button
+                        key={item.title}
+                        type="button"
+                        onClick={() => {
+                          setIsModeDrawerOpen(false);
+                          sendMessage(item.prompt);
+                        }}
+                        className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-emerald-500/40 bg-white dark:bg-slate-800/60 hover:bg-emerald-500/5 text-left flex items-center gap-2.5 transition-all text-xs"
+                      >
+                        <span className="text-sm">{item.icon}</span>
+                        <span className="font-semibold flex-1">{item.title}</span>
+                        <span className="text-slate-400">→</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
 

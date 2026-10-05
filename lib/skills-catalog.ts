@@ -1,3 +1,5 @@
+import rawLifeOsSkills from './skills-data.json';
+
 export interface SkillQuestion {
   title: string;
   prompt: string;
@@ -39,7 +41,7 @@ export const INITIAL_SUBSCRIPTION_TIERS: SubscriptionTier[] = [
   { id: 'ADMIN', name: 'Admin', description: 'Unrestricted enterprise capability', dailyTokenLimit: 1000000 },
 ];
 
-export const CORE_MASTER_SKILLS: SkillDefinition[] = [
+const BASE_APP_AND_CAREER_SKILLS: SkillDefinition[] = [
   // --- GOOGLE WORKSPACE APP EXECUTION SUITE ---
   {
     num: 1,
@@ -685,6 +687,152 @@ export const CORE_MASTER_SKILLS: SkillDefinition[] = [
   }
 ];
 
+// --- 6 NEW BUSINESS, SALARIED & OUTREACH SKILLS ---
+export const BUSINESS_AND_PROFESSIONAL_SKILLS: SkillDefinition[] = [
+  {
+    num: 37,
+    id: 'whatsapp-omnichannel-communicator',
+    name: 'WhatsApp 1-Tap Omnichannel Communicator',
+    department: 'Business & Outreach Operations',
+    description: 'Generates instant 1-tap WhatsApp message links (https://wa.me/<number>?text=...) with URL-encoded tailored messaging for customer outreach, vendor negotiations, payment follow-ups, meeting confirmations, and candidate catch-ups. Includes interactive WhatsApp Action Cards in chat.',
+    enabled: true,
+    allowedTiers: ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'ADMIN'],
+    workflow: [
+      'Extract recipient phone number, contact name, and message intent.',
+      'Sanitize phone into international format (e.g. 919876543210).',
+      'Craft concise, polite, actionable message text with clear call-to-action.',
+      'Call generate_whatsapp_link tool or build https://wa.me/ URI with URL-encoded text.',
+      'Present interactive WhatsApp Action Card with direct [ Open WhatsApp Chat ] button.'
+    ],
+    guardrails: [
+      'Always URL-encode the text parameter completely.',
+      'Never send messages autonomously; always provide 1-tap human launch link.',
+      'Ensure international dialing code is present without plus or spaces in the URL.'
+    ]
+  },
+  {
+    num: 38,
+    id: 'direct-call-briefing-and-dialer',
+    name: 'Executive Direct Call Dialer & Briefing Desk',
+    department: 'Executive Communications',
+    description: 'Prepares pre-call intelligence briefings (talking points, objectives, leverage points, landmines to avoid) paired with 1-tap direct dialer (tel:<number>) phone links. Automatically stages post-call notes in Google Keep or Tasks.',
+    enabled: true,
+    allowedTiers: ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'ADMIN'],
+    workflow: [
+      'Identify contact name, telephone number, and call objective.',
+      'Structure executive pre-call briefing: Objective, 3 Key Talking Points, Leverage Points, and Landmines to avoid.',
+      'Call create_call_briefing tool or output direct tel:<number> dialer link.',
+      'Offer to create a Google Keep note or Google Tasks follow-up for post-call logging.'
+    ],
+    guardrails: [
+      'Ensure phone link uses standard tel:<number> format.',
+      'Keep pre-call briefing crisp: 3 talking points maximum to enable rapid skim-reading before dialing.'
+    ]
+  },
+  {
+    num: 39,
+    id: 'vendor-procurement-and-rfq-matcher',
+    name: 'Vendor Procurement, RFQ & Cost Optimizer',
+    department: 'Business Operations & Procurement',
+    description: 'Discovers, compares, and procures suppliers, contractors, SaaS, and professional services. Drafts RFQ briefs, builds side-by-side cost & deliverable comparison matrices in Google Sheets, and scripts negotiation counter-offers.',
+    enabled: true,
+    allowedTiers: ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'ADMIN'],
+    workflow: [
+      'Assess vendor category, scope of work, timeline, and budget constraints.',
+      'Conduct autonomous web search to identify top-rated suppliers or service providers.',
+      'Build side-by-side vendor comparison matrix in Google Sheets (Vendor, Price, Scope, SLA, Rating, Contact, Status).',
+      'Draft standardized RFQ outreach notes or WhatsApp inquiry messages.',
+      'Return single master link to comparison Google Sheet.'
+    ],
+    guardrails: [
+      'Always include at least 3 comparable vendor options with transparent pricing or quote ranges.',
+      'Use uppercase bold headers in the Google Sheet matrix.'
+    ]
+  },
+  {
+    num: 40,
+    id: 'b2b-customer-outreach-engine',
+    name: 'Customer Connect & Multi-Touch Outreach Engine',
+    department: 'Sales & Customer Outreach',
+    description: 'Drives high-converting customer connect pipelines across Gmail and WhatsApp. Automatically structures target lead lists in Google Sheets with status tracking (Pitched, Followed Up, Demo Scheduled, Closed Won) and ready-to-send messages.',
+    enabled: true,
+    allowedTiers: ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'ADMIN'],
+    workflow: [
+      'Identify ideal customer profile (ICP), industry niche, and core value proposition.',
+      'Synthesize customized multi-touch outreach sequence (Cold Email Touch 1, WhatsApp Touch 2, Value Add Touch 3).',
+      'Create or update Google Sheets Customer Outreach Tracker with columns: PROSPECT_NAME, COMPANY, EMAIL, PHONE, STATUS, LAST_TOUCH.',
+      'Stage email drafts in Gmail Drafts folder or generate 1-tap WhatsApp launch links.',
+      'Deliver summary with link to tracker sheet.'
+    ],
+    guardrails: [
+      'Zero robotic spam; every outreach message must highlight specific relevance to the prospect.',
+      'Always stage drafts for human review before transmission.'
+    ]
+  },
+  {
+    num: 41,
+    id: 'business-entity-and-compliance-setup',
+    name: 'Business Entity, Incorporation & Compliance Setup',
+    department: 'Entrepreneurship & Business Setup',
+    description: 'Guides entrepreneurs and founders from zero-to-one company setup: entity selection (Proprietorship, LLP, Pvt Ltd, LLC), GST/tax registration, founder agreements, trademark filing, banking setup, and compliance checklists in Google Keep.',
+    enabled: true,
+    allowedTiers: ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'ADMIN'],
+    workflow: [
+      'Evaluate business model, co-founder equity split, liability profile, and funding intent.',
+      'Recommend optimal corporate structure (LLP vs Private Limited vs LLC).',
+      'Create step-by-step incorporation and compliance checklist in Google Keep.',
+      'Draft Founders Agreement or Core Term Sheet in Google Docs.',
+      'List statutory annual filings, tax registration steps (GST, PAN, TAN), and current bank account prerequisites.'
+    ],
+    guardrails: [
+      'Clearly outline statutory compliance deadlines and penalties.',
+      'Provide structured checklist in Google Keep so the founder can tick items off sequentially.'
+    ]
+  },
+  {
+    num: 42,
+    id: 'salaried-career-growth-and-appraisal-maximizer',
+    name: 'Salaried Career Growth & Appraisal Maximizer',
+    department: 'Corporate Career Excellence',
+    description: 'Empowers salaried corporate professionals to navigate performance appraisal cycles, build high-impact brag sheets in Google Docs, manage upwards with skip-level leaders, secure promotions, and negotiate salary raises.',
+    enabled: true,
+    allowedTiers: ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'ADMIN'],
+    workflow: [
+      'Collect annual achievements, key business metrics impacted, and leadership contributions.',
+      'Generate executive "Brag Sheet & Impact Dossier" in Google Docs with quantified business outcomes.',
+      'Formulate promotion pitch script and salary revision counter-offer talking points.',
+      'Draft 1-on-1 manager agenda and quarterly career development check-in framework in Google Tasks.',
+      'Provide single master link to the finished Impact Dossier doc.'
+    ],
+    guardrails: [
+      'Focus purely on measurable business outcomes ($ revenue saved/earned, hours cut, throughput increase) rather than mere effort.',
+      'Zero defensive language; frame everything as mutual stakeholder alignment.'
+    ]
+  }
+];
+
+// --- 100 LIFE OS SKILLS (Imported from JSON) ---
+export const LIFE_OS_100_SKILLS: SkillDefinition[] = (rawLifeOsSkills as any[]).map((s, idx) => ({
+  num: (s.num || (idx + 43)),
+  id: s.id,
+  name: s.name,
+  department: s.department,
+  description: s.description,
+  enabled: s.enabled ?? true,
+  allowedTiers: s.allowedTiers || ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'ADMIN'],
+  quickQuestions: s.quickQuestions,
+  parameters: s.parameters,
+  workflow: s.workflow,
+  guardrails: s.guardrails,
+}));
+
+// --- COMBINED MASTER CATALOG (142 SKILLS TOTAL) ---
+export const CORE_MASTER_SKILLS: SkillDefinition[] = [
+  ...BASE_APP_AND_CAREER_SKILLS,
+  ...BUSINESS_AND_PROFESSIONAL_SKILLS,
+  ...LIFE_OS_100_SKILLS,
+];
+
 export const INITIAL_100_SKILLS: SkillDefinition[] = CORE_MASTER_SKILLS;
 export const INITIAL_53_SKILLS: SkillDefinition[] = CORE_MASTER_SKILLS;
 
@@ -737,6 +885,14 @@ export function findMatchingSkills(userPrompt: string, skills: SkillDefinition[]
     if (s.id === 'multi-variant-static-portfolio-deployer' && (lower.includes('portfolio') || lower.includes('static website') || lower.includes('personal site') || lower.includes('showcase'))) score += 6;
     if (s.id === 'stealth-diligence-and-backchannel-auditor' && (lower.includes('due diligence') || lower.includes('toxic') || lower.includes('runway') || lower.includes('layoffs') || lower.includes('culture audit'))) score += 6;
     if (s.id === 'stealth-application-and-read-only-safety-gate' && (lower.includes('safety gate') || lower.includes('read-only') || lower.includes('staging') || lower.includes('approval'))) score += 6;
+
+    // BUSINESS, SALARIED & OUTREACH TRIGGER KEYWORDS
+    if (s.id === 'whatsapp-omnichannel-communicator' && (lower.includes('whatsapp') || lower.includes('wa.me') || lower.includes('wa message') || lower.includes('text client') || lower.includes('chat on wa'))) score += 8;
+    if (s.id === 'direct-call-briefing-and-dialer' && (lower.includes('call') || lower.includes('dial') || lower.includes('phone') || lower.includes('talking points') || lower.includes('pre-call') || lower.includes('briefing'))) score += 7;
+    if (s.id === 'vendor-procurement-and-rfq-matcher' && (lower.includes('vendor') || lower.includes('rfq') || lower.includes('supplier') || lower.includes('contractor') || lower.includes('procurement') || lower.includes('quote') || lower.includes('quotation'))) score += 7;
+    if (s.id === 'b2b-customer-outreach-engine' && (lower.includes('outreach') || lower.includes('customer connect') || lower.includes('leads') || lower.includes('cold email') || lower.includes('prospect') || lower.includes('sales pipeline'))) score += 7;
+    if (s.id === 'business-entity-and-compliance-setup' && (lower.includes('business setup') || lower.includes('incorporat') || lower.includes('llp') || lower.includes('pvt ltd') || lower.includes('gst') || lower.includes('company registration') || lower.includes('startup setup'))) score += 7;
+    if (s.id === 'salaried-career-growth-and-appraisal-maximizer' && (lower.includes('appraisal') || lower.includes('promotion') || lower.includes('raise') || lower.includes('salaried') || lower.includes('performance review') || lower.includes('brag sheet') || lower.includes('skip-level'))) score += 7;
 
     // Description word matching
     const descWords = s.description.toLowerCase().split(/\s+/).filter(w => w.length > 5);

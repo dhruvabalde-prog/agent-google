@@ -184,11 +184,12 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { messages, chatId, isIncognito, meaningfulOutcome, delegationSettings } = body as {
+    const { messages, chatId, isIncognito, meaningfulOutcome, delegationSettings, mode } = body as {
       messages: { role: 'user' | 'assistant'; content: string }[];
       chatId?: string;
       isIncognito?: boolean;
       meaningfulOutcome?: string;
+      mode?: 'home' | 'life';
       delegationSettings?: {
         globalMode: 'AUTONOMOUS' | 'COLLABORATIVE' | 'ADVISORY';
         emailMode: 'DRAFT_AND_APPROVE' | 'AUTONOMOUS_SEND';
@@ -283,7 +284,25 @@ export async function POST(request: NextRequest) {
         `RULE: Strictly honor these user preferences at all times.\n`;
     }
 
-    const dynamicSystemPrompt = `${SYSTEM_PROMPT}${temporalAnchor}${delegationNotice}${skillInstructions}`;
+    let modeNotice = '';
+    if (mode === 'home') {
+      modeNotice = `\n\nACTIVE DUAL MODE: 🏠 HOME MODE (Personal Life, Vitality, Family, & Domestic Logistics)\n` +
+        `- The user is currently operating in Home Mode.\n` +
+        `- Prioritize personal life management: annual health checkups, metabolic vitality, aging parents' medical care, children's schooling, grocery & meal planning, home maintenance, travel checklists, personal habit tracking, and personal finance/budgeting.\n` +
+        `- Recommend tools, routines, and Keep checklists that bring calm, organization, and peace of mind to domestic and family life.\n`;
+    } else {
+      modeNotice = `\n\nACTIVE DUAL MODE: 💼 LIFE MODE (Business, Career Excellence, Operations & Outreach)\n` +
+        `- The user is currently operating in Life Mode (Business & Professional Mastery).\n` +
+        `- Prioritize professional, business, and operational leverage:\n` +
+        `  * WhatsApp 1-tap communication links (https://wa.me/<phone>?text=...) with URL-encoded messages for client follow-ups, payment reminders, vendor negotiations via generate_whatsapp_link.\n` +
+        `  * Direct Call dialer (tel:<phone>) with pre-call intelligence briefings (talking points, objectives, leverage points, landmines) via create_call_briefing.\n` +
+        `  * Vendor search, RFQ drafting, and side-by-side cost comparison matrices in Google Sheets via search_and_compare_vendors.\n` +
+        `  * Customer connect pipelines, lead generation, and multi-touch email & WhatsApp outreach via create_customer_outreach_pipeline.\n` +
+        `  * Business entity setup (incorporation, GST, founder agreements, banking, compliance checklists).\n` +
+        `  * Salaried corporate career growth, appraisal brag sheets in Google Docs, promotion strategies, and compensation negotiation.\n`;
+    }
+
+    const dynamicSystemPrompt = `${SYSTEM_PROMPT}${temporalAnchor}${modeNotice}${delegationNotice}${skillInstructions}`;
 
     const convertedMessages = messages.map(m => ({
       role: m.role === 'assistant' ? 'model' : 'user',
