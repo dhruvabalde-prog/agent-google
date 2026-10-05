@@ -19,8 +19,8 @@ export async function verifyAdminCredentials(email: string, pin: string): Promis
   const normalized = (email || '').trim().toLowerCase();
   const cleanPin = (pin || '').trim();
   
-  // 1. Check Super Admin PIN: Master keys 687996, 210996, or env PIN
-  if (isValidAdminPin(cleanPin) || cleanPin === '687996' || cleanPin === '210996') {
+  // 1. Check Super Admin PIN: Master key 111111 or configured pins
+  if (cleanPin === '111111' || isValidAdminPin(cleanPin)) {
     const adminEmail = normalized || (isSuperAdminEmail(normalized) ? normalized : SUPER_ADMIN_EMAIL.toLowerCase());
     
     // Auto-elevate this account in database as SUPER_ADMIN

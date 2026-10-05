@@ -744,10 +744,7 @@ export default function AdminPage() {
             </div>
 
             <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="block text-xs font-semibold text-gray-300 uppercase">Security PIN</label>
-                <span className="text-[10px] text-gray-400 font-mono">210996 / 687996</span>
-              </div>
+              <label className="block text-xs font-semibold text-gray-300 uppercase mb-1">Security PIN (6 Digits)</label>
               <input
                 type="password"
                 required

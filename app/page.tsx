@@ -340,13 +340,14 @@ export default function Home() {
       }
     } catch (e) {}
 
-    // Load User Profile
+    // Load User Profile (Require v2 onboarding completion)
     try {
+      const v2Completed = localStorage.getItem('lifeos_onboarding_v2_completed');
       const savedProfile = localStorage.getItem('lifeos_user_profile');
-      if (savedProfile) {
+      if (savedProfile && v2Completed === 'true') {
         setUserProfile(JSON.parse(savedProfile));
       } else {
-        // Trigger onboarding for new users
+        // Trigger onboarding for new users or fresh v2 upgrade
         setShowOnboardingModal(true);
       }
     } catch (e) {}
@@ -3615,6 +3616,7 @@ export default function Home() {
     </div>
   );
 }
+
 
 
 
