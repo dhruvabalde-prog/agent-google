@@ -16,6 +16,7 @@ import { RoutineItem } from '@/components/RoutinePlayerModal';
 import DelegationSettingsModal, { DelegationSettings, DEFAULT_DELEGATION_SETTINGS } from '@/components/DelegationSettingsModal';
 import GoogleAccountsModal from '@/components/GoogleAccountsModal';
 import UserProfileModal from '@/components/UserProfileModal';
+import SettingsModal from '@/components/SettingsModal';
 
 interface ArchiveChat {
   id: string;
@@ -334,6 +335,7 @@ export default function Home() {
 
   // Delegation & Autonomy Settings
   const [isDelegationModalOpen, setIsDelegationModalOpen] = useState(false);
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [delegationSettings, setDelegationSettings] = useState<DelegationSettings>(DEFAULT_DELEGATION_SETTINGS);
 
   useEffect(() => {
@@ -1239,8 +1241,15 @@ export default function Home() {
     setInput('');
     setAttachedFiles([]);
     setRecordedAudioUrl(null);
-    setShowTextInputOverride(false);
     triggerToast('Started a fresh new chat');
+  }
+
+  function handleEndChat() {
+    if (currentChatId && messages.length > 0) {
+      handleConfirmOutcome();
+    }
+    handleStartNewChat();
+    triggerToast('Chat session ended & archived');
   }
 
   // Send message
@@ -1983,59 +1992,8 @@ export default function Home() {
           </div>
         </button>
 
-        {/* Right: Home/Work Simple Toggle + Incognito Icon Button */}
+        {/* Right: Subtle Mobile Install Button */}
         <div className="flex items-center gap-2">
-          {/* Home/Work Toggle - Crystal-clear, never both active */}
-          <div className={`flex items-center p-0.5 rounded-xl border ${
-            isDarkMode || isIncognito ? 'bg-slate-900/90 border-slate-800' : 'bg-slate-100 border-slate-200'
-          }`}>
-            <button
-              type="button"
-              onClick={() => handleModeChange('home')}
-              title="Switch to Home Mode"
-              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
-                chatMode === 'home'
-                  ? 'bg-emerald-600 text-white shadow-xs'
-                  : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
-              }`}
-            >
-              <span>🏠</span>
-              <span className="hidden sm:inline">Home</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => handleModeChange('work')}
-              title="Switch to Work Mode"
-              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
-                chatMode === 'work'
-                  ? 'bg-blue-600 text-white shadow-xs'
-                  : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
-              }`}
-            >
-              <span>💼</span>
-              <span className="hidden sm:inline">Work</span>
-            </button>
-          </div>
-
-          {/* Incognito Icon Button */}
-          <button
-            type="button"
-            onClick={handleToggleIncognito}
-            title={isIncognito ? 'Exit Incognito Mode' : 'Enter Private Incognito'}
-            className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all border ${
-              isIncognito
-                ? 'bg-purple-600 border-purple-500 text-white shadow-xs'
-                : isDarkMode
-                ? 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
-                : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-            }`}
-          >
-            <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
-              <circle cx="12" cy="12" r="3" />
-            </svg>
-          </button>
-
           {/* Subtle Mobile Install Button */}
           <button
             type="button"
@@ -2135,21 +2093,106 @@ export default function Home() {
       {/* 5. LIFE OS CHAT TAB VIEW (MESSAGES SCROLL AREA) */}
       {activeAppTab === 'chat' && (
         <div className="flex-1 flex flex-col overflow-hidden relative">
+          {/* Chatbox Top Control Bar: Quick Icon Actions */}
+          <div className={`px-4 py-2 border-b flex items-center justify-between text-xs backdrop-blur-md z-20 ${
+            isIncognito ? 'bg-purple-950/60 border-purple-800/40' : isDarkMode ? 'bg-zinc-900/80 border-zinc-800' : 'bg-slate-50/90 border-slate-200'
+          }`}>
+            <div className="flex items-center gap-2">
+              <span className={`w-2 h-2 rounded-full ${isIncognito ? 'bg-purple-400' : 'bg-emerald-500'} animate-pulse`}></span>
+              <span className="text-[11px] font-bold text-zinc-500 uppercase tracking-wider">
+                {isIncognito ? 'Private Session' : meaningfulOutcome ? 'Active Session' : 'New Session'}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              {/* 1. Take Context to New Chat */}
+              <button
+                type="button"
+                onClick={handleTakeContextToNewChat}
+                title="Take context to new chat"
+                className="p-1.5 rounded-lg border text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 border-zinc-200 dark:border-zinc-800 transition-colors flex items-center justify-center"
+              >
+                <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
+                  <rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>
+                  <path d="m9 14 2 2 4-4"/>
+                </svg>
+              </button>
+
+              {/* 2. Start New Chat */}
+              <button
+                type="button"
+                onClick={handleStartNewChat}
+                title="Start new chat"
+                className="p-1.5 rounded-lg border text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 border-zinc-200 dark:border-zinc-800 transition-colors flex items-center justify-center"
+              >
+                <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="12" y1="5" x2="12" y2="19"/>
+                  <line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+              </button>
+
+              {/* 3. End Chat */}
+              <button
+                type="button"
+                onClick={handleEndChat}
+                title="End & archive chat"
+                className="p-1.5 rounded-lg border text-zinc-500 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 border-zinc-200 dark:border-zinc-800 transition-colors flex items-center justify-center"
+              >
+                <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="6" y="6" width="12" height="12" rx="2"/>
+                </svg>
+              </button>
+
+              {/* 4. Continue Chat Arrow */}
+              <button
+                type="button"
+                onClick={handleContinueChat}
+                title="Continue chat arrow"
+                className="p-1.5 rounded-lg border text-zinc-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/30 border-zinc-200 dark:border-zinc-800 transition-colors flex items-center justify-center"
+              >
+                <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="5" y1="12" x2="19" y2="12"/>
+                  <polyline points="12 5 19 12 12 19"/>
+                </svg>
+              </button>
+
+              {/* 5. Incognito Mode Button with Adaptable Colors */}
+              <button
+                type="button"
+                onClick={handleToggleIncognito}
+                title={isIncognito ? 'Exit Incognito Mode' : 'Enter Private Incognito'}
+                className={`p-1.5 rounded-lg border transition-all flex items-center justify-center ${
+                  isIncognito
+                    ? 'bg-purple-600 text-white border-purple-500 shadow-xs'
+                    : isDarkMode
+                    ? 'bg-zinc-800 text-zinc-400 hover:text-zinc-200 border-zinc-700'
+                    : 'bg-white text-zinc-600 hover:bg-slate-100 border-zinc-200'
+                }`}
+              >
+                <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
           {/* Sovereign Incognito Ephemeral Banner */}
           {isIncognito && (
-            <div className="px-4 py-2.5 bg-gradient-to-r from-purple-950 via-indigo-950 to-purple-950 border-b border-purple-800/60 backdrop-blur-md flex items-center justify-between z-20 text-xs text-purple-200 shadow-xs">
+            <div className="px-4 py-2 bg-gradient-to-r from-purple-950 via-indigo-950 to-purple-950 border-b border-purple-800/60 backdrop-blur-md flex items-center justify-between z-20 text-xs text-purple-200 shadow-xs">
               <div className="flex items-center gap-2 truncate">
                 <span className="text-sm flex-shrink-0">🕵️</span>
                 <span className="font-semibold truncate">
-                  Sovereign Ephemeral Session — Zero chat logging, zero telemetry, air-gapped from memory.
+                  Incognito Active — Private ephemeral session. Zero logs or history saved.
                 </span>
               </div>
               <button
                 type="button"
                 onClick={handleToggleIncognito}
-                className="text-[11px] font-bold text-purple-200 hover:text-white px-2.5 py-1 rounded-lg bg-purple-900/60 border border-purple-700/60 transition-colors flex-shrink-0 ml-2"
+                className="text-[11px] font-bold text-purple-200 hover:text-white px-2.5 py-0.5 rounded-lg bg-purple-900/60 border border-purple-700/60 transition-colors flex-shrink-0 ml-2"
               >
-                Exit Private
+                Exit
               </button>
             </div>
           )}
@@ -3568,39 +3611,8 @@ export default function Home() {
         </button>
       </div>
 
-      {/* Mode Switcher: Home vs Work - Distinct, Never Confusing */}
-      <div className="p-3 border-b border-inherit">
-        <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5 px-1">
-          Active Mode ({chatMode === 'home' ? 'Home Mode' : 'Work Mode'})
-        </div>
-        <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
-          <button
-            type="button"
-            onClick={() => handleModeChange('home')}
-            className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
-              chatMode === 'home'
-                ? 'bg-emerald-600 text-white shadow-xs'
-                : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
-            }`}
-          >
-            <span>🏠</span> Home
-          </button>
-          <button
-            type="button"
-            onClick={() => handleModeChange('work')}
-            className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
-              chatMode === 'work'
-                ? 'bg-blue-600 text-white shadow-xs'
-                : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
-            }`}
-          >
-            <span>💼</span> Work
-          </button>
-        </div>
-      </div>
-
-      {/* Navigation Links: Every button opens a dedicated full page or tab */}
-      <div className="flex-1 overflow-y-auto p-3 space-y-1">
+      {/* Navigation Links: Clean dedicated full pages */}
+      <div className="flex-1 overflow-y-auto p-3 space-y-1.5">
         {/* Chats Archive - Dedicated Full View */}
         <button
           type="button"
@@ -3619,23 +3631,71 @@ export default function Home() {
           </span>
         </button>
 
-        {/* Add/Remove Gmail IDs - Dedicated Full Modal */}
+        {/* My Day & Schedule */}
         <button
           type="button"
           onClick={() => {
-            setIsAccountsModalOpen(true);
+            setActiveView('myday');
+            setActiveAppTab('today');
             setIsModeDrawerOpen(false);
           }}
-          className="w-full text-left px-3 py-2.5 rounded-xl text-xs font-bold flex items-center justify-between transition-colors hover:bg-slate-100 dark:hover:bg-slate-800/60 text-indigo-600 dark:text-indigo-400"
+          className={`w-full text-left px-3 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-between transition-colors ${
+            activeAppTab === 'today'
+              ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 font-bold'
+              : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'
+          }`}
         >
           <div className="flex items-center gap-3">
-            <span>✉️</span>
-            <span>Google Accounts (Personal & Work)</span>
+            <span>☀️</span>
+            <span>My Day & Schedule</span>
           </div>
-          <span className="text-[10px] text-slate-400">OAuth ↗</span>
+          <span className="text-[10px] text-zinc-400">Hub ↗</span>
         </button>
 
-        {/* Profile & Identity - Dedicated Full Modal */}
+        {/* Live Dashboards */}
+        <button
+          type="button"
+          onClick={() => {
+            setActiveView('dashboards');
+            setActiveAppTab('dashboards');
+            setIsModeDrawerOpen(false);
+          }}
+          className={`w-full text-left px-3 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-between transition-colors ${
+            activeAppTab === 'dashboards'
+              ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 font-bold'
+              : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'
+          }`}
+        >
+          <div className="flex items-center gap-3">
+            <span>📊</span>
+            <span>Live Dashboards</span>
+          </div>
+          <span className="text-[10px] text-zinc-400">Metrics ↗</span>
+        </button>
+
+        {/* Action Cards Deck */}
+        <button
+          type="button"
+          onClick={() => {
+            setIsActionsDeckOpen(true);
+            setIsModeDrawerOpen(false);
+          }}
+          className="w-full text-left px-3 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-between transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50"
+        >
+          <div className="flex items-center gap-3">
+            <span>⚡</span>
+            <span>Action Cards Deck</span>
+          </div>
+          <span className="text-[10px] text-zinc-400">Review ↗</span>
+        </button>
+
+        <div className="pt-2 pb-1 border-t border-inherit my-1">
+          <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-2 mb-1">
+            Account & Governance
+          </div>
+        </div>
+
+        {/* Profile */}
         <button
           type="button"
           onClick={() => {
@@ -3646,163 +3706,46 @@ export default function Home() {
         >
           <div className="flex items-center gap-3">
             <span>👤</span>
-            <span>Profile & Identity</span>
+            <span>Profile</span>
           </div>
-          <span className="text-[10px] text-slate-400">Edit ✎</span>
+          <span className="text-[10px] text-blue-600 dark:text-blue-400 font-bold">Edit ↗</span>
         </button>
 
-        <div className="pt-2 pb-1 border-t border-inherit my-1">
-          <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-2 mb-1">
-            Workspace Hubs
+        {/* Settings */}
+        <button
+          type="button"
+          onClick={() => {
+            setIsSettingsModalOpen(true);
+            setIsModeDrawerOpen(false);
+          }}
+          className="w-full text-left px-3 py-2.5 rounded-xl text-xs font-bold flex items-center justify-between transition-colors hover:bg-slate-100 dark:hover:bg-slate-800/60"
+        >
+          <div className="flex items-center gap-3">
+            <span>⚙️</span>
+            <span>Settings</span>
           </div>
-        </div>
-
-        <button
-          type="button"
-          onClick={() => {
-            setActiveView('chat');
-            setActiveAppTab('chat');
-            setIsModeDrawerOpen(false);
-          }}
-          className={`w-full text-left px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-3 transition-colors ${
-            activeAppTab === 'chat'
-              ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 font-bold'
-              : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'
-          }`}
-        >
-          <span>💬</span> Unified Chat
+          <span className="text-[10px] text-zinc-400">Configure ↗</span>
         </button>
 
-        <button
-          type="button"
-          onClick={() => {
-            setActiveView('myday');
-            setActiveAppTab('today');
-            setIsModeDrawerOpen(false);
-          }}
-          className={`w-full text-left px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-3 transition-colors ${
-            activeAppTab === 'today'
-              ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 font-bold'
-              : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'
-          }`}
-        >
-          <span>☀️</span> My Day & Schedule
-        </button>
-
-        <button
-          type="button"
-          onClick={() => {
-            setActiveView('dashboards');
-            setActiveAppTab('dashboards');
-            setIsModeDrawerOpen(false);
-          }}
-          className={`w-full text-left px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-3 transition-colors ${
-            activeAppTab === 'dashboards'
-              ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 font-bold'
-              : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'
-          }`}
-        >
-          <span>📊</span> Live Dashboards
-        </button>
-
-        <button
-          type="button"
-          onClick={() => {
-            setIsActionsDeckOpen(true);
-            setIsModeDrawerOpen(false);
-          }}
-          className="w-full text-left px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-3 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50"
-        >
-          <span>⚡</span> Action Cards Deck
-        </button>
-
-        <button
-          type="button"
-          onClick={() => {
-            setIsDelegationModalOpen(true);
-            setIsModeDrawerOpen(false);
-          }}
-          className="w-full text-left px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-3 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50"
-        >
-          <span>⚙️</span> Systems & SOPs
-        </button>
-
+        {/* Report a Bug */}
         <button
           type="button"
           onClick={() => {
             setIsBugModalOpen(true);
             setIsModeDrawerOpen(false);
           }}
-          className="w-full text-left px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-3 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50 text-rose-500"
+          className="w-full text-left px-3 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-between transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50 text-rose-500"
         >
-          <span>🐞</span> Report a Bug
-        </button>
-
-        <button
-          type="button"
-          onClick={() => { 
-            try {
-              localStorage.removeItem('agent_google_user_profile');
-              localStorage.removeItem('agent_user_session');
-            } catch(e) {}
-            setUserProfile(null);
-            setShowOnboardingModal(true);
-            setIsModeDrawerOpen(false);
-          }}
-          className="w-full text-left px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-3 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50 text-amber-500"
-        >
-          <span>🔄</span> Reset & Re-run Onboarding
+          <div className="flex items-center gap-3">
+            <span>🐞</span>
+            <span>Report a Bug</span>
+          </div>
+          <span className="text-[10px] text-rose-400">Send ↗</span>
         </button>
       </div>
 
-      {/* Bottom: Profile Summary & Actions */}
+      {/* Bottom: Quick Actions */}
       <div className="p-3.5 border-t border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/60 space-y-2.5">
-        {userProfile && (
-          <div className="p-2.5 rounded-xl bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 shadow-xs space-y-2">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xs flex-shrink-0">
-                  {userProfile.name?.charAt(0) || 'L'}
-                </div>
-                <div className="min-w-0">
-                  <p className="text-xs font-bold truncate text-slate-900 dark:text-white">{userProfile.name}</p>
-                  <p className="text-[10px] text-blue-600 dark:text-blue-400 font-semibold uppercase">{userProfile.userType?.replace('_', ' ')}</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setIsProfileModalOpen(true);
-                  setIsModeDrawerOpen(false);
-                }}
-                className="text-[11px] text-blue-600 dark:text-blue-400 font-bold hover:underline"
-              >
-                Edit
-              </button>
-            </div>
-            
-            <div className="pt-1.5 border-t border-slate-100 dark:border-slate-700/40 space-y-1 text-[10px]">
-              {(userProfile.primaryEmail || userProfile.email) && (
-                <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
-                  <span>🏠 Personal:</span>
-                  <span className="truncate max-w-[130px] font-mono">{userProfile.primaryEmail || userProfile.email}</span>
-                </div>
-              )}
-              {userProfile.workEmail && (
-                <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
-                  <span>💼 Work:</span>
-                  <span className="truncate max-w-[130px] font-mono">{userProfile.workEmail}</span>
-                </div>
-              )}
-              {userProfile.phoneNumber && (
-                <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
-                  <span>📱 Mobile:</span>
-                  <span className="font-mono">{userProfile.phoneNumber}</span>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
         
         <div className="grid grid-cols-2 gap-2">
           <button onClick={toggleDarkMode} className="flex items-center justify-center gap-1.5 py-1.5 bg-slate-200 dark:bg-slate-800 rounded-lg text-xs font-bold hover:bg-slate-300 dark:hover:bg-slate-700 transition-colors">
@@ -3919,6 +3862,14 @@ export default function Home() {
           }
           triggerToast('Profile saved successfully');
         }}
+        isDarkMode={isDarkMode}
+      />
+
+      {/* Systems, Memory & Admin Settings Modal */}
+      <SettingsModal
+        isOpen={isSettingsModalOpen}
+        onClose={() => setIsSettingsModalOpen(false)}
+        isAdmin={isAdmin}
         isDarkMode={isDarkMode}
       />
 

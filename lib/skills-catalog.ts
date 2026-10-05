@@ -1,4 +1,5 @@
 import rawLifeOsSkills from './skills-data.json';
+import { ALL_SPECIALIZED_SKILLS } from './specialized-skills';
 
 export interface SkillQuestion {
   title: string;
@@ -1007,13 +1008,38 @@ export const SPECIALIZED_PERSONA_SKILLS: SkillDefinition[] = [
 
 const LIFE_OS_100_SKILLS: SkillDefinition[] = rawLifeOsSkills as unknown as SkillDefinition[];
 
-// --- COMBINED MASTER CATALOG (152 SKILLS TOTAL) ---
-export const CORE_MASTER_SKILLS: SkillDefinition[] = [
+// --- COMBINED MASTER CATALOG WITH SPECIALIZED PACKS (230+ SKILLS TOTAL) ---
+const RAW_COMBINED_SKILLS: SkillDefinition[] = [
   ...BASE_APP_AND_CAREER_SKILLS,
   ...BUSINESS_AND_PROFESSIONAL_SKILLS,
   ...LIFE_OS_100_SKILLS,
   ...SPECIALIZED_PERSONA_SKILLS,
+  ...ALL_SPECIALIZED_SKILLS,
 ];
+
+// All Home mode skills made dormant (enabled: false) per Work Mode sovereign architecture
+export const CORE_MASTER_SKILLS: SkillDefinition[] = RAW_COMBINED_SKILLS.map(s => {
+  const dept = (s.department || '').toLowerCase();
+  const id = (s.id || '').toLowerCase();
+  const name = (s.name || '').toLowerCase();
+  const isHomeSkill = 
+    dept.includes('home') ||
+    dept.includes('personal') ||
+    dept.includes('household') ||
+    dept.includes('family') ||
+    dept.includes('senior') ||
+    id.includes('preventive-health') ||
+    id.includes('grocery') ||
+    id.includes('household') ||
+    id.includes('parent-care') ||
+    name.includes('preventive health') ||
+    name.includes('grocery checklist');
+
+  if (isHomeSkill) {
+    return { ...s, enabled: false };
+  }
+  return s;
+});
 
 export const INITIAL_100_SKILLS: SkillDefinition[] = CORE_MASTER_SKILLS;
 export const INITIAL_53_SKILLS: SkillDefinition[] = CORE_MASTER_SKILLS;

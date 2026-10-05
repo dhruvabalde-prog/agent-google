@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { encryptSession } from '@/lib/auth';
+import { encryptSession, decryptSession } from '@/lib/auth';
 import { UserSession } from '@/lib/types';
 import { upsertUser } from '@/lib/db';
 
@@ -75,9 +75,23 @@ export async function GET(request: Request) {
       console.warn('DB upsert error in OAuth callback:', dbErr);
     }
 
+    let refreshToken = tokenData.refresh_token;
+    if (!refreshToken) {
+      const existingCookie = request.headers.get('cookie')?.split(';').find(c => c.trim().startsWith('session='));
+      if (existingCookie) {
+        const val = existingCookie.split('=')[1]?.trim();
+        if (val) {
+          const prevSession = await decryptSession(val);
+          if (prevSession?.refreshToken && prevSession.email === userData.email) {
+            refreshToken = prevSession.refreshToken;
+          }
+        }
+      }
+    }
+
     const session: UserSession = {
       accessToken: tokenData.access_token,
-      refreshToken: tokenData.refresh_token,
+      refreshToken: refreshToken || '',
       expiresAt: Date.now() + tokenData.expires_in * 1000,
       email: userData.email,
       name: userData.name,

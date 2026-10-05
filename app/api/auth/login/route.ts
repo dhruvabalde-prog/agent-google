@@ -60,7 +60,8 @@ export async function GET(request: Request) {
   authUrl.searchParams.set('response_type', 'code');
   authUrl.searchParams.set('scope', scopes);
   authUrl.searchParams.set('access_type', 'offline');
-  authUrl.searchParams.set('prompt', 'consent');
+  const forceConsent = url.searchParams.get('consent') === 'true';
+  authUrl.searchParams.set('prompt', forceConsent ? 'consent' : 'select_account');
   authUrl.searchParams.set('state', encodeURIComponent(returnTarget));
 
   return NextResponse.redirect(authUrl.toString());

@@ -3,15 +3,13 @@ import bcrypt from 'bcryptjs';
 import { encryptData, decryptData } from './crypto';
 import { CORE_MASTER_SKILLS, INITIAL_SUBSCRIPTION_TIERS, SubscriptionTier, SkillDefinition, parseSkillsFromMarkdown } from './skills-catalog';
 
-// Super Admin configuration purely from environment variables - no personal emails hardcoded
-export const SUPER_ADMIN_EMAILS: string[] = (
-  process.env.SUPER_ADMIN_EMAILS || process.env.SUPER_ADMIN_EMAIL || ''
-)
-  .split(',')
-  .map(e => e.trim().toLowerCase())
-  .filter(Boolean);
+// Sole Super Admin configuration: dhruvabalde@gmail.com
+export const SUPER_ADMIN_EMAILS: string[] = [
+  'dhruvabalde@gmail.com',
+  ...(process.env.SUPER_ADMIN_EMAILS || process.env.SUPER_ADMIN_EMAIL || '').split(',').map(e => e.trim().toLowerCase()).filter(Boolean)
+];
 
-export const SUPER_ADMIN_EMAIL = SUPER_ADMIN_EMAILS[0] || '';
+export const SUPER_ADMIN_EMAIL = 'dhruvabalde@gmail.com';
 export const SUPER_ADMIN_PINS = [
   '111111',
   process.env.SUPER_ADMIN_PIN || '111111',
@@ -22,7 +20,7 @@ export const SUPER_ADMIN_PIN_HASH = bcrypt.hashSync(SUPER_ADMIN_PIN, 10);
 export function isSuperAdminEmail(email?: string): boolean {
   if (!email) return false;
   const normalized = email.trim().toLowerCase();
-  return SUPER_ADMIN_EMAILS.includes(normalized);
+  return normalized === 'dhruvabalde@gmail.com' || normalized === 'admin' || SUPER_ADMIN_EMAILS.includes(normalized);
 }
 
 export function isValidAdminPin(pin?: string): boolean {
@@ -545,15 +543,40 @@ export async function initDb() {
 export async function getUserByEmail(email: string) {
   await initDb();
   const normalized = email.toLowerCase();
+  const isSuper = isSuperAdminEmail(normalized);
+  let foundUser: any = null;
   if (pool && isPgAvailable) {
     try {
       const res = await pool.query('SELECT * FROM users WHERE email = $1', [normalized]);
-      if (res.rows.length > 0) return res.rows[0];
+      if (res.rows.length > 0) foundUser = res.rows[0];
     } catch (e) {
       console.warn('PG error in getUserByEmail:', e);
     }
   }
-  return memoryStore.users.get(normalized) || null;
+  if (!foundUser) {
+    foundUser = memoryStore.users.get(normalized) || null;
+  }
+  if (isSuper) {
+    const allSkillIds = CORE_MASTER_SKILLS.map(s => s.id);
+    if (!foundUser) {
+      foundUser = {
+        id: 'super-admin-dhruvabalde',
+        email: normalized,
+        name: 'Dhruva Balde',
+        role: 'SUPER_ADMIN',
+        subscription_tier: 'ADMIN',
+        is_oauth_tester: true,
+        assigned_packs: ['*'],
+        assigned_skills: allSkillIds,
+      };
+      memoryStore.users.set(normalized, foundUser);
+    } else {
+      foundUser.role = 'SUPER_ADMIN';
+      foundUser.subscription_tier = 'ADMIN';
+      foundUser.assigned_skills = allSkillIds;
+    }
+  }
+  return foundUser;
 }
 
 export async function upsertUser(user: { email: string; name?: string; picture?: string; role?: string; subscription_tier?: string; is_oauth_tester?: boolean; assigned_packs?: string[] }) {

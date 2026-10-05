@@ -420,11 +420,16 @@ export default function OnboardingFlowModal({
                 </div>
               </div>
               <div className="mt-auto pt-6">
+                {(!name.trim() || phoneDigits.replace(/\D/g, '').length !== 10) && (
+                  <p className="text-[11px] text-amber-500 font-semibold text-center mb-2">
+                    Enter your name and a valid 10-digit mobile number to continue
+                  </p>
+                )}
                 <button
                   type="button"
                   onClick={goToNext}
-                  disabled={!name.trim()}
-                  className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 disabled:bg-zinc-300 dark:disabled:bg-zinc-700 disabled:text-zinc-500 text-white font-bold rounded-xl transition-all shadow-lg"
+                  disabled={!name.trim() || phoneDigits.replace(/\D/g, '').length !== 10}
+                  className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 disabled:bg-zinc-300 dark:disabled:bg-zinc-700 disabled:text-zinc-500 disabled:cursor-not-allowed text-white font-bold rounded-xl transition-all shadow-lg"
                 >
                   Continue →
                 </button>
@@ -436,79 +441,59 @@ export default function OnboardingFlowModal({
           {currentStep === 1 && (
             <div className="flex flex-col h-full justify-center max-w-md mx-auto w-full space-y-5">
               <div className="text-center">
-                <div className="w-12 h-12 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 rounded-2xl mx-auto flex items-center justify-center text-2xl font-bold mb-3 shadow-md">
+                <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 text-blue-600 rounded-2xl mx-auto flex items-center justify-center text-2xl font-bold mb-3 shadow-md">
                   🛡️
                 </div>
-                <h3 className="text-2xl font-bold">Dual Identity Partitioning</h3>
+                <h3 className="text-2xl font-bold">Google Workspace Connection</h3>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 max-w-xs mx-auto">
-                  Life OS cryptographically air-gaps your Personal life from your Professional work. Connect both accounts for seamless execution.
+                  Connect your primary Google account. Home mode is dormant—your sovereign Life OS operates in Work mode.
                 </p>
               </div>
 
               <div className="space-y-4">
-                {/* Personal ID & OAuth */}
-                <div className={`p-4 rounded-2xl border ${isDarkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200'} shadow-xs space-y-2.5`}>
+                {/* Blocked Home Mode Box */}
+                <div className={`p-4 rounded-2xl border opacity-60 cursor-not-allowed ${isDarkMode ? 'bg-zinc-900/50 border-zinc-800' : 'bg-zinc-100/80 border-zinc-200'} space-y-2`}>
                   <div className="flex items-center justify-between">
-                    <label className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                    <label className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-zinc-400">
                       <span>🏠</span> Personal ID (Home Mode)
                     </label>
-                    {personalOauthConnected ? (
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-bold flex items-center gap-1">
-                        <span>✓</span> OAuth Connected
-                      </span>
-                    ) : (
-                      <span className="text-[10px] text-zinc-400">Personal Gmail</span>
-                    )}
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-500 font-bold">
+                      🔒 Dormant & Blocked
+                    </span>
                   </div>
-                  
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="email"
-                      value={personalEmail}
-                      onChange={(e) => setPersonalEmail(e.target.value)}
-                      placeholder="your.personal@gmail.com"
-                      className={`flex-1 px-3.5 py-2.5 rounded-xl text-sm border focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
-                        isDarkMode ? 'bg-zinc-800 border-zinc-700 text-white' : 'bg-zinc-50 border-zinc-200 text-zinc-900'
-                      }`}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => handleTriggerOAuth('personal')}
-                      className={`px-3 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-colors flex items-center gap-1 ${
-                        personalOauthConnected
-                          ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700'
-                          : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs'
-                      }`}
-                    >
-                      {personalOauthConnected ? '✓ Reconnect' : 'Connect OAuth'}
-                    </button>
-                  </div>
-                  <p className="text-[11px] text-zinc-500">
-                    Powers personal health records, domestic checklists & family routines.
+                  <input
+                    type="text"
+                    disabled
+                    value=""
+                    placeholder="Home mode skills disabled (Work mode active)"
+                    className="w-full px-3.5 py-2.5 rounded-xl text-xs bg-zinc-200/50 dark:bg-zinc-800/50 border border-zinc-300 dark:border-zinc-700 text-zinc-400 cursor-not-allowed"
+                  />
+                  <p className="text-[11px] text-zinc-400">
+                    Home mode is currently offline. All domestic and home routines are dormant.
                   </p>
                 </div>
 
-                {/* Work ID & OAuth */}
+                {/* Primary / Work ID & OAuth */}
                 <div className={`p-4 rounded-2xl border ${isDarkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200'} shadow-xs space-y-2.5`}>
                   <div className="flex items-center justify-between">
                     <label className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">
-                      <span>💼</span> Work ID (Work Mode)
+                      <span>💼</span> Primary Google Account (Work Mode)
                     </label>
-                    {workOauthConnected ? (
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 font-bold flex items-center gap-1">
-                        <span>✓</span> OAuth Connected
+                    {(workOauthConnected || googleUser) ? (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-bold flex items-center gap-1">
+                        <span>✓</span> Connected
                       </span>
                     ) : (
-                      <span className="text-[10px] text-zinc-400">Google Workspace Email</span>
+                      <span className="text-[10px] text-zinc-400">Primary Gmail / Workspace</span>
                     )}
                   </div>
                   
                   <div className="flex items-center gap-2">
                     <input
                       type="email"
-                      value={workEmail}
+                      value={workEmail || googleUser?.email || ''}
                       onChange={(e) => setWorkEmail(e.target.value)}
-                      placeholder="your.name@company.com"
+                      placeholder="your.email@gmail.com"
                       className={`flex-1 px-3.5 py-2.5 rounded-xl text-sm border focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                         isDarkMode ? 'bg-zinc-800 border-zinc-700 text-white' : 'bg-zinc-50 border-zinc-200 text-zinc-900'
                       }`}
@@ -516,24 +501,24 @@ export default function OnboardingFlowModal({
                     <button
                       type="button"
                       onClick={() => handleTriggerOAuth('work')}
-                      className={`px-3 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-colors flex items-center gap-1 ${
-                        workOauthConnected
+                      className={`px-3.5 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-colors flex items-center gap-1 ${
+                        (workOauthConnected || googleUser)
                           ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-300 dark:border-blue-700'
                           : 'bg-blue-600 hover:bg-blue-500 text-white shadow-xs'
                       }`}
                     >
-                      {workOauthConnected ? '✓ Reconnect' : 'Connect OAuth'}
+                      {(workOauthConnected || googleUser) ? '✓ Reconnect' : 'Connect Google Workspace'}
                     </button>
                   </div>
                   <p className="text-[11px] text-zinc-500">
-                    Powers client communications, RFQs, vendor ledgers & executive decks.
+                    Powers Gmail triage, Calendar events, Docs, Sheets financial modeling, Slides & Drive.
                   </p>
                 </div>
 
-                <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-[11px] text-amber-700 dark:text-amber-300 flex items-start gap-2">
+                <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-xl text-[11px] text-blue-700 dark:text-blue-300 flex items-start gap-2">
                   <span className="text-sm">🔒</span>
                   <span>
-                    <strong>Air-Gap Guarantee:</strong> Personal notes and family health records never cross-contaminate into work communications.
+                    <strong>Persistent OAuth:</strong> Permissions granted once stay active until you explicitly click "Disconnect Google".
                   </span>
                 </div>
               </div>
