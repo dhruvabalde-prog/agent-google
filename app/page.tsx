@@ -1595,7 +1595,7 @@ export default function Home() {
       } else if (tab === 'actions') {
         setActiveAppTab('actions');
       }
-      if (params.get('onboarding') === 'true' || params.get('onboarding') === '1') {
+      if (params.get('onboarding') === 'true' || params.get('onboarding') === '1' || params.get('onboarding') === 'resume') {
         setShowOnboardingModal(true);
       }
     }
@@ -3573,13 +3573,36 @@ export default function Home() {
       {/* Bottom: Profile & Settings */}
       <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 space-y-3">
         {userProfile && (
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold shadow-sm">
-              {userProfile.name.charAt(0)}
+          <div className="space-y-2 mb-2 p-2.5 rounded-xl bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 shadow-xs">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-sm shadow-sm flex-shrink-0">
+                {userProfile.name?.charAt(0) || 'L'}
+              </div>
+              <div className="flex-1 overflow-hidden">
+                <p className="text-sm font-bold truncate text-slate-900 dark:text-white">{userProfile.name}</p>
+                <p className="text-[10px] text-blue-600 dark:text-blue-400 font-bold uppercase tracking-wider">{userProfile.userType?.replace('_', ' ')}</p>
+              </div>
             </div>
-            <div className="flex-1 overflow-hidden">
-              <p className="text-sm font-bold truncate">{userProfile.name}</p>
-              <p className="text-[10px] text-slate-500 uppercase tracking-wider">{userProfile.userType}</p>
+            
+            <div className="pt-2 border-t border-slate-100 dark:border-slate-700/50 space-y-1 text-[11px]">
+              {(userProfile.primaryEmail || userProfile.email) && (
+                <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
+                  <span className="font-semibold flex items-center gap-1">🏠 Personal ID:</span>
+                  <span className="truncate max-w-[150px] font-mono text-slate-700 dark:text-slate-300">{userProfile.primaryEmail || userProfile.email}</span>
+                </div>
+              )}
+              {userProfile.workEmail && (
+                <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
+                  <span className="font-semibold flex items-center gap-1">💼 Work ID:</span>
+                  <span className="truncate max-w-[150px] font-mono text-slate-700 dark:text-slate-300">{userProfile.workEmail}</span>
+                </div>
+              )}
+              {userProfile.phoneNumber && (
+                <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
+                  <span className="font-semibold flex items-center gap-1">📱 Mobile:</span>
+                  <span className="font-mono text-slate-700 dark:text-slate-300">{userProfile.phoneNumber}</span>
+                </div>
+              )}
             </div>
           </div>
         )}

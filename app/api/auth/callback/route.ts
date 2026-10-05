@@ -3,10 +3,25 @@ import { encryptSession } from '@/lib/auth';
 import { UserSession } from '@/lib/types';
 import { upsertUser } from '@/lib/db';
 
+function getAppOrigin(request: Request, url: URL): string {
+  const forwardedHost = request.headers.get('x-forwarded-host');
+  const forwardedProto = request.headers.get('x-forwarded-proto') || 'https';
+  if (forwardedHost) {
+    return `${forwardedProto}://${forwardedHost}`;
+  }
+  if (process.env.NEXT_PUBLIC_APP_URL) {
+    return process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, '');
+  }
+  return url.origin;
+}
+
 export async function GET(request: Request) {
-  const { searchParams, origin } = new URL(request.url);
+  const url = new URL(request.url);
+  const { searchParams } = url;
+  const origin = getAppOrigin(request, url);
   const code = searchParams.get('code');
   const error = searchParams.get('error');
+  const state = searchParams.get('state');
 
   if (error || !code) {
     const errorType = error === 'access_denied' ? 'access_denied' : 'auth_failed';
@@ -71,7 +86,10 @@ export async function GET(request: Request) {
 
     const encryptedSession = await encryptSession(session);
 
-    const response = NextResponse.redirect(`${origin}/`);
+    const targetPath = state ? decodeURIComponent(state) : '/';
+    const safeTarget = targetPath.startsWith('/') ? `${origin}${targetPath}` : `${origin}/`;
+
+    const response = NextResponse.redirect(safeTarget);
     response.cookies.set('session', encryptedSession, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',

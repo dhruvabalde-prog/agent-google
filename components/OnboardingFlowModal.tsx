@@ -100,11 +100,12 @@ export default function OnboardingFlowModal({
   isDarkMode = false,
 }: OnboardingFlowModalProps) {
   // --- Flow State ---
-  // 0: Identity (Name, Phone, OTP)
-  // 1: Primary User Type
-  // 2: Specific Sub-Type
-  // 3 to (3 + questions.length - 1): Questions
-  // N: OAuth Integrations
+  // 0: Identity (Name, Mobile +91, Gender)
+  // 1: Dual Account Identities (Personal ID & Work ID)
+  // 2: Primary User Type (5 Personas)
+  // 3: Specific Sub-Category
+  // 4 to (4 + questions.length - 1): Dynamic Multi-Select Questions
+  // N (4 + questions.length): OAuth Integrations
   // N+1: Building Dashboard...
   const [currentStep, setCurrentStep] = useState(0);
   const [slideDirection, setSlideDirection] = useState<'left' | 'right'>('right');
@@ -115,23 +116,65 @@ export default function OnboardingFlowModal({
     initialProfile?.phoneNumber ? initialProfile.phoneNumber.replace(/\D/g, '').slice(-10) : ''
   );
   const [phone, setPhone] = useState(initialProfile?.phoneNumber || '');
+  const [personalEmail, setPersonalEmail] = useState(initialProfile?.primaryEmail || initialProfile?.email || '');
+  const [workEmail, setWorkEmail] = useState(initialProfile?.workEmail || '');
   const [gender, setGender] = useState<'female' | 'male' | 'non_binary' | 'prefer_not_to_say'>(initialProfile?.gender || 'prefer_not_to_say');
   const [userType, setUserType] = useState<UserType>(initialProfile?.userType || 'working_professional');
   const [workingCategory, setWorkingCategory] = useState<WorkingProfessionalCategory>(initialProfile?.workingCategory || 'salaried');
   const [subCategory, setSubCategory] = useState<string>('');
   
-  // Answers state
-  const [answers, setAnswers] = useState<Record<string, string>>({});
+  // Answers state: now arrays of strings to allow MULTIPLE selection
+  const [answers, setAnswers] = useState<Record<string, string[]>>({});
 
   // Auth/Integrations State
-  const [perms, setPerms] = useState({ gmail: false, calendar: false, whatsapp: false });
+  const [googleUser, setGoogleUser] = useState<{ email: string; name?: string; picture?: string } | null>(null);
   const [buildingStage, setBuildingStage] = useState(0);
 
   // Dynamic questions based on selected type
   const questions = useMemo(() => getQuestions(userType, workingCategory), [userType, workingCategory]);
 
-  const OAUTH_STEP = 3 + questions.length;
+  const DUAL_ACCOUNT_STEP = 1;
+  const PERSONA_STEP = 2;
+  const CATEGORY_STEP = 3;
+  const QUESTIONS_START_STEP = 4;
+  const OAUTH_STEP = 4 + questions.length;
   const BUILDING_STEP = OAUTH_STEP + 1;
+
+  // Restore draft if returning from Google OAuth
+  useEffect(() => {
+    try {
+      const savedDraft = localStorage.getItem('lifeos_onboarding_draft');
+      if (savedDraft) {
+        const parsed = JSON.parse(savedDraft);
+        if (parsed.name) setName(parsed.name);
+        if (parsed.phoneDigits) setPhoneDigits(parsed.phoneDigits);
+        if (parsed.phone) setPhone(parsed.phone);
+        if (parsed.gender) setGender(parsed.gender);
+        if (parsed.personalEmail) setPersonalEmail(parsed.personalEmail);
+        if (parsed.workEmail) setWorkEmail(parsed.workEmail);
+        if (parsed.userType) setUserType(parsed.userType);
+        if (parsed.workingCategory) setWorkingCategory(parsed.workingCategory);
+        if (parsed.subCategory) setSubCategory(parsed.subCategory);
+        if (parsed.answers) setAnswers(parsed.answers);
+        if (typeof parsed.currentStep === 'number') setCurrentStep(parsed.currentStep);
+        localStorage.removeItem('lifeos_onboarding_draft');
+      }
+    } catch {}
+
+    async function checkGoogleAuth() {
+      try {
+        const res = await fetch('/api/auth/session');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.authenticated && data.user) {
+            setGoogleUser(data.user);
+            setPersonalEmail(prev => prev || data.user.email);
+          }
+        }
+      } catch {}
+    }
+    checkGoogleAuth();
+  }, []);
 
   const goToNext = () => {
     setSlideDirection('right');
@@ -145,11 +188,35 @@ export default function OnboardingFlowModal({
     }
   };
 
-  const handleSelectOption = (questionId: string, option: string) => {
-    setAnswers(prev => ({ ...prev, [questionId]: option }));
-    setTimeout(() => {
-      goToNext();
-    }, 350); // Slight delay so user sees selection
+  // Multi-option toggle
+  const handleToggleOption = (questionId: string, option: string) => {
+    setAnswers(prev => {
+      const list = prev[questionId] || [];
+      const exists = list.includes(option);
+      const updated = exists ? list.filter(o => o !== option) : [...list, option];
+      return { ...prev, [questionId]: updated };
+    });
+  };
+
+  // Google OAuth initiation
+  const handleConnectGoogle = () => {
+    try {
+      const draft = {
+        currentStep: OAUTH_STEP,
+        name,
+        phoneDigits,
+        phone,
+        gender,
+        personalEmail,
+        workEmail,
+        userType,
+        workingCategory,
+        subCategory,
+        answers,
+      };
+      localStorage.setItem('lifeos_onboarding_draft', JSON.stringify(draft));
+    } catch {}
+    window.location.href = '/api/auth/login?redirect=/?onboarding=resume';
   };
 
   const finalizeOnboarding = (overrideProfile?: Partial<UserProfile>) => {
@@ -157,6 +224,9 @@ export default function OnboardingFlowModal({
     const updated: UserProfile = {
       name: name.trim() || 'Life OS Member',
       phoneNumber: finalPhone,
+      email: personalEmail.trim() || googleUser?.email || '',
+      primaryEmail: personalEmail.trim() || googleUser?.email || '',
+      workEmail: workEmail.trim() || '',
       gender,
       userType,
       workingCategory: userType === 'working_professional' ? workingCategory : undefined,
@@ -171,7 +241,7 @@ export default function OnboardingFlowModal({
       localStorage.setItem('lifeos_onboarding_v2_completed', 'true');
       localStorage.setItem('lifeos_user_profile', JSON.stringify(updated));
       localStorage.setItem('agent_google_user_profile', JSON.stringify(updated));
-    } catch(e) {}
+    } catch {}
     onSaveProfile(updated);
     onClose();
   };
@@ -252,10 +322,10 @@ export default function OnboardingFlowModal({
       {/* Main Full-Page Responsive Container */}
       <main className={`flex-1 w-full max-w-lg mx-auto p-4 sm:p-6 md:p-8 flex flex-col justify-between ${slideClass}`}>
           
-          {/* STEP 0: IDENTITY */}
+          {/* STEP 0: IDENTITY BASICS */}
           {currentStep === 0 && (
             <div className="flex flex-col h-full justify-center space-y-6 max-w-sm mx-auto w-full">
-              <div className="text-center mb-4">
+              <div className="text-center mb-2">
                 <div className="w-16 h-16 bg-blue-600 rounded-2xl mx-auto flex items-center justify-center text-3xl text-white font-bold mb-4 shadow-lg shadow-blue-500/30">L</div>
                 <h3 className="text-2xl font-bold">Welcome to Life OS</h3>
                 <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-2">Let's set up your sovereign workspace.</p>
@@ -274,7 +344,7 @@ export default function OnboardingFlowModal({
                 </div>
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-500">Mobile Number (Optional)</label>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-500">Mobile Number</label>
                     <span className="text-[11px] text-zinc-400">For WhatsApp & Direct Calls</span>
                   </div>
                   {/* Locked +91 prefix badge */}
@@ -325,21 +395,99 @@ export default function OnboardingFlowModal({
                   </div>
                 </div>
               </div>
-              <div className="mt-auto pt-8">
+              <div className="mt-auto pt-6">
                 <button
                   type="button"
                   onClick={goToNext}
                   disabled={!name.trim()}
                   className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 disabled:bg-zinc-300 dark:disabled:bg-zinc-700 disabled:text-zinc-500 text-white font-bold rounded-xl transition-all shadow-lg"
                 >
-                  Continue
+                  Continue →
                 </button>
               </div>
             </div>
           )}
 
-          {/* STEP 1: PRIMARY USER TYPE (5 Personas) */}
+          {/* STEP 1: DUAL ACCOUNT IDENTITIES (PERSONAL ID & WORK ID) */}
           {currentStep === 1 && (
+            <div className="flex flex-col h-full justify-center max-w-md mx-auto w-full space-y-5">
+              <div className="text-center">
+                <div className="w-12 h-12 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 rounded-2xl mx-auto flex items-center justify-center text-2xl font-bold mb-3 shadow-md">
+                  🛡️
+                </div>
+                <h3 className="text-2xl font-bold">Dual Identity Separation</h3>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 max-w-xs mx-auto">
+                  Life OS cryptographically air-gaps your Personal life from your Professional work. Configure both accounts for complete peace of mind.
+                </p>
+              </div>
+
+              <div className="space-y-3.5">
+                {/* Personal ID */}
+                <div className={`p-4 rounded-2xl border ${isDarkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200'} shadow-xs`}>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
+                      <span>🏠</span> Personal ID (Home Mode)
+                    </label>
+                    <span className="text-[10px] text-zinc-400 font-medium">Personal Gmail</span>
+                  </div>
+                  <input
+                    type="email"
+                    value={personalEmail}
+                    onChange={(e) => setPersonalEmail(e.target.value)}
+                    placeholder="e.g. personal@gmail.com"
+                    className={`w-full px-3.5 py-2.5 rounded-xl text-sm border focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+                      isDarkMode ? 'bg-zinc-800 border-zinc-700 text-white' : 'bg-zinc-50 border-zinc-200 text-zinc-900'
+                    }`}
+                  />
+                  <p className="text-[11px] text-zinc-500 mt-1.5">
+                    Powers personal routines, family health records, biometric wellness & domestic checklists.
+                  </p>
+                </div>
+
+                {/* Work ID */}
+                <div className={`p-4 rounded-2xl border ${isDarkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200'} shadow-xs`}>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">
+                      <span>💼</span> Work ID (Work Mode)
+                    </label>
+                    <span className="text-[10px] text-zinc-400 font-medium">Corporate / Client Email</span>
+                  </div>
+                  <input
+                    type="email"
+                    value={workEmail}
+                    onChange={(e) => setWorkEmail(e.target.value)}
+                    placeholder="e.g. name@company.com or business email"
+                    className={`w-full px-3.5 py-2.5 rounded-xl text-sm border focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                      isDarkMode ? 'bg-zinc-800 border-zinc-700 text-white' : 'bg-zinc-50 border-zinc-200 text-zinc-900'
+                    }`}
+                  />
+                  <p className="text-[11px] text-zinc-500 mt-1.5">
+                    Powers corporate projects, client outreach, vendor sheets, presentations & B2B communications.
+                  </p>
+                </div>
+
+                <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-[11px] text-amber-700 dark:text-amber-300 flex items-start gap-2">
+                  <span className="text-sm">🔒</span>
+                  <span>
+                    <strong>Air-Gap Guarantee:</strong> Personal health or family notes will never cross-contaminate into work communications.
+                  </span>
+                </div>
+              </div>
+
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={goToNext}
+                  className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-all shadow-lg text-sm"
+                >
+                  Continue →
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 2: PRIMARY USER TYPE (5 Personas) */}
+          {currentStep === 2 && (
             <div className="flex flex-col h-full overflow-y-auto">
               <div className="mb-4">
                 <h3 className="text-xl font-bold mb-1">What best describes you?</h3>
@@ -357,7 +505,13 @@ export default function OnboardingFlowModal({
                     key={type.id}
                     onClick={() => {
                       if (type.id === 'admin') {
-                        window.location.href = '/admin';
+                        // Check if already authenticated with Google OAuth
+                        if (googleUser?.email) {
+                          window.location.href = '/admin';
+                        } else {
+                          // Start OAuth first!
+                          window.location.href = '/api/auth/login?redirect=/admin';
+                        }
                       } else if (type.id === 'entrepreneur') {
                         setUserType('working_professional');
                         setWorkingCategory('entrepreneur');
@@ -387,8 +541,8 @@ export default function OnboardingFlowModal({
             </div>
           )}
 
-          {/* STEP 2: SPECIFIC CATEGORY */}
-          {currentStep === 2 && (
+          {/* STEP 3: SPECIFIC CATEGORY */}
+          {currentStep === 3 && (
             <div className="flex flex-col h-full">
               <div className="mb-6">
                 <h3 className="text-xl font-bold mb-2">Let's get more specific.</h3>
@@ -434,94 +588,153 @@ export default function OnboardingFlowModal({
             </div>
           )}
 
-          {/* STEP 3 to (3 + questions.length - 1): DYNAMIC QUESTIONS */}
-          {currentStep >= 3 && currentStep < OAUTH_STEP && (
-            <div className="flex flex-col h-full justify-center max-w-md mx-auto w-full">
-              <div className="mb-8">
-                <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider mb-2 block">Question {currentStep - 2} of {questions.length}</span>
-                <h3 className="text-2xl font-bold leading-tight">{questions[currentStep - 3].title}</h3>
+          {/* STEPS 4 to (4 + questions.length - 1): DYNAMIC QUESTIONS (MULTI-SELECT) */}
+          {currentStep >= QUESTIONS_START_STEP && currentStep < OAUTH_STEP && (() => {
+            const qIdx = currentStep - QUESTIONS_START_STEP;
+            const currentQ = questions[qIdx];
+            if (!currentQ) return null;
+            const qId = currentQ.id;
+            const selectedList = answers[qId] || [];
+
+            return (
+              <div className="flex flex-col h-full justify-between max-w-md mx-auto w-full">
+                <div>
+                  <div className="mb-6">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider">Question {qIdx + 1} of {questions.length}</span>
+                      <span className="text-[10px] text-zinc-400 font-semibold bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 rounded-full">Select all that apply</span>
+                    </div>
+                    <h3 className="text-2xl font-bold leading-tight">{currentQ.title}</h3>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    {currentQ.options.map((opt, idx) => {
+                      const isSelected = selectedList.includes(opt);
+                      return (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => handleToggleOption(qId, opt)}
+                          className={`w-full text-left p-4 rounded-2xl border-2 transition-all flex items-center justify-between group ${
+                            isSelected
+                              ? 'border-blue-500 bg-blue-50/80 dark:bg-blue-900/30'
+                              : isDarkMode ? 'border-zinc-800 bg-zinc-900 hover:border-zinc-700' : 'border-zinc-200 bg-white hover:border-zinc-300'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3 min-w-0 pr-2">
+                            <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-colors flex-shrink-0 ${
+                              isSelected ? 'border-blue-500 bg-blue-500 text-white' : 'border-zinc-300 dark:border-zinc-700 group-hover:border-zinc-400'
+                            }`}>
+                              {isSelected && (
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5">
+                                  <path d="M20 6L9 17l-5-5"/>
+                                </svg>
+                              )}
+                            </div>
+                            <span className={`text-sm font-medium ${isSelected ? 'text-blue-700 dark:text-blue-300 font-semibold' : ''}`}>{opt}</span>
+                          </div>
+                          <span className={`text-[10px] font-bold uppercase tracking-wider flex-shrink-0 ${isSelected ? 'text-blue-600 dark:text-blue-400' : 'text-zinc-400'}`}>
+                            {isSelected ? '✓ Selected' : '+ Select'}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="mt-8 pt-4 border-t border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
+                  <p className="text-xs text-zinc-500">
+                    {selectedList.length > 0 ? `${selectedList.length} option${selectedList.length > 1 ? 's' : ''} chosen` : 'Choose 1 or more options'}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={goToNext}
+                    disabled={selectedList.length === 0}
+                    className="py-3 px-6 bg-blue-600 hover:bg-blue-700 disabled:bg-zinc-300 dark:disabled:bg-zinc-800 disabled:text-zinc-500 text-white font-bold rounded-xl text-sm transition-all shadow-md flex items-center gap-2"
+                  >
+                    <span>Continue</span>
+                    <span>→</span>
+                  </button>
+                </div>
               </div>
-              
-              <div className="space-y-3">
-                {questions[currentStep - 3].options.map((opt, idx) => {
-                  const qId = questions[currentStep - 3].id;
-                  const isSelected = answers[qId] === opt;
-                  return (
-                    <button
-                      key={idx}
-                      onClick={() => handleSelectOption(qId, opt)}
-                      className={`w-full text-left p-4 rounded-2xl border-2 transition-all flex items-center justify-between group ${
-                        isSelected
-                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30'
-                          : isDarkMode ? 'border-zinc-800 bg-zinc-900 hover:border-zinc-600' : 'border-zinc-200 bg-white hover:border-zinc-300'
-                      }`}
-                    >
-                      <span className={`font-medium ${isSelected ? 'text-blue-700 dark:text-blue-300' : ''}`}>{opt}</span>
-                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
-                        isSelected ? 'border-blue-500 bg-blue-500' : 'border-zinc-300 dark:border-zinc-700 group-hover:border-zinc-400'
-                      }`}>
-                        {isSelected && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><path d="M20 6L9 17l-5-5"/></svg>}
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* OAUTH INTEGRATIONS */}
           {currentStep === OAUTH_STEP && (
             <div className="flex flex-col h-full justify-center max-w-md mx-auto w-full">
-              <div className="text-center mb-8">
-                <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 rounded-full mx-auto flex items-center justify-center text-3xl mb-4">
-                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              <div className="text-center mb-6">
+                <div className="w-14 h-14 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 rounded-2xl mx-auto flex items-center justify-center text-2xl mb-3 shadow-md">
+                  ⚡
                 </div>
-                <h3 className="text-2xl font-bold mb-2">Connect Your World</h3>
-                <p className="text-sm text-zinc-500">Life OS needs access to securely automate your workflows. Grant permissions one by one.</p>
+                <h3 className="text-2xl font-bold mb-1.5">Connect Integrations</h3>
+                <p className="text-xs text-zinc-500">Life OS orchestrates your tools securely. Connect Google Workspace directly via OAuth.</p>
               </div>
 
               <div className="space-y-4">
-                {/* Gmail & Calendar */}
-                <div className={`p-4 rounded-2xl border flex items-center justify-between ${isDarkMode ? 'bg-zinc-800/40 border-zinc-700' : 'bg-white border-zinc-200'}`}>
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-red-100 text-red-600 rounded-xl flex items-center justify-center font-bold">G</div>
-                    <div>
-                      <p className="font-bold text-sm">Google Workspace</p>
-                      <p className="text-[10px] text-zinc-500">Gmail, Calendar, Docs & Drive</p>
+                {/* Google Workspace */}
+                <div className={`p-4 rounded-2xl border flex items-center justify-between ${isDarkMode ? 'bg-zinc-800/40 border-zinc-700' : 'bg-white border-zinc-200'} shadow-xs`}>
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-10 h-10 bg-red-100 text-red-600 rounded-xl flex items-center justify-center font-bold text-lg flex-shrink-0">
+                      G
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <p className="font-bold text-sm">Google Workspace</p>
+                        {googleUser && (
+                          <span className="text-[10px] bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 px-1.5 py-0.2 rounded font-bold">Connected</span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-zinc-500 truncate">
+                        {googleUser?.email ? googleUser.email : 'Gmail, Calendar, Docs, Sheets, Drive'}
+                      </p>
                     </div>
                   </div>
-                  <button 
-                    onClick={() => setPerms(p => ({...p, gmail: !p.gmail}))}
-                    className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${perms.gmail ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}
-                  >
-                    {perms.gmail ? 'Connected ✓' : 'Connect'}
-                  </button>
+                  {googleUser ? (
+                    <span className="px-3 py-1 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-700 rounded-full text-xs font-bold flex items-center gap-1 flex-shrink-0">
+                      <span>✓</span> Ready
+                    </span>
+                  ) : (
+                    <button 
+                      type="button"
+                      onClick={handleConnectGoogle}
+                      className="px-4 py-2 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white transition-all shadow-md flex-shrink-0"
+                    >
+                      Connect OAuth
+                    </button>
+                  )}
                 </div>
 
-                {/* WhatsApp */}
-                <div className={`p-4 rounded-2xl border flex items-center justify-between ${isDarkMode ? 'bg-zinc-800/40 border-zinc-700' : 'bg-white border-zinc-200'}`}>
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-green-100 text-green-600 rounded-xl flex items-center justify-center font-bold">W</div>
-                    <div>
-                      <p className="font-bold text-sm">WhatsApp Business</p>
-                      <p className="text-[10px] text-zinc-500">Cloud API Integration</p>
+                {/* WhatsApp Business - LOCKED */}
+                <div className={`p-4 rounded-2xl border flex items-center justify-between opacity-80 ${isDarkMode ? 'bg-zinc-800/20 border-zinc-800' : 'bg-zinc-50 border-zinc-200'}`}>
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-10 h-10 bg-green-100/70 text-green-700 rounded-xl flex items-center justify-center font-bold text-lg flex-shrink-0">
+                      W
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <p className="font-bold text-sm text-zinc-700 dark:text-zinc-300">WhatsApp Business</p>
+                        <span className="text-[10px] bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 px-1.5 py-0.2 rounded font-bold">🔒 Later</span>
+                      </div>
+                      <p className="text-[11px] text-zinc-400 truncate">
+                        {phoneDigits ? `Direct WhatsApp active via +91 ${phoneDigits}` : 'Direct mobile WhatsApp active. Cloud API later.'}
+                      </p>
                     </div>
                   </div>
-                  <button 
-                    onClick={() => setPerms(p => ({...p, whatsapp: !p.whatsapp}))}
-                    className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${perms.whatsapp ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}
-                  >
-                    {perms.whatsapp ? 'Connected ✓' : 'Connect'}
-                  </button>
+                  <div className="px-3 py-1 rounded-full text-[11px] font-bold text-zinc-400 bg-zinc-200/50 dark:bg-zinc-800 border border-zinc-300/60 dark:border-zinc-700 cursor-not-allowed select-none flex-shrink-0 flex items-center gap-1">
+                    <span>🔒</span> Locked
+                  </div>
                 </div>
               </div>
 
               <div className="mt-8">
                 <button
+                  type="button"
                   onClick={goToNext}
-                  className="w-full py-4 bg-black dark:bg-white dark:text-black hover:scale-[1.02] text-white font-bold rounded-2xl transition-all shadow-lg text-lg flex items-center justify-center gap-2"
+                  className="w-full py-4 bg-black dark:bg-white dark:text-black hover:scale-[1.01] text-white font-bold rounded-2xl transition-all shadow-lg text-base flex items-center justify-center gap-2"
                 >
-                  Generate My Life OS <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                  <span>Generate My Life OS</span>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
                 </button>
               </div>
             </div>

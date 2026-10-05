@@ -1,9 +1,23 @@
 import { NextResponse } from 'next/server';
 
+function getAppOrigin(request: Request, url: URL): string {
+  const forwardedHost = request.headers.get('x-forwarded-host');
+  const forwardedProto = request.headers.get('x-forwarded-proto') || 'https';
+  if (forwardedHost) {
+    return `${forwardedProto}://${forwardedHost}`;
+  }
+  if (process.env.NEXT_PUBLIC_APP_URL) {
+    return process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, '');
+  }
+  return url.origin;
+}
+
 export async function GET(request: Request) {
   const url = new URL(request.url);
-  const redirectUri = `${url.origin}/api/auth/callback`;
+  const origin = getAppOrigin(request, url);
+  const redirectUri = `${origin}/api/auth/callback`;
   const toolsParam = url.searchParams.get('tools');
+  const returnTarget = url.searchParams.get('redirect') || '/';
 
   // Base identity and sovereign scoped Drive access
   const requestedScopes: string[] = [
@@ -47,6 +61,7 @@ export async function GET(request: Request) {
   authUrl.searchParams.set('scope', scopes);
   authUrl.searchParams.set('access_type', 'offline');
   authUrl.searchParams.set('prompt', 'consent');
+  authUrl.searchParams.set('state', encodeURIComponent(returnTarget));
 
   return NextResponse.redirect(authUrl.toString());
 }
