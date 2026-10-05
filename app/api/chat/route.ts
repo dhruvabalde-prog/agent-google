@@ -121,8 +121,8 @@ When the user seeks career counseling, job hunting, resume tailoring, portfolio 
 - Compensation Arbitrage Playbook: Demand guaranteed fixed base over variable bonus traps; leverage notice buyout as upfront signing cash; synchronize final rounds for 7-day multi-offer laddering; protect equity with 5-10 year post-termination exercise windows (PTEW).`;
 
 const CANDIDATE_MODELS = [
-  'gemini-2.0-flash',
-  'gemini-2.0-flash-lite',
+  'gemini-3.8-flash',
+  'gemini-2.5-flash',
   'gemini-1.5-flash',
   'gemini-1.5-pro',
 ];
@@ -213,33 +213,12 @@ export async function POST(request: NextRequest) {
     const userRecord = await getUserByEmail(refreshedSession.email);
     const tier = userRecord?.subscription_tier || 'BEGINNER';
 
-    // Get API Key from Key Pool mapped to this tier
-    const apiKey = await getApiKeyForTier(tier, 'gemini');
+    // Get API Key from Key Pool mapped to this tier or direct environment pool
+    const tierApiKey = await getApiKeyForTier(tier, 'gemini');
+    const poolApiKey = (process.env.GEMINI_API_KEYS || process.env.GEMINI_API_KEY || '').split(',')[0]?.trim();
+    const apiKey = tierApiKey || poolApiKey || process.env.GEMINI_API_KEY || '';
     
-    let ai;
-    if (process.env.GCP_SERVICE_ACCOUNT_JSON) {
-      const fs = require('fs');
-      const tmpPath = '/tmp/sa-key.json';
-      try {
-        if (!fs.existsSync(tmpPath)) {
-          // In Vercel serverless, /tmp is writable
-          const parsedKey = process.env.GCP_SERVICE_ACCOUNT_JSON.startsWith('{') 
-            ? process.env.GCP_SERVICE_ACCOUNT_JSON 
-            : JSON.parse(process.env.GCP_SERVICE_ACCOUNT_JSON); // Handle stringified JSON
-          fs.writeFileSync(tmpPath, parsedKey);
-        }
-        process.env.GOOGLE_APPLICATION_CREDENTIALS = tmpPath;
-      } catch (e) {
-        console.error('Failed to write SA JSON to /tmp', e);
-      }
-      ai = new GoogleGenAI({
-        vertexai: true,
-        project: process.env.GCP_PROJECT_ID || 'suchi-ai',
-        location: process.env.GCP_REGION || 'us-central1',
-      });
-    } else {
-      ai = new GoogleGenAI({ apiKey });
-    }
+    let ai = new GoogleGenAI({ apiKey });
 
     // Incognito sensitive topic check
     if (isIncognito) {

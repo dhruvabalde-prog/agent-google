@@ -14,6 +14,8 @@ import OnboardingFlowModal from '@/components/OnboardingFlowModal';
 import LifeOSLiveVoiceModal from '@/components/LifeOSLiveVoiceModal';
 import { RoutineItem } from '@/components/RoutinePlayerModal';
 import DelegationSettingsModal, { DelegationSettings, DEFAULT_DELEGATION_SETTINGS } from '@/components/DelegationSettingsModal';
+import GoogleAccountsModal from '@/components/GoogleAccountsModal';
+import UserProfileModal from '@/components/UserProfileModal';
 
 interface ArchiveChat {
   id: string;
@@ -242,6 +244,8 @@ export default function Home() {
   // User Profile & Onboarding State
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [showOnboardingModal, setShowOnboardingModal] = useState<boolean>(false);
+  const [isAccountsModalOpen, setIsAccountsModalOpen] = useState<boolean>(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState<boolean>(false);
 
   // Active slot proxies based on chatMode ('home' | 'work') and activeSlot (1 | 2)
   const isHome = chatMode === 'home';
@@ -1960,15 +1964,18 @@ export default function Home() {
           title="Open Life OS Navigation Drawer"
           className="flex items-center gap-2 sm:gap-2.5 flex-shrink-0 group cursor-pointer text-left focus:outline-none"
         >
-          <span className={`w-8 h-8 rounded-xl flex items-center justify-center p-1.5 shadow-sm transition-all group-hover:scale-105 active:scale-95 ${
+          <span className={`w-8 h-8 rounded-xl flex items-center justify-center p-1 shadow-sm transition-all group-hover:scale-105 active:scale-95 ${
             isIncognito
               ? 'bg-purple-950 border border-purple-700/60 shadow-purple-950/50'
               : isDarkMode
               ? 'bg-slate-900 border border-slate-800'
               : 'bg-slate-950 border border-slate-800'
           }`}>
-            <svg viewBox="0 0 24 24" className="w-full h-full text-white dark:text-slate-100" fill="currentColor">
-              <path d="M12 2L2 22h20L12 2z" />
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" className="w-5 h-5">
+              <circle cx="16" cy="16" r="12" fill="none" stroke="#64748b" strokeWidth="2"/>
+              <polygon points="16,6.5 19,16 16,14.5" fill={isIncognito ? "#c084fc" : "#3b82f6"}/>
+              <polygon points="16,25.5 19,16 16,17.5" fill={isIncognito ? "#a855f7" : "#ef4444"}/>
+              <circle cx="16" cy="16" r="2.5" fill="#ffffff"/>
             </svg>
           </span>
           <div>
@@ -1976,9 +1983,9 @@ export default function Home() {
           </div>
         </button>
 
-        {/* Right: Home/Work Simple Icon Toggle + Incognito Icon Button */}
+        {/* Right: Home/Work Simple Toggle + Incognito Icon Button */}
         <div className="flex items-center gap-2">
-          {/* Home/Work Toggle (Minimal Icon Switcher) */}
+          {/* Home/Work Toggle - Crystal-clear, never both active */}
           <div className={`flex items-center p-0.5 rounded-xl border ${
             isDarkMode || isIncognito ? 'bg-slate-900/90 border-slate-800' : 'bg-slate-100 border-slate-200'
           }`}>
@@ -1986,29 +1993,27 @@ export default function Home() {
               type="button"
               onClick={() => handleModeChange('home')}
               title="Switch to Home Mode"
-              className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold transition-all ${
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
                 chatMode === 'home'
-                  ? 'bg-emerald-600 text-white shadow-xs scale-105'
+                  ? 'bg-emerald-600 text-white shadow-xs'
                   : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
               }`}
             >
-              <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="currentColor">
-                <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />
-              </svg>
+              <span>🏠</span>
+              <span className="hidden sm:inline">Home</span>
             </button>
             <button
               type="button"
               onClick={() => handleModeChange('work')}
               title="Switch to Work Mode"
-              className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold transition-all ${
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
                 chatMode === 'work'
-                  ? 'bg-blue-600 text-white shadow-xs scale-105'
+                  ? 'bg-blue-600 text-white shadow-xs'
                   : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
               }`}
             >
-              <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="currentColor">
-                <path d="M20 6h-4V4c0-1.11-.89-2-2-2h-4c-1.11 0-2 .89-2 2v2H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-6 0h-4V4h4v2z" />
-              </svg>
+              <span>💼</span>
+              <span className="hidden sm:inline">Work</span>
             </button>
           </div>
 
@@ -2130,6 +2135,25 @@ export default function Home() {
       {/* 5. LIFE OS CHAT TAB VIEW (MESSAGES SCROLL AREA) */}
       {activeAppTab === 'chat' && (
         <div className="flex-1 flex flex-col overflow-hidden relative">
+          {/* Sovereign Incognito Ephemeral Banner */}
+          {isIncognito && (
+            <div className="px-4 py-2.5 bg-gradient-to-r from-purple-950 via-indigo-950 to-purple-950 border-b border-purple-800/60 backdrop-blur-md flex items-center justify-between z-20 text-xs text-purple-200 shadow-xs">
+              <div className="flex items-center gap-2 truncate">
+                <span className="text-sm flex-shrink-0">🕵️</span>
+                <span className="font-semibold truncate">
+                  Sovereign Ephemeral Session — Zero chat logging, zero telemetry, air-gapped from memory.
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={handleToggleIncognito}
+                className="text-[11px] font-bold text-purple-200 hover:text-white px-2.5 py-1 rounded-lg bg-purple-900/60 border border-purple-700/60 transition-colors flex-shrink-0 ml-2"
+              >
+                Exit Private
+              </button>
+            </div>
+          )}
+
           {/* Pinned Meaningful Outcome right below header in chatbox itself */}
           {meaningfulOutcome && (
             <div className={`px-4 py-2 border-b backdrop-blur-md flex items-center justify-between z-10 transition-all ${
@@ -3509,98 +3533,271 @@ export default function Home() {
   <div className="fixed inset-0 z-50 flex justify-start">
     {/* Backdrop */}
     <div
-      className="fixed inset-0 bg-black/40 backdrop-blur-xs transition-opacity animate-in fade-in"
+      className="fixed inset-0 bg-black/50 backdrop-blur-xs transition-opacity animate-in fade-in"
       onClick={() => setIsModeDrawerOpen(false)}
     />
 
     {/* Drawer Panel */}
-    <div className={`relative w-full max-w-[280px] h-full shadow-2xl flex flex-col z-10 overflow-hidden animate-in slide-in-from-left duration-200 border-r ${
+    <div className={`relative w-full max-w-[300px] h-full shadow-2xl flex flex-col z-10 overflow-hidden animate-in slide-in-from-left duration-200 border-r ${
       isDarkMode || isIncognito
         ? 'bg-slate-900 border-slate-800 text-slate-100'
         : 'bg-white border-slate-200 text-slate-800'
     }`}>
-      {/* Top: Home/Work Toggle */}
-      <div className="p-4 border-b border-slate-200 dark:border-slate-800">
+      {/* Drawer Header with Compass Needle Logo */}
+      <div className="p-4 border-b border-inherit flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <span className="w-8 h-8 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-center p-1 text-white shadow-xs">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" className="w-5 h-5">
+              <circle cx="16" cy="16" r="12" fill="none" stroke="#64748b" strokeWidth="2"/>
+              <polygon points="16,6.5 19,16 16,14.5" fill={isIncognito ? "#c084fc" : "#3b82f6"}/>
+              <polygon points="16,25.5 19,16 16,17.5" fill={isIncognito ? "#a855f7" : "#ef4444"}/>
+              <circle cx="16" cy="16" r="2.5" fill="#ffffff"/>
+            </svg>
+          </span>
+          <div>
+            <h2 className="font-bold text-sm tracking-tight">Life OS</h2>
+            <p className="text-[10px] text-slate-400 font-mono">Sovereign Workspace</p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => setIsModeDrawerOpen(false)}
+          className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 text-base"
+        >
+          ✕
+        </button>
+      </div>
+
+      {/* Mode Switcher: Home vs Work - Distinct, Never Confusing */}
+      <div className="p-3 border-b border-inherit">
+        <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5 px-1">
+          Active Mode ({chatMode === 'home' ? 'Home Mode' : 'Work Mode'})
+        </div>
         <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
           <button
+            type="button"
             onClick={() => handleModeChange('home')}
-            className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${chatMode === 'home' ? 'bg-white dark:bg-slate-700 shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
+            className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
+              chatMode === 'home'
+                ? 'bg-emerald-600 text-white shadow-xs'
+                : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+            }`}
           >
-            Home
+            <span>🏠</span> Home
           </button>
           <button
+            type="button"
             onClick={() => handleModeChange('work')}
-            className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${chatMode === 'work' ? 'bg-white dark:bg-slate-700 shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
+            className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
+              chatMode === 'work'
+                ? 'bg-blue-600 text-white shadow-xs'
+                : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+            }`}
           >
-            Work
+            <span>💼</span> Work
           </button>
         </div>
       </div>
 
-      {/* Navigation Links with Rich Pointers */}
+      {/* Navigation Links: Every button opens a dedicated full page or tab */}
       <div className="flex-1 overflow-y-auto p-3 space-y-1">
-        <button onClick={() => { setActiveView('chat'); setActiveAppTab('chat'); setIsModeDrawerOpen(false); }} className={`w-full text-left px-3 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-3 transition-colors ${activeAppTab === 'chat' ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400' : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'}`}>
-          <span>💬</span> Unified Chats
+        {/* Chats Archive - Dedicated Full View */}
+        <button
+          type="button"
+          onClick={() => {
+            setIsArchiveOpen(true);
+            setIsModeDrawerOpen(false);
+          }}
+          className="w-full text-left px-3 py-2.5 rounded-xl text-xs font-bold flex items-center justify-between transition-colors hover:bg-slate-100 dark:hover:bg-slate-800/60"
+        >
+          <div className="flex items-center gap-3">
+            <span>📂</span>
+            <span>Chats Archive</span>
+          </div>
+          <span className="text-[10px] bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300 px-1.5 py-0.5 rounded font-bold">
+            Full View ↗
+          </span>
         </button>
-        <button onClick={() => { setActiveView('myday'); setActiveAppTab('today'); setIsModeDrawerOpen(false); }} className={`w-full text-left px-3 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-3 transition-colors ${activeAppTab === 'today' ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400' : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'}`}>
+
+        {/* Add/Remove Gmail IDs - Dedicated Full Modal */}
+        <button
+          type="button"
+          onClick={() => {
+            setIsAccountsModalOpen(true);
+            setIsModeDrawerOpen(false);
+          }}
+          className="w-full text-left px-3 py-2.5 rounded-xl text-xs font-bold flex items-center justify-between transition-colors hover:bg-slate-100 dark:hover:bg-slate-800/60 text-indigo-600 dark:text-indigo-400"
+        >
+          <div className="flex items-center gap-3">
+            <span>✉️</span>
+            <span>Google Accounts (Personal & Work)</span>
+          </div>
+          <span className="text-[10px] text-slate-400">OAuth ↗</span>
+        </button>
+
+        {/* Profile & Identity - Dedicated Full Modal */}
+        <button
+          type="button"
+          onClick={() => {
+            setIsProfileModalOpen(true);
+            setIsModeDrawerOpen(false);
+          }}
+          className="w-full text-left px-3 py-2.5 rounded-xl text-xs font-bold flex items-center justify-between transition-colors hover:bg-slate-100 dark:hover:bg-slate-800/60"
+        >
+          <div className="flex items-center gap-3">
+            <span>👤</span>
+            <span>Profile & Identity</span>
+          </div>
+          <span className="text-[10px] text-slate-400">Edit ✎</span>
+        </button>
+
+        <div className="pt-2 pb-1 border-t border-inherit my-1">
+          <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-2 mb-1">
+            Workspace Hubs
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => {
+            setActiveView('chat');
+            setActiveAppTab('chat');
+            setIsModeDrawerOpen(false);
+          }}
+          className={`w-full text-left px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-3 transition-colors ${
+            activeAppTab === 'chat'
+              ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 font-bold'
+              : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'
+          }`}
+        >
+          <span>💬</span> Unified Chat
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setActiveView('myday');
+            setActiveAppTab('today');
+            setIsModeDrawerOpen(false);
+          }}
+          className={`w-full text-left px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-3 transition-colors ${
+            activeAppTab === 'today'
+              ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 font-bold'
+              : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'
+          }`}
+        >
           <span>☀️</span> My Day & Schedule
         </button>
-        <button onClick={() => { setActiveView('dashboards'); setActiveAppTab('dashboards'); setIsModeDrawerOpen(false); }} className={`w-full text-left px-3 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-3 transition-colors ${activeAppTab === 'dashboards' ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400' : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'}`}>
+
+        <button
+          type="button"
+          onClick={() => {
+            setActiveView('dashboards');
+            setActiveAppTab('dashboards');
+            setIsModeDrawerOpen(false);
+          }}
+          className={`w-full text-left px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-3 transition-colors ${
+            activeAppTab === 'dashboards'
+              ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 font-bold'
+              : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'
+          }`}
+        >
           <span>📊</span> Live Dashboards
         </button>
-        <button onClick={() => { setIsActionsDeckOpen(true); setIsModeDrawerOpen(false); }} className="w-full text-left px-3 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-3 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50">
+
+        <button
+          type="button"
+          onClick={() => {
+            setIsActionsDeckOpen(true);
+            setIsModeDrawerOpen(false);
+          }}
+          className="w-full text-left px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-3 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50"
+        >
           <span>⚡</span> Action Cards Deck
         </button>
-        <button onClick={() => { setIsDelegationModalOpen(true); setIsModeDrawerOpen(false); }} className="w-full text-left px-3 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-3 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50">
+
+        <button
+          type="button"
+          onClick={() => {
+            setIsDelegationModalOpen(true);
+            setIsModeDrawerOpen(false);
+          }}
+          className="w-full text-left px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-3 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50"
+        >
           <span>⚙️</span> Systems & SOPs
         </button>
-        <button onClick={() => { setIsBugModalOpen(true); setIsModeDrawerOpen(false); }} className="w-full text-left px-3 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-3 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50 text-rose-500">
+
+        <button
+          type="button"
+          onClick={() => {
+            setIsBugModalOpen(true);
+            setIsModeDrawerOpen(false);
+          }}
+          className="w-full text-left px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-3 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50 text-rose-500"
+        >
           <span>🐞</span> Report a Bug
         </button>
-        <button onClick={() => { 
-          try {
-            localStorage.removeItem('agent_google_user_profile');
-            localStorage.removeItem('agent_user_session');
-          } catch(e) {}
-          setUserProfile(null);
-          setShowOnboardingModal(true);
-          setIsModeDrawerOpen(false);
-        }} className="w-full text-left px-3 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-3 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50 text-amber-500">
+
+        <button
+          type="button"
+          onClick={() => { 
+            try {
+              localStorage.removeItem('agent_google_user_profile');
+              localStorage.removeItem('agent_user_session');
+            } catch(e) {}
+            setUserProfile(null);
+            setShowOnboardingModal(true);
+            setIsModeDrawerOpen(false);
+          }}
+          className="w-full text-left px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-3 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50 text-amber-500"
+        >
           <span>🔄</span> Reset & Re-run Onboarding
         </button>
       </div>
 
-      {/* Bottom: Profile & Settings */}
-      <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 space-y-3">
+      {/* Bottom: Profile Summary & Actions */}
+      <div className="p-3.5 border-t border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/60 space-y-2.5">
         {userProfile && (
-          <div className="space-y-2 mb-2 p-2.5 rounded-xl bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 shadow-xs">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-sm shadow-sm flex-shrink-0">
-                {userProfile.name?.charAt(0) || 'L'}
+          <div className="p-2.5 rounded-xl bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 shadow-xs space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xs flex-shrink-0">
+                  {userProfile.name?.charAt(0) || 'L'}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-bold truncate text-slate-900 dark:text-white">{userProfile.name}</p>
+                  <p className="text-[10px] text-blue-600 dark:text-blue-400 font-semibold uppercase">{userProfile.userType?.replace('_', ' ')}</p>
+                </div>
               </div>
-              <div className="flex-1 overflow-hidden">
-                <p className="text-sm font-bold truncate text-slate-900 dark:text-white">{userProfile.name}</p>
-                <p className="text-[10px] text-blue-600 dark:text-blue-400 font-bold uppercase tracking-wider">{userProfile.userType?.replace('_', ' ')}</p>
-              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsProfileModalOpen(true);
+                  setIsModeDrawerOpen(false);
+                }}
+                className="text-[11px] text-blue-600 dark:text-blue-400 font-bold hover:underline"
+              >
+                Edit
+              </button>
             </div>
             
-            <div className="pt-2 border-t border-slate-100 dark:border-slate-700/50 space-y-1 text-[11px]">
+            <div className="pt-1.5 border-t border-slate-100 dark:border-slate-700/40 space-y-1 text-[10px]">
               {(userProfile.primaryEmail || userProfile.email) && (
                 <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
-                  <span className="font-semibold flex items-center gap-1">🏠 Personal ID:</span>
-                  <span className="truncate max-w-[150px] font-mono text-slate-700 dark:text-slate-300">{userProfile.primaryEmail || userProfile.email}</span>
+                  <span>🏠 Personal:</span>
+                  <span className="truncate max-w-[130px] font-mono">{userProfile.primaryEmail || userProfile.email}</span>
                 </div>
               )}
               {userProfile.workEmail && (
                 <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
-                  <span className="font-semibold flex items-center gap-1">💼 Work ID:</span>
-                  <span className="truncate max-w-[150px] font-mono text-slate-700 dark:text-slate-300">{userProfile.workEmail}</span>
+                  <span>💼 Work:</span>
+                  <span className="truncate max-w-[130px] font-mono">{userProfile.workEmail}</span>
                 </div>
               )}
               {userProfile.phoneNumber && (
                 <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
-                  <span className="font-semibold flex items-center gap-1">📱 Mobile:</span>
-                  <span className="font-mono text-slate-700 dark:text-slate-300">{userProfile.phoneNumber}</span>
+                  <span>📱 Mobile:</span>
+                  <span className="font-mono">{userProfile.phoneNumber}</span>
                 </div>
               )}
             </div>
@@ -3608,15 +3805,16 @@ export default function Home() {
         )}
         
         <div className="grid grid-cols-2 gap-2">
-          <button onClick={toggleDarkMode} className="flex items-center justify-center gap-2 py-2 bg-slate-200 dark:bg-slate-800 rounded-lg text-xs font-bold hover:bg-slate-300 dark:hover:bg-slate-700 transition-colors">
+          <button onClick={toggleDarkMode} className="flex items-center justify-center gap-1.5 py-1.5 bg-slate-200 dark:bg-slate-800 rounded-lg text-xs font-bold hover:bg-slate-300 dark:hover:bg-slate-700 transition-colors">
             {isDarkMode ? '☀️ Light' : '🌙 Dark'}
           </button>
-          <button onClick={() => { setIsIncognito(!isIncognito); setMessages([]); }} className={`flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold transition-colors ${isIncognito ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' : 'bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700'}`}>
+          <button onClick={() => { setIsIncognito(!isIncognito); setMessages([]); setIsModeDrawerOpen(false); }} className={`flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-bold transition-colors ${isIncognito ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' : 'bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700'}`}>
             🕵️ Incognito
           </button>
         </div>
         
         <button
+          type="button"
           onClick={() => {
             setIsModeDrawerOpen(false);
             handleInstallApp();
@@ -3627,7 +3825,7 @@ export default function Home() {
         </button>
 
         {isAdmin && (
-          <button onClick={() => window.location.href = '/admin'} className="w-full mt-2 py-2 bg-slate-800 dark:bg-slate-200 text-white dark:text-slate-800 rounded-lg text-xs font-bold hover:opacity-90 transition-opacity flex justify-center items-center gap-2">
+          <button onClick={() => window.location.href = '/admin'} className="w-full py-1.5 bg-slate-800 dark:bg-slate-200 text-white dark:text-slate-800 rounded-lg text-xs font-bold hover:opacity-90 transition-opacity flex justify-center items-center gap-2">
             Admin Portal ↗
           </button>
         )}
@@ -3664,6 +3862,64 @@ export default function Home() {
           setShowOnboardingModal(false);
           triggerToast(`Profile configured for ${profile.name}`);
         }}
+      />
+
+      {/* Google Accounts Manager Modal (Personal & Work Gmail IDs with OAuth) */}
+      <GoogleAccountsModal
+        isOpen={isAccountsModalOpen}
+        onClose={() => setIsAccountsModalOpen(false)}
+        profile={userProfile}
+        onUpdateProfile={(updated) => {
+          if (userProfile) {
+            handleSaveUserProfile({ ...userProfile, ...updated });
+          } else {
+            handleSaveUserProfile({
+              name: 'Life OS Member',
+              phoneNumber: '',
+              email: updated.email || updated.primaryEmail || '',
+              primaryEmail: updated.primaryEmail || '',
+              workEmail: updated.workEmail || '',
+              gender: 'prefer_not_to_say',
+              userType: 'working_professional',
+              familyMembers: [],
+              teamMembers: [],
+              onboardingCompleted: true,
+              updatedAt: new Date().toISOString(),
+              ...updated,
+            });
+          }
+          triggerToast('Google accounts updated successfully');
+        }}
+        isDarkMode={isDarkMode}
+      />
+
+      {/* Profile & Identity Modal */}
+      <UserProfileModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+        profile={userProfile}
+        onUpdateProfile={(updated) => {
+          if (userProfile) {
+            handleSaveUserProfile({ ...userProfile, ...updated });
+          } else {
+            handleSaveUserProfile({
+              name: updated.name || 'Life OS Member',
+              phoneNumber: updated.phoneNumber || '',
+              email: '',
+              primaryEmail: '',
+              gender: updated.gender || 'prefer_not_to_say',
+              userType: updated.userType || 'working_professional',
+              professionalSubCategory: updated.professionalSubCategory || '',
+              familyMembers: [],
+              teamMembers: [],
+              onboardingCompleted: true,
+              updatedAt: new Date().toISOString(),
+              ...updated,
+            });
+          }
+          triggerToast('Profile saved successfully');
+        }}
+        isDarkMode={isDarkMode}
       />
 
       {/* Sleek Mobile Installation Modal (iPhone & Android) */}

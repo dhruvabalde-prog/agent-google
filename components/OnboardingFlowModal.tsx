@@ -11,6 +11,18 @@ interface OnboardingFlowModalProps {
   isDarkMode?: boolean;
 }
 
+// Compass Needle SVG Component
+export function CompassNeedleIcon({ className = "w-6 h-6" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.5" strokeOpacity="0.4" />
+      <circle cx="12" cy="12" r="2.2" fill="currentColor" />
+      <polygon points="12,3 15,12 12,10 9,12" fill="#3b82f6" />
+      <polygon points="12,21 15,12 12,14 9,12" fill="#ef4444" opacity="0.85" />
+    </svg>
+  );
+}
+
 const SUB_CATEGORIES_MAP: { [key: string]: string[] } = {
   salaried: [
     'Software Engineer / Tech Lead',
@@ -55,8 +67,8 @@ const SUB_CATEGORIES_MAP: { [key: string]: string[] } = {
 
 function getQuestions(userType: UserType, category?: WorkingProfessionalCategory) {
   const common = [
-    { id: 'q_goal', title: 'What is your primary goal for joining Life OS?', options: ['Automating daily repetitive tasks', 'Organizing my chaotic schedule', 'Accelerating career/business growth', 'Delegating work to an AI team'] },
-    { id: 'q_comm', title: 'How do you prefer to interact with your AI?', options: ['Text & Chat mostly', 'Voice Commands & Calls', 'Background Automation', 'Mix of all approaches'] },
+    { id: 'q_goal', title: 'What are your primary goals for joining Life OS?', options: ['Automating daily repetitive tasks', 'Organizing my chaotic schedule', 'Accelerating career & business growth', 'Delegating work to an executive AI partner', 'Maintaining strict personal & work life balance'] },
+    { id: 'q_comm', title: 'How do you prefer to interact with Life OS?', options: ['Text & Chat mostly', 'Voice Commands & Daily Briefings', 'Automated Background Workflows', 'Direct 1-Tap WhatsApp Actions'] },
   ];
   let specific: { id: string, title: string, options: string[] }[] = [];
   
@@ -64,28 +76,28 @@ function getQuestions(userType: UserType, category?: WorkingProfessionalCategory
     const c = category?.toLowerCase();
     if (c === 'entrepreneur') {
       specific = [
-        { id: 'q_e1', title: 'What is the biggest operational challenge in your business?', options: ['Client Acquisition & Sales', 'Vendor & Supply Chain Management', 'Financial Tracking & Cashflow', 'Team Delegation & Hiring'] },
-        { id: 'q_e2', title: 'How big is your current team?', options: ['Just me (Solopreneur)', '1 - 10 employees', '11 - 50 employees', '50+ employees'] }
+        { id: 'q_e1', title: 'What are your biggest operational priorities?', options: ['Client Acquisition & B2B Outreach', 'Vendor & Supply Chain Negotiations', 'Cashflow & Revenue Tracking in Sheets', 'Team Delegation & Executive Alignment'] },
+        { id: 'q_e2', title: 'What is the current scale of your organization?', options: ['Solopreneur / Founder', '1 - 10 Team Members', '11 - 50 Employees', '50+ Enterprise Team'] }
       ];
     } else if (c === 'freelancer') {
       specific = [
-        { id: 'q_f1', title: 'What takes up most of your unbillable time?', options: ['Finding new clients', 'Invoicing & following up on payments', 'Managing projects & deadlines', 'Drafting proposals/emails'] },
-        { id: 'q_f2', title: 'How do you track your projects currently?', options: ['Spreadsheets & Docs', 'Project Management tools (Notion, Trello)', 'Notebooks / Mental tracking', 'Scattered across multiple apps'] }
+        { id: 'q_f1', title: 'Where do you lose the most administrative time?', options: ['Finding & qualifying client leads', 'Invoicing & payment follow-ups', 'Managing deadlines & contracts', 'Drafting executive proposals & emails'] },
+        { id: 'q_f2', title: 'How do you track deliverables and milestones currently?', options: ['Google Sheets & Docs', 'Task & Project Management tools', 'Scattered across notes & chat apps', 'Mental tracking'] }
       ];
     } else {
       specific = [
-        { id: 'q_s1', title: 'What describes your current career phase?', options: ['Pushing for a promotion', 'Managing a new team', 'Work-life balance focus', 'Looking for a switch'] },
-        { id: 'q_s2', title: 'How much of your day is spent in meetings?', options: ['Less than 1 hour', '1-3 hours', '3-5 hours (Too many)', 'Most of my day'] }
+        { id: 'q_s1', title: 'What describes your current strategic career focus?', options: ['Pushing for promotion & executive appraisal', 'Leading a high-performance team', 'Protecting work-life boundary & health', 'Exploring strategic career transition'] },
+        { id: 'q_s2', title: 'What takes up the majority of your cognitive energy?', options: ['Back-to-back calendar meetings', 'Inbox triage & drafting executive responses', 'Creating presentation decks & spreadsheets', 'Reviewing vendor & project proposals'] }
       ];
     }
   } else if (userType === 'student' || userType === 'STUDENT') {
     specific = [
-       { id: 'q_st1', title: 'What is your biggest bottleneck in studying?', options: ['Lack of focus/procrastination', 'Too much material to synthesize', 'Tracking assignments & deadlines', 'Finding good research resources'] },
-       { id: 'q_st2', title: 'How do you prefer to consume study material?', options: ['Reading notes & docs', 'Watching videos & lectures', 'Solving practice questions', 'Group study & discussions'] }
+       { id: 'q_st1', title: 'What are your key academic bottlenecks?', options: ['Procrastination & daily routine discipline', 'Synthesizing dense material into notes', 'Tracking project submissions & deadlines', 'Structured research & bibliography'] },
+       { id: 'q_st2', title: 'How do you prefer to consume knowledge?', options: ['Structured notes & Google Docs', 'Interactive Q&A and practice problems', 'Audio/Voice summaries & briefings', 'Collaborative group study'] }
     ];
   } else {
     specific = [
-      { id: 'q_gen1', title: 'What areas of your life need the most organization?', options: ['Health & Wellness tracking', 'Financial planning & bills', 'Travel & Event planning', 'Daily routines & habits'] }
+      { id: 'q_gen1', title: 'What areas of your daily routine need the most organization?', options: ['Preventive health & diagnostic schedules', 'Personal financial budgets & SIP tracking', 'Domestic chores & household checklists', 'Family travel & event itineraries'] }
     ];
   }
   
@@ -99,14 +111,14 @@ export default function OnboardingFlowModal({
   initialProfile,
   isDarkMode = false,
 }: OnboardingFlowModalProps) {
-  // --- Flow State ---
+  // --- Flow Steps ---
   // 0: Identity (Name, Mobile +91, Gender)
-  // 1: Dual Account Identities (Personal ID & Work ID)
-  // 2: Primary User Type (5 Personas)
-  // 3: Specific Sub-Category
+  // 1: Dual Account Identities (Personal Gmail OAuth & Work Workspace OAuth)
+  // 2: Primary Role Persona
+  // 3: Sub-Category
   // 4 to (4 + questions.length - 1): Dynamic Multi-Select Questions
-  // N (4 + questions.length): OAuth Integrations
-  // N+1: Building Dashboard...
+  // N (4 + questions.length): Integrations Summary
+  // N+1: Building Dashboard Screen
   const [currentStep, setCurrentStep] = useState(0);
   const [slideDirection, setSlideDirection] = useState<'left' | 'right'>('right');
 
@@ -123,11 +135,13 @@ export default function OnboardingFlowModal({
   const [workingCategory, setWorkingCategory] = useState<WorkingProfessionalCategory>(initialProfile?.workingCategory || 'salaried');
   const [subCategory, setSubCategory] = useState<string>('');
   
-  // Answers state: now arrays of strings to allow MULTIPLE selection
+  // Multi-select answers
   const [answers, setAnswers] = useState<Record<string, string[]>>({});
 
-  // Auth/Integrations State
+  // Auth / Google Status
   const [googleUser, setGoogleUser] = useState<{ email: string; name?: string; picture?: string } | null>(null);
+  const [personalOauthConnected, setPersonalOauthConnected] = useState(false);
+  const [workOauthConnected, setWorkOauthConnected] = useState(false);
   const [buildingStage, setBuildingStage] = useState(0);
 
   // Dynamic questions based on selected type
@@ -140,7 +154,7 @@ export default function OnboardingFlowModal({
   const OAUTH_STEP = 4 + questions.length;
   const BUILDING_STEP = OAUTH_STEP + 1;
 
-  // Restore draft if returning from Google OAuth
+  // Restore draft and check OAuth session
   useEffect(() => {
     try {
       const savedDraft = localStorage.getItem('lifeos_onboarding_draft');
@@ -161,19 +175,28 @@ export default function OnboardingFlowModal({
       }
     } catch {}
 
-    async function checkGoogleAuth() {
+    async function checkAuthSession() {
       try {
         const res = await fetch('/api/auth/session');
         if (res.ok) {
           const data = await res.json();
           if (data.authenticated && data.user) {
             setGoogleUser(data.user);
-            setPersonalEmail(prev => prev || data.user.email);
+            // Check if returning from personal or work oauth
+            const searchParams = new URLSearchParams(window.location.search);
+            const accountType = searchParams.get('account');
+            if (accountType === 'work') {
+              setWorkEmail(data.user.email);
+              setWorkOauthConnected(true);
+            } else {
+              setPersonalEmail(data.user.email);
+              setPersonalOauthConnected(true);
+            }
           }
         }
       } catch {}
     }
-    checkGoogleAuth();
+    checkAuthSession();
   }, []);
 
   const goToNext = () => {
@@ -198,11 +221,11 @@ export default function OnboardingFlowModal({
     });
   };
 
-  // Google OAuth initiation
-  const handleConnectGoogle = () => {
+  // Google OAuth initiation for Personal vs Work
+  const handleTriggerOAuth = (accountType: 'personal' | 'work') => {
     try {
       const draft = {
-        currentStep: OAUTH_STEP,
+        currentStep: DUAL_ACCOUNT_STEP,
         name,
         phoneDigits,
         phone,
@@ -216,7 +239,7 @@ export default function OnboardingFlowModal({
       };
       localStorage.setItem('lifeos_onboarding_draft', JSON.stringify(draft));
     } catch {}
-    window.location.href = '/api/auth/login?redirect=/?onboarding=resume';
+    window.location.href = `/api/auth/login?account=${accountType}&redirect=/?onboarding=resume%26account=${accountType}`;
   };
 
   const finalizeOnboarding = (overrideProfile?: Partial<UserProfile>) => {
@@ -255,7 +278,6 @@ export default function OnboardingFlowModal({
     }
   }, [currentStep, BUILDING_STEP]);
 
-  // CSS for slide animation
   const slideClass = slideDirection === 'right' ? 'animate-[slideInRight_0.3s_ease-out]' : 'animate-[slideInLeft_0.3s_ease-out]';
 
   if (!isOpen) return null;
@@ -291,8 +313,8 @@ export default function OnboardingFlowModal({
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M15 18l-6-6 6-6"/></svg>
               </button>
             ) : (
-              <div className="w-8 h-8 rounded-xl bg-blue-600 flex items-center justify-center text-white font-black text-sm shadow-sm">
-                L
+              <div className="w-8 h-8 rounded-xl bg-slate-900 border border-slate-700 flex items-center justify-center p-1 text-white shadow-sm">
+                <CompassNeedleIcon className="w-5 h-5 text-white" />
               </div>
             )}
             <div>
@@ -326,7 +348,9 @@ export default function OnboardingFlowModal({
           {currentStep === 0 && (
             <div className="flex flex-col h-full justify-center space-y-6 max-w-sm mx-auto w-full">
               <div className="text-center mb-2">
-                <div className="w-16 h-16 bg-blue-600 rounded-2xl mx-auto flex items-center justify-center text-3xl text-white font-bold mb-4 shadow-lg shadow-blue-500/30">L</div>
+                <div className="w-16 h-16 bg-slate-950 border border-slate-800 rounded-2xl mx-auto flex items-center justify-center p-2 mb-4 shadow-xl">
+                  <CompassNeedleIcon className="w-10 h-10 text-white" />
+                </div>
                 <h3 className="text-2xl font-bold">Welcome to Life OS</h3>
                 <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-2">Let's set up your sovereign workspace.</p>
               </div>
@@ -338,7 +362,7 @@ export default function OnboardingFlowModal({
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="e.g. Arjun Sharma"
+                    placeholder="Enter your name"
                     className={`w-full px-4 py-3 rounded-xl text-sm border focus:outline-none focus:ring-2 focus:ring-blue-500 ${isDarkMode ? 'bg-zinc-800 border-zinc-700 text-white' : 'bg-zinc-50 border-zinc-200 text-zinc-900'}`}
                   />
                 </div>
@@ -366,7 +390,7 @@ export default function OnboardingFlowModal({
                         setPhoneDigits(digits);
                         setPhone(digits ? `+91 ${digits}` : '');
                       }}
-                      placeholder="Enter 10-digit number"
+                      placeholder="10-digit mobile number"
                       className="flex-1 px-3.5 py-3 bg-transparent text-sm focus:outline-none placeholder:text-zinc-400 font-mono tracking-wider"
                     />
                   </div>
@@ -408,68 +432,108 @@ export default function OnboardingFlowModal({
             </div>
           )}
 
-          {/* STEP 1: DUAL ACCOUNT IDENTITIES (PERSONAL ID & WORK ID) */}
+          {/* STEP 1: DUAL ACCOUNT IDENTITIES (PERSONAL ID & WORK ID) WITH DUAL OAUTH */}
           {currentStep === 1 && (
             <div className="flex flex-col h-full justify-center max-w-md mx-auto w-full space-y-5">
               <div className="text-center">
                 <div className="w-12 h-12 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 rounded-2xl mx-auto flex items-center justify-center text-2xl font-bold mb-3 shadow-md">
                   🛡️
                 </div>
-                <h3 className="text-2xl font-bold">Dual Identity Separation</h3>
+                <h3 className="text-2xl font-bold">Dual Identity Partitioning</h3>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 max-w-xs mx-auto">
-                  Life OS cryptographically air-gaps your Personal life from your Professional work. Configure both accounts for complete peace of mind.
+                  Life OS cryptographically air-gaps your Personal life from your Professional work. Connect both accounts for seamless execution.
                 </p>
               </div>
 
-              <div className="space-y-3.5">
-                {/* Personal ID */}
-                <div className={`p-4 rounded-2xl border ${isDarkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200'} shadow-xs`}>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
+              <div className="space-y-4">
+                {/* Personal ID & OAuth */}
+                <div className={`p-4 rounded-2xl border ${isDarkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200'} shadow-xs space-y-2.5`}>
+                  <div className="flex items-center justify-between">
+                    <label className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
                       <span>🏠</span> Personal ID (Home Mode)
                     </label>
-                    <span className="text-[10px] text-zinc-400 font-medium">Personal Gmail</span>
+                    {personalOauthConnected ? (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-bold flex items-center gap-1">
+                        <span>✓</span> OAuth Connected
+                      </span>
+                    ) : (
+                      <span className="text-[10px] text-zinc-400">Personal Gmail</span>
+                    )}
                   </div>
-                  <input
-                    type="email"
-                    value={personalEmail}
-                    onChange={(e) => setPersonalEmail(e.target.value)}
-                    placeholder="e.g. personal@gmail.com"
-                    className={`w-full px-3.5 py-2.5 rounded-xl text-sm border focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
-                      isDarkMode ? 'bg-zinc-800 border-zinc-700 text-white' : 'bg-zinc-50 border-zinc-200 text-zinc-900'
-                    }`}
-                  />
-                  <p className="text-[11px] text-zinc-500 mt-1.5">
-                    Powers personal routines, family health records, biometric wellness & domestic checklists.
+                  
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="email"
+                      value={personalEmail}
+                      onChange={(e) => setPersonalEmail(e.target.value)}
+                      placeholder="your.personal@gmail.com"
+                      className={`flex-1 px-3.5 py-2.5 rounded-xl text-sm border focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
+                        isDarkMode ? 'bg-zinc-800 border-zinc-700 text-white' : 'bg-zinc-50 border-zinc-200 text-zinc-900'
+                      }`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleTriggerOAuth('personal')}
+                      className={`px-3 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-colors flex items-center gap-1 ${
+                        personalOauthConnected
+                          ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700'
+                          : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs'
+                      }`}
+                    >
+                      {personalOauthConnected ? '✓ Reconnect' : 'Connect OAuth'}
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-zinc-500">
+                    Powers personal health records, domestic checklists & family routines.
                   </p>
                 </div>
 
-                {/* Work ID */}
-                <div className={`p-4 rounded-2xl border ${isDarkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200'} shadow-xs`}>
-                  <div className="flex items-center justify-between mb-1.5">
+                {/* Work ID & OAuth */}
+                <div className={`p-4 rounded-2xl border ${isDarkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200'} shadow-xs space-y-2.5`}>
+                  <div className="flex items-center justify-between">
                     <label className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">
                       <span>💼</span> Work ID (Work Mode)
                     </label>
-                    <span className="text-[10px] text-zinc-400 font-medium">Corporate / Client Email</span>
+                    {workOauthConnected ? (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 font-bold flex items-center gap-1">
+                        <span>✓</span> OAuth Connected
+                      </span>
+                    ) : (
+                      <span className="text-[10px] text-zinc-400">Google Workspace Email</span>
+                    )}
                   </div>
-                  <input
-                    type="email"
-                    value={workEmail}
-                    onChange={(e) => setWorkEmail(e.target.value)}
-                    placeholder="e.g. name@company.com or business email"
-                    className={`w-full px-3.5 py-2.5 rounded-xl text-sm border focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                      isDarkMode ? 'bg-zinc-800 border-zinc-700 text-white' : 'bg-zinc-50 border-zinc-200 text-zinc-900'
-                    }`}
-                  />
-                  <p className="text-[11px] text-zinc-500 mt-1.5">
-                    Powers corporate projects, client outreach, vendor sheets, presentations & B2B communications.
+                  
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="email"
+                      value={workEmail}
+                      onChange={(e) => setWorkEmail(e.target.value)}
+                      placeholder="your.name@company.com"
+                      className={`flex-1 px-3.5 py-2.5 rounded-xl text-sm border focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                        isDarkMode ? 'bg-zinc-800 border-zinc-700 text-white' : 'bg-zinc-50 border-zinc-200 text-zinc-900'
+                      }`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleTriggerOAuth('work')}
+                      className={`px-3 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-colors flex items-center gap-1 ${
+                        workOauthConnected
+                          ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-300 dark:border-blue-700'
+                          : 'bg-blue-600 hover:bg-blue-500 text-white shadow-xs'
+                      }`}
+                    >
+                      {workOauthConnected ? '✓ Reconnect' : 'Connect OAuth'}
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-zinc-500">
+                    Powers client communications, RFQs, vendor ledgers & executive decks.
                   </p>
                 </div>
 
                 <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-[11px] text-amber-700 dark:text-amber-300 flex items-start gap-2">
                   <span className="text-sm">🔒</span>
                   <span>
-                    <strong>Air-Gap Guarantee:</strong> Personal health or family notes will never cross-contaminate into work communications.
+                    <strong>Air-Gap Guarantee:</strong> Personal notes and family health records never cross-contaminate into work communications.
                   </span>
                 </div>
               </div>
@@ -486,77 +550,67 @@ export default function OnboardingFlowModal({
             </div>
           )}
 
-          {/* STEP 2: PRIMARY USER TYPE (5 Personas) */}
+          {/* STEP 2: PRIMARY ROLE PERSONA */}
           {currentStep === 2 && (
             <div className="flex flex-col h-full overflow-y-auto">
               <div className="mb-4">
                 <h3 className="text-xl font-bold mb-1">What best describes you?</h3>
-                <p className="text-xs text-zinc-500">Life OS configures distinct capabilities and intelligence profiles based on your role.</p>
+                <p className="text-xs text-zinc-500">Life OS configures dedicated capabilities and intelligence profiles based on your role.</p>
               </div>
               <div className="grid grid-cols-1 gap-2.5">
                 {[
                   { id: 'working_professional', icon: '💼', title: 'Working Professional', desc: 'Corporate, Tech, Consulting & Salaried' },
                   { id: 'entrepreneur', icon: '🚀', title: 'Entrepreneur & Founder', desc: 'Startups, Agency Owners & Growth Leaders' },
                   { id: 'student', icon: '🎓', title: 'Student', desc: 'School, University & Competitive Exams' },
-                  { id: 'seniors', icon: '☕', title: 'Home & Personal', desc: 'Retirees, Homemakers & Family Managers' },
-                  { id: 'admin', icon: '🛡️', title: 'Admin / System Commander', desc: 'Sovereign console access & governance' },
-                ].map(type => (
+                  { id: 'seniors', icon: '🌱', title: 'Senior / Retired / Homemaker', desc: 'Wellness, Family Logistics & Estate Management' },
+                  { id: 'other', icon: '⚡', title: 'General Executive', desc: 'Autonomous High-Leverage Life Operations' },
+                ].map(p => (
                   <button
-                    key={type.id}
+                    key={p.id}
+                    type="button"
                     onClick={() => {
-                      if (type.id === 'admin') {
-                        // Check if already authenticated with Google OAuth
-                        if (googleUser?.email) {
-                          window.location.href = '/admin';
-                        } else {
-                          // Start OAuth first!
-                          window.location.href = '/api/auth/login?redirect=/admin';
-                        }
-                      } else if (type.id === 'entrepreneur') {
-                        setUserType('working_professional');
-                        setWorkingCategory('entrepreneur');
-                        setTimeout(goToNext, 300);
-                      } else {
-                        setUserType(type.id as UserType);
-                        setTimeout(goToNext, 300);
-                      }
+                      setUserType(p.id as UserType);
+                      goToNext();
                     }}
-                    className={`flex items-center gap-3.5 p-3.5 rounded-2xl border transition-all text-left group ${
-                      userType === type.id
-                        ? 'border-blue-500 bg-blue-500/10 ring-1 ring-blue-500/50'
-                        : isDarkMode ? 'border-zinc-800 bg-zinc-800/40 hover:bg-zinc-800' : 'border-zinc-200 bg-white hover:bg-zinc-50'
+                    className={`p-3.5 rounded-2xl border text-left flex items-center justify-between transition-all ${
+                      userType === p.id
+                        ? 'border-blue-500 bg-blue-50/70 dark:bg-blue-950/40 text-blue-600 dark:text-blue-300 shadow-xs'
+                        : isDarkMode ? 'border-zinc-800 bg-zinc-900 hover:border-zinc-700' : 'border-zinc-200 bg-white hover:border-zinc-300'
                     }`}
                   >
-                    <div className="text-2xl bg-zinc-100 dark:bg-zinc-900 w-11 h-11 flex items-center justify-center rounded-xl flex-shrink-0">{type.icon}</div>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-bold text-sm leading-tight">{type.title}</h4>
-                      <p className="text-[11px] text-zinc-500 truncate">{type.desc}</p>
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl">{p.icon}</span>
+                      <div>
+                        <h4 className="font-bold text-sm text-zinc-900 dark:text-zinc-100">{p.title}</h4>
+                        <p className="text-xs text-zinc-500 dark:text-zinc-400">{p.desc}</p>
+                      </div>
                     </div>
-                    <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${userType === type.id ? 'border-blue-500' : 'border-zinc-300 dark:border-zinc-600'}`}>
-                      {userType === type.id && <div className="w-2 h-2 bg-blue-500 rounded-full" />}
-                    </div>
+                    <span className="text-zinc-400 font-bold">→</span>
                   </button>
                 ))}
               </div>
             </div>
           )}
 
-          {/* STEP 3: SPECIFIC CATEGORY */}
+          {/* STEP 3: SUB-CATEGORY */}
           {currentStep === 3 && (
-            <div className="flex flex-col h-full">
-              <div className="mb-6">
-                <h3 className="text-xl font-bold mb-2">Let's get more specific.</h3>
-                <p className="text-sm text-zinc-500">Select your specific category so we can tailor your dashboards.</p>
+            <div className="flex flex-col h-full overflow-y-auto">
+              <div className="mb-4">
+                <h3 className="text-xl font-bold mb-1">Select your focus domain</h3>
+                <p className="text-xs text-zinc-500">Fine-tunes the workflows and automation blueprints for your routine.</p>
               </div>
-              
+
               {userType === 'working_professional' && (
-                <div className="mb-6 grid grid-cols-2 gap-2">
-                  {['salaried', 'entrepreneur', 'freelancer', 'self_employed'].map(cat => (
+                <div className="flex p-1 bg-zinc-200/60 dark:bg-zinc-800/80 rounded-xl mb-4 text-xs font-bold">
+                  {(['salaried', 'entrepreneur', 'freelancer', 'self_employed'] as WorkingProfessionalCategory[]).map(cat => (
                     <button
                       key={cat}
-                      onClick={() => { setWorkingCategory(cat as any); setSubCategory(''); }}
-                      className={`p-3 rounded-xl text-sm font-bold capitalize border text-center transition-all ${
-                        workingCategory === cat ? 'bg-blue-600 border-blue-600 text-white' : isDarkMode ? 'bg-zinc-800 border-zinc-700' : 'bg-white border-zinc-200'
+                      type="button"
+                      onClick={() => setWorkingCategory(cat)}
+                      className={`flex-1 py-1.5 rounded-lg transition-all capitalize ${
+                        workingCategory === cat
+                          ? 'bg-white dark:bg-zinc-700 text-blue-600 dark:text-white shadow-xs'
+                          : 'text-zinc-500'
                       }`}
                     >
                       {cat.replace('_', ' ')}
@@ -565,30 +619,30 @@ export default function OnboardingFlowModal({
                 </div>
               )}
 
-              <div className="flex-1 overflow-y-auto pr-2">
-                <div className="space-y-2">
-                  {(SUB_CATEGORIES_MAP[userType === 'working_professional' ? workingCategory : userType] || SUB_CATEGORIES_MAP['student']).map(sub => (
-                    <button
-                      key={sub}
-                      onClick={() => {
-                        setSubCategory(sub);
-                        setTimeout(goToNext, 300);
-                      }}
-                      className={`w-full text-left p-4 rounded-xl border transition-all text-sm font-medium ${
-                        subCategory === sub
-                          ? 'border-blue-500 bg-blue-500/10 text-blue-700 dark:text-blue-300'
-                          : isDarkMode ? 'border-zinc-800 bg-zinc-800/40 hover:bg-zinc-800' : 'border-zinc-200 bg-white hover:bg-zinc-50'
-                      }`}
-                    >
-                      {sub}
-                    </button>
-                  ))}
-                </div>
+              <div className="grid grid-cols-1 gap-2">
+                {(SUB_CATEGORIES_MAP[userType === 'working_professional' ? (workingCategory || 'salaried') : userType] || SUB_CATEGORIES_MAP.salaried).map((sub, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => {
+                      setSubCategory(sub);
+                      goToNext();
+                    }}
+                    className={`p-3.5 rounded-2xl border text-left text-xs font-semibold transition-all flex items-center justify-between ${
+                      subCategory === sub
+                        ? 'border-blue-500 bg-blue-50/70 dark:bg-blue-950/40 text-blue-600 dark:text-blue-300'
+                        : isDarkMode ? 'border-zinc-800 bg-zinc-900 hover:border-zinc-700' : 'border-zinc-200 bg-white hover:border-zinc-300'
+                    }`}
+                  >
+                    <span>{sub}</span>
+                    <span className="text-zinc-400 font-bold">→</span>
+                  </button>
+                ))}
               </div>
             </div>
           )}
 
-          {/* STEPS 4 to (4 + questions.length - 1): DYNAMIC QUESTIONS (MULTI-SELECT) */}
+          {/* STEP 4+: DYNAMIC MULTI-SELECT QUESTIONS */}
           {currentStep >= QUESTIONS_START_STEP && currentStep < OAUTH_STEP && (() => {
             const qIdx = currentStep - QUESTIONS_START_STEP;
             const currentQ = questions[qIdx];
@@ -644,7 +698,7 @@ export default function OnboardingFlowModal({
 
                 <div className="mt-8 pt-4 border-t border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
                   <p className="text-xs text-zinc-500">
-                    {selectedList.length > 0 ? `${selectedList.length} option${selectedList.length > 1 ? 's' : ''} chosen` : 'Choose 1 or more options'}
+                    {selectedList.length > 0 ? `${selectedList.length} chosen` : 'Choose 1 or more options'}
                   </p>
                   <button
                     type="button"
@@ -660,7 +714,7 @@ export default function OnboardingFlowModal({
             );
           })()}
 
-          {/* OAUTH INTEGRATIONS */}
+          {/* OAUTH INTEGRATIONS & LAUNCH */}
           {currentStep === OAUTH_STEP && (
             <div className="flex flex-col h-full justify-center max-w-md mx-auto w-full">
               <div className="text-center mb-6">
@@ -668,7 +722,7 @@ export default function OnboardingFlowModal({
                   ⚡
                 </div>
                 <h3 className="text-2xl font-bold mb-1.5">Connect Integrations</h3>
-                <p className="text-xs text-zinc-500">Life OS orchestrates your tools securely. Connect Google Workspace directly via OAuth.</p>
+                <p className="text-xs text-zinc-500">Life OS orchestrates your tools securely. Verify your connected accounts.</p>
               </div>
 
               <div className="space-y-4">
@@ -681,28 +735,18 @@ export default function OnboardingFlowModal({
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5">
                         <p className="font-bold text-sm">Google Workspace</p>
-                        {googleUser && (
+                        {(personalEmail || workEmail || googleUser) && (
                           <span className="text-[10px] bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 px-1.5 py-0.2 rounded font-bold">Connected</span>
                         )}
                       </div>
                       <p className="text-[11px] text-zinc-500 truncate">
-                        {googleUser?.email ? googleUser.email : 'Gmail, Calendar, Docs, Sheets, Drive'}
+                        {personalEmail || workEmail || googleUser?.email || 'Gmail, Calendar, Docs, Sheets, Drive'}
                       </p>
                     </div>
                   </div>
-                  {googleUser ? (
-                    <span className="px-3 py-1 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-700 rounded-full text-xs font-bold flex items-center gap-1 flex-shrink-0">
-                      <span>✓</span> Ready
-                    </span>
-                  ) : (
-                    <button 
-                      type="button"
-                      onClick={handleConnectGoogle}
-                      className="px-4 py-2 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white transition-all shadow-md flex-shrink-0"
-                    >
-                      Connect OAuth
-                    </button>
-                  )}
+                  <span className="px-3 py-1 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-700 rounded-full text-xs font-bold flex items-center gap-1 flex-shrink-0">
+                    <span>✓</span> Ready
+                  </span>
                 </div>
 
                 {/* WhatsApp Business - LOCKED */}
@@ -733,7 +777,7 @@ export default function OnboardingFlowModal({
                   onClick={goToNext}
                   className="w-full py-4 bg-black dark:bg-white dark:text-black hover:scale-[1.01] text-white font-bold rounded-2xl transition-all shadow-lg text-base flex items-center justify-center gap-2"
                 >
-                  <span>Generate My Life OS</span>
+                  <span>Launch My Life OS</span>
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
                 </button>
               </div>
@@ -746,12 +790,14 @@ export default function OnboardingFlowModal({
               <div className="relative w-24 h-24 mb-8">
                 <div className="absolute inset-0 border-4 border-blue-200 dark:border-blue-900 rounded-full"></div>
                 <div className="absolute inset-0 border-4 border-blue-600 rounded-full border-t-transparent animate-spin"></div>
-                <div className="absolute inset-0 flex items-center justify-center font-bold text-blue-600 text-2xl">L</div>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <CompassNeedleIcon className="w-10 h-10 text-blue-600" />
+                </div>
               </div>
               <h3 className="text-2xl font-bold mb-4">Building your Life OS...</h3>
               
               <div className="space-y-3 w-full text-sm font-medium text-zinc-500 dark:text-zinc-400">
-                <p className={buildingStage >= 0 ? 'text-blue-600 dark:text-blue-400' : ''}>✓ Analyzing your role and goals</p>
+                <p className={buildingStage >= 0 ? 'text-blue-600 dark:text-blue-400' : ''}>✓ Analyzing your role and strategic priorities</p>
                 <p className={`transition-opacity ${buildingStage >= 1 ? 'opacity-100 text-blue-600 dark:text-blue-400' : 'opacity-30'}`}>✓ Generating custom trackers in Google Sheets</p>
                 <p className={`transition-opacity ${buildingStage >= 2 ? 'opacity-100 text-blue-600 dark:text-blue-400' : 'opacity-30'}`}>✓ Initializing autonomous execution engine</p>
               </div>

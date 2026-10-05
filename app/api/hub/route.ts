@@ -147,7 +147,7 @@ export async function GET(req: NextRequest) {
     if (!userData) {
       userData = {
         tasks: [
-          { id: 'task-1', title: 'Review Alex Rivera Q4 strategic proposal draft', notes: 'Life OS has drafted reply in Actions Deck', due: new Date(Date.now() + 86400000).toISOString(), status: 'needsAction' },
+          { id: 'task-1', title: 'Review Q4 financial strategy and invoice ledger in Sheets', notes: 'Life OS has linked actions in Google Sheets', due: new Date(Date.now() + 86400000).toISOString(), status: 'needsAction' },
           { id: 'task-2', title: 'Schedule medical checkups for parents in Drive', notes: 'Compare lab packages via Google Doc', due: new Date(Date.now() + 172800000).toISOString(), status: 'needsAction' },
           { id: 'task-3', title: 'Confirm Meaningful Outcome on quarterly growth plan', notes: 'Lock chat when satisfied', status: 'completed' },
         ],
