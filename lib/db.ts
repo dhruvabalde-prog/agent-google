@@ -3,13 +3,15 @@ import bcrypt from 'bcryptjs';
 import { encryptData, decryptData } from './crypto';
 import { CORE_MASTER_SKILLS, INITIAL_SUBSCRIPTION_TIERS, SubscriptionTier, SkillDefinition, parseSkillsFromMarkdown } from './skills-catalog';
 
-// Super Admin seed configuration
-export const SUPER_ADMIN_EMAILS = [
-  'dhruvabalde@gmail.com',
-  'ddhruva21balde@gmail.com',
-  (process.env.SUPER_ADMIN_EMAIL || 'dhruvabalde@gmail.com').toLowerCase(),
-];
-export const SUPER_ADMIN_EMAIL = 'dhruvabalde@gmail.com';
+// Super Admin configuration purely from environment variables - no personal emails hardcoded
+export const SUPER_ADMIN_EMAILS: string[] = (
+  process.env.SUPER_ADMIN_EMAILS || process.env.SUPER_ADMIN_EMAIL || ''
+)
+  .split(',')
+  .map(e => e.trim().toLowerCase())
+  .filter(Boolean);
+
+export const SUPER_ADMIN_EMAIL = SUPER_ADMIN_EMAILS[0] || '';
 export const SUPER_ADMIN_PINS = [
   '111111',
   process.env.SUPER_ADMIN_PIN || '111111',
@@ -20,7 +22,7 @@ export const SUPER_ADMIN_PIN_HASH = bcrypt.hashSync(SUPER_ADMIN_PIN, 10);
 export function isSuperAdminEmail(email?: string): boolean {
   if (!email) return false;
   const normalized = email.trim().toLowerCase();
-  return SUPER_ADMIN_EMAILS.includes(normalized) || normalized.includes('dhruva');
+  return SUPER_ADMIN_EMAILS.includes(normalized);
 }
 
 export function isValidAdminPin(pin?: string): boolean {

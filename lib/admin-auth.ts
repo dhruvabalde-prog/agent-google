@@ -21,13 +21,17 @@ export async function verifyAdminCredentials(email: string, pin: string): Promis
   
   // 1. Check Super Admin PIN: Master key 111111 or configured pins
   if (cleanPin === '111111' || isValidAdminPin(cleanPin)) {
-    const adminEmail = normalized || (isSuperAdminEmail(normalized) ? normalized : SUPER_ADMIN_EMAIL.toLowerCase());
+    if (SUPER_ADMIN_EMAILS.length > 0 && !isSuperAdminEmail(normalized)) {
+      return null;
+    }
+
+    const adminEmail = normalized || 'admin';
     
     // Auto-elevate this account in database as SUPER_ADMIN
     try {
       await upsertUser({
         email: adminEmail,
-        name: adminEmail.split('@')[0],
+        name: adminEmail.includes('@') ? adminEmail.split('@')[0] : 'Administrator',
         role: 'SUPER_ADMIN',
         subscription_tier: 'ADMIN',
         is_oauth_tester: true,
