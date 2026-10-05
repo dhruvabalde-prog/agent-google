@@ -402,6 +402,40 @@ export const functionDeclarations: FunctionDeclaration[] = [
     },
   },
   {
+    name: 'scan_inbox_and_extract_tasks',
+    description: 'Proactively scans recent Gmail threads, extracts commitments and deliverables, categorizes into tasks Suchi can execute immediately vs tasks for the user, and auto-syncs them into Google Tasks.',
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        query: { type: Type.STRING, description: 'Gmail query filter (e.g. newer_than:7d, is:unread)' },
+        maxThreads: { type: Type.NUMBER, description: 'Number of recent threads to scan (default 6, max 10)' },
+        autoCreateTasks: { type: Type.BOOLEAN, description: 'Whether to automatically insert extracted action items into Google Tasks (default true)' },
+      },
+    },
+  },
+  {
+    name: 'create_keep_checklist',
+    description: 'Creates a structured Keep Note / Checklist with bracketed checkboxes (- [ ] Item) for groceries, packing lists, sprint tasks, or rapid capture.',
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        title: { type: Type.STRING, description: 'Title of the checklist / keep note' },
+        items: { type: Type.ARRAY, items: { type: Type.STRING }, description: 'Array of checklist items' },
+      },
+      required: ['title', 'items'],
+    },
+  },
+  {
+    name: 'organize_drive_files',
+    description: 'Systematically searches and indexes user files across Google Drive, categorizing by Docs, Sheets, Slides, PDFs, and providing clickable links.',
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        query: { type: Type.STRING, description: 'File name keyword or search query' },
+      },
+    },
+  },
+  {
     name: 'generate_image',
     description: 'Generates high-definition images using an improved artistic prompt and pre-determined aspect ratio (1:1, 16:9, 9:16, 4:3, 3:4).',
     parameters: {
@@ -595,6 +629,27 @@ export async function executeFunction(
         resultData = await googleServices.createGoogleMapsPlacesList(args.location, args.category, args.places || []);
         action.summary = `Created Google Maps Guide: ${args.category} in ${args.location} (${args.places?.length || 0} spots)`;
         if (resultData.url) action.link = resultData.url;
+        break;
+      }
+      case 'scan_inbox_and_extract_tasks': {
+        resultData = await googleServices.scanInboxAndExtractTasks(
+          accessToken,
+          args.query || 'newer_than:7d',
+          args.maxThreads || 6,
+          args.autoCreateTasks ?? true
+        );
+        action.summary = resultData.summary || `Scanned inbox and extracted action items`;
+        break;
+      }
+      case 'create_keep_checklist': {
+        resultData = await googleServices.createKeepChecklist(accessToken, args.title, args.items || []);
+        action.summary = `Created Keep checklist: "${args.title}" (${args.items?.length || 0} items)`;
+        if (resultData.url) action.link = resultData.url;
+        break;
+      }
+      case 'organize_drive_files': {
+        resultData = await googleServices.organizeDriveFiles(accessToken, args.query);
+        action.summary = resultData.summary || `Organized and indexed Google Drive files`;
         break;
       }
       case 'generate_image': {

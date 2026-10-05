@@ -713,6 +713,229 @@ export async function deleteDraft(accessToken: string, draftId: string) {
   }
 }
 
+// Proactive Inbox Scanner & Task Extractor
+export async function scanInboxAndExtractTasks(
+  accessToken: string,
+  query: string = 'newer_than:7d',
+  maxThreads: number = 6,
+  autoCreateTasks: boolean = true
+) {
+  try {
+    const auth = getAuth(accessToken);
+    const gmail = google.gmail({ version: 'v1', auth });
+    const tasksApi = google.tasks({ version: 'v1', auth });
+
+    // 1. Fetch recent messages
+    const listRes = await gmail.users.messages.list({
+      userId: 'me',
+      q: query,
+      maxResults: Math.min(Math.max(maxThreads, 1), 10),
+    });
+
+    const messages = listRes.data.messages || [];
+    if (messages.length === 0) {
+      return {
+        threadsScanned: 0,
+        suchiTasks: [],
+        userTasks: [],
+        tasksCreated: 0,
+        summary: 'Inbox scanned: No recent messages matching criteria.',
+      };
+    }
+
+    const suchiTasks: { title: string; notes: string; due?: string; from: string; subject: string; messageId: string }[] = [];
+    const userTasks: { title: string; notes: string; due?: string; from: string; subject: string; messageId: string }[] = [];
+
+    // 2. Read each thread snippet and subject
+    for (const msg of messages) {
+      try {
+        const fullMsg = await gmail.users.messages.get({
+          userId: 'me',
+          id: msg.id!,
+          format: 'metadata',
+          metadataHeaders: ['From', 'Subject', 'Date'],
+        });
+
+        const headers = fullMsg.data.payload?.headers || [];
+        const fromHeader = headers.find(h => h.name?.toLowerCase() === 'from')?.value || 'Unknown Sender';
+        const subjectHeader = headers.find(h => h.name?.toLowerCase() === 'subject')?.value || '(No Subject)';
+        const snippet = fullMsg.data.snippet || '';
+
+        const lowerSnippet = snippet.toLowerCase();
+        const lowerSubj = subjectHeader.toLowerCase();
+
+        // Categorize into Suchi vs User tasks based on action keywords
+        if (
+          lowerSnippet.includes('draft') ||
+          lowerSnippet.includes('meeting') ||
+          lowerSnippet.includes('schedule') ||
+          lowerSnippet.includes('send over') ||
+          lowerSnippet.includes('can you check') ||
+          lowerSnippet.includes('calendar') ||
+          lowerSnippet.includes('please find') ||
+          lowerSubj.includes('agenda')
+        ) {
+          suchiTasks.push({
+            title: `Prepare / Draft: ${subjectHeader.slice(0, 60)}`,
+            notes: `From: ${fromHeader}\nContext: ${snippet}`,
+            from: fromHeader,
+            subject: subjectHeader,
+            messageId: msg.id!,
+          });
+        } else {
+          userTasks.push({
+            title: `Review / Action: ${subjectHeader.slice(0, 60)}`,
+            notes: `From: ${fromHeader}\nContext: ${snippet}`,
+            from: fromHeader,
+            subject: subjectHeader,
+            messageId: msg.id!,
+          });
+        }
+      } catch (err) {
+        // Skip failed individual message
+      }
+    }
+
+    let tasksCreated = 0;
+    // 3. Auto-create tasks in Google Tasks if requested
+    if (autoCreateTasks) {
+      try {
+        const listsRes = await tasksApi.tasklists.list({ maxResults: 10 });
+        let targetListId = '@default';
+        const lists = listsRes.data.items || [];
+        const existingList = lists.find(l => l.title?.toLowerCase().includes('inbox') || l.title?.toLowerCase().includes('action'));
+        if (existingList?.id) {
+          targetListId = existingList.id;
+        }
+
+        // Create up to 5 top tasks
+        const combined = [...suchiTasks.slice(0, 3), ...userTasks.slice(0, 3)];
+        for (const t of combined) {
+          await tasksApi.tasks.insert({
+            tasklist: targetListId,
+            requestBody: {
+              title: t.title,
+              notes: t.notes,
+            },
+          });
+          tasksCreated++;
+        }
+      } catch (tasksErr) {
+        console.warn('Could not auto-insert tasks into Google Tasks:', tasksErr);
+      }
+    }
+
+    return {
+      threadsScanned: messages.length,
+      suchiTasks,
+      userTasks,
+      tasksCreated,
+      summary: `Scanned ${messages.length} email threads. Identified ${suchiTasks.length} tasks for Suchi and ${userTasks.length} tasks for User. Created ${tasksCreated} tasks in Google Tasks.`,
+    };
+  } catch (error: any) {
+    return { error: error.message };
+  }
+}
+
+// Google Keep / Checklists Engine
+export async function createKeepChecklist(accessToken: string, title: string, items: string[]) {
+  try {
+    const auth = getAuth(accessToken);
+    const tasksApi = google.tasks({ version: 'v1', auth });
+
+    // Look for or create a Keep Notes / Checklists tasklist
+    const listsRes = await tasksApi.tasklists.list({ maxResults: 10 });
+    let targetListId = '@default';
+    const lists = listsRes.data.items || [];
+    let keepList = lists.find(l => l.title?.toLowerCase() === 'keep notes' || l.title?.toLowerCase() === 'checklists');
+    
+    if (!keepList) {
+      try {
+        const createListRes = await tasksApi.tasklists.insert({
+          requestBody: { title: 'Keep Notes & Checklists' },
+        });
+        if (createListRes.data.id) targetListId = createListRes.data.id;
+      } catch (e) {
+        targetListId = '@default';
+      }
+    } else if (keepList.id) {
+      targetListId = keepList.id;
+    }
+
+    // Format content with bracketed checkboxes
+    const checklistNotes = items.map(item => `- [ ] ${item}`).join('\n');
+
+    const createdTask = await tasksApi.tasks.insert({
+      tasklist: targetListId,
+      requestBody: {
+        title: `📝 ${title}`,
+        notes: checklistNotes,
+      },
+    });
+
+    return {
+      id: createdTask.data.id,
+      title,
+      itemCount: items.length,
+      items,
+      checklistText: checklistNotes,
+      listTitle: 'Keep Notes & Checklists',
+      url: 'https://tasks.google.com',
+    };
+  } catch (error: any) {
+    return { error: error.message };
+  }
+}
+
+// Google Drive Systematic File Organizer & Indexer
+export async function organizeDriveFiles(accessToken: string, query?: string) {
+  try {
+    const auth = getAuth(accessToken);
+    const drive = google.drive({ version: 'v3', auth });
+
+    const q = query ? `name contains '${query}' and trashed = false` : 'trashed = false';
+    const res = await drive.files.list({
+      q,
+      pageSize: 20,
+      fields: 'files(id, name, mimeType, modifiedTime, webViewLink, iconLink, size)',
+      orderBy: 'modifiedTime desc',
+    });
+
+    const files = res.data.files || [];
+    const categorized: Record<string, { id: string; name: string; link: string; modifiedTime?: string }[]> = {
+      Documents: [],
+      Spreadsheets: [],
+      Presentations: [],
+      PDFs: [],
+      Others: [],
+    };
+
+    for (const f of files) {
+      const mime = f.mimeType || '';
+      const item = {
+        id: f.id || '',
+        name: f.name || 'Untitled',
+        link: f.webViewLink || `https://drive.google.com/file/d/${f.id}/view`,
+        modifiedTime: f.modifiedTime || undefined,
+      };
+
+      if (mime.includes('document')) categorized.Documents.push(item);
+      else if (mime.includes('spreadsheet')) categorized.Spreadsheets.push(item);
+      else if (mime.includes('presentation')) categorized.Presentations.push(item);
+      else if (mime.includes('pdf')) categorized.PDFs.push(item);
+      else categorized.Others.push(item);
+    }
+
+    return {
+      totalFiles: files.length,
+      categorized,
+      summary: `Found and indexed ${files.length} files across Google Drive.`,
+    };
+  } catch (error: any) {
+    return { error: error.message };
+  }
+}
+
 export async function searchInternet(query: string) {
   try {
     const res = await fetch(`https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`, {

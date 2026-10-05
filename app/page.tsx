@@ -10,6 +10,7 @@ import MyDayView, { CalendarEvent, TaskItem, GoalItem } from '@/components/MyDay
 import ActionsDeckView, { ActionDeckItem } from '@/components/ActionsDeckView';
 
 import { RoutineItem } from '@/components/RoutinePlayerModal';
+import DelegationSettingsModal, { DelegationSettings, DEFAULT_DELEGATION_SETTINGS } from '@/components/DelegationSettingsModal';
 
 interface ArchiveChat {
   id: string;
@@ -210,6 +211,19 @@ export default function Home() {
   // Voice Typing (Speech-to-Text dictation)
   const [isVoiceTyping, setIsVoiceTyping] = useState(false);
   const speechRecognitionRef = useRef<any>(null);
+  // Delegation & Autonomy Settings
+  const [isDelegationModalOpen, setIsDelegationModalOpen] = useState(false);
+  const [delegationSettings, setDelegationSettings] = useState<DelegationSettings>(DEFAULT_DELEGATION_SETTINGS);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('suchi_delegation_settings_v1');
+      if (stored) {
+        setDelegationSettings({ ...DEFAULT_DELEGATION_SETTINGS, ...JSON.parse(stored) });
+      }
+    } catch (e) {}
+  }, []);
+
   const [welcomeCapabilities, setWelcomeCapabilities] = useState<string[]>([]);
 
   useEffect(() => {
@@ -1075,6 +1089,7 @@ export default function Home() {
           chatId: currentChatId,
           isIncognito,
           meaningfulOutcome,
+          delegationSettings,
           messages: chatHistory.map(m => ({ role: m.role, content: m.content })),
         }),
       });
@@ -1758,6 +1773,21 @@ export default function Home() {
                         <span>{isIncognito ? 'Exit Incognito' : 'Incognito Mode'}</span>
                       </span>
                       <span className="text-[10px] text-zinc-400 font-medium">{isIncognito ? 'Active' : 'Off'}</span>
+                    </button>
+
+                    {/* Delegation & Autonomy Settings */}
+                    <button
+                      type="button"
+                      onClick={() => { setIsSettingsOpen(false); setIsDelegationModalOpen(true); }}
+                      className="w-full text-left px-3 py-2 hover:bg-zinc-100 dark:hover:bg-zinc-800/70 rounded-lg mx-auto flex items-center justify-between transition-colors"
+                    >
+                      <span className="flex items-center gap-2.5">
+                        <span className="text-sm">⚡</span>
+                        <span>Delegation & Autonomy</span>
+                      </span>
+                      <span className="text-[10px] text-blue-500 font-semibold uppercase tracking-wider">
+                        {delegationSettings.globalMode.slice(0, 4)}
+                      </span>
                     </button>
 
                     {/* Chats Archive */}
@@ -2973,6 +3003,15 @@ export default function Home() {
           </div>
         </div>
       )}
+
+      {/* DELEGATION & AUTONOMY SETTINGS MODAL */}
+      <DelegationSettingsModal
+        isOpen={isDelegationModalOpen}
+        onClose={() => setIsDelegationModalOpen(false)}
+        isDarkMode={isDarkMode}
+        isIncognito={isIncognito}
+        onSave={setDelegationSettings}
+      />
 
       {/* BUG REPORTING & INCOMPLETE WORK MODAL */}
       {isBugModalOpen && (

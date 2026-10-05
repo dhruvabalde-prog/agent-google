@@ -159,11 +159,19 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { messages, chatId, isIncognito, meaningfulOutcome } = body as {
+    const { messages, chatId, isIncognito, meaningfulOutcome, delegationSettings } = body as {
       messages: { role: 'user' | 'assistant'; content: string }[];
       chatId?: string;
       isIncognito?: boolean;
       meaningfulOutcome?: string;
+      delegationSettings?: {
+        globalMode: 'AUTONOMOUS' | 'COLLABORATIVE' | 'ADVISORY';
+        emailMode: 'DRAFT_AND_APPROVE' | 'AUTONOMOUS_SEND';
+        docsMode: 'AUTO_CREATE' | 'OUTLINE_FIRST';
+        calendarMode: 'AUTO_SCHEDULE' | 'CHECK_AVAILABILITY';
+        tasksMode: 'AUTO_ORGANIZE' | 'REVIEW_FIRST';
+        inboxSweeper: boolean;
+      };
     };
 
     // User & Tier mapping
@@ -235,7 +243,22 @@ export async function POST(request: NextRequest) {
       skillInstructions = `\n\nACTIVE SKILLS KNOWLEDGE BASE (TIER: ${tier}):\n${skillsListSummary}\n\nOPERATIONAL RULES:\n1. If key parameters are needed, ask a concise clarifying question with '- [A] Choice 1', '- [B] Choice 2'.\n2. Execute all relevant Google Workspace tool calls autonomously to produce high-standard deliverables.\n3. Always link completed artifacts with a single direct master link.`;
     }
 
-    const dynamicSystemPrompt = `${SYSTEM_PROMPT}${temporalAnchor}${skillInstructions}`;
+    let delegationNotice = '';
+    if (delegationSettings) {
+      delegationNotice = `\n\nUSER CONFIGURED DELEGATION POLICY (STRICT BOUNDARIES):\n` +
+        `- Global Autonomy Mode: ${delegationSettings.globalMode}\n` +
+        `  * AUTONOMOUS: You have full executive authority to build Docs, Sheets, Slides, Tasks, Keep Notes, and Research immediately. Do not ask for pre-approval—execute the tool calls and report back with concise summaries and master links.\n` +
+        `  * COLLABORATIVE: Preview drafts and outlines for major items. For emails, ALWAYS use draft_reply so the user can review and approve with one click.\n` +
+        `  * ADVISORY: Outline the proposed plan first and ask for user confirmation before modifying Workspace files.\n` +
+        `- Gmail Email Mode: ${delegationSettings.emailMode === 'DRAFT_AND_APPROVE' ? 'Mandatory draft_reply for user approval before sending.' : 'Autonomous sending permitted.'}\n` +
+        `- Docs & Sheets Mode: ${delegationSettings.docsMode === 'AUTO_CREATE' ? 'Direct creation enabled.' : 'Present outline first.'}\n` +
+        `- Calendar Mode: ${delegationSettings.calendarMode === 'AUTO_SCHEDULE' ? 'Direct scheduling into open slots enabled.' : 'Confirm slot first.'}\n` +
+        `- Tasks & Keep Checklists: ${delegationSettings.tasksMode === 'AUTO_ORGANIZE' ? 'Auto-insert into Google Tasks and Keep enabled.' : 'Review in chat first.'}\n` +
+        `- Inbox Sweeper: ${delegationSettings.inboxSweeper ? 'Active: Proactively scan email threads and extract actionable tasks when asked.' : 'Disabled.'}\n` +
+        `RULE: Strictly honor these user preferences at all times.\n`;
+    }
+
+    const dynamicSystemPrompt = `${SYSTEM_PROMPT}${temporalAnchor}${delegationNotice}${skillInstructions}`;
 
     const convertedMessages = messages.map(m => ({
       role: m.role === 'assistant' ? 'model' : 'user',
