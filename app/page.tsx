@@ -1944,324 +1944,35 @@ export default function Home() {
     }`}>
       {/* HEADER - Sized comfortable & pretty for phones & desktops */}
       <header className={`h-16 border-b px-3.5 sm:px-5 flex items-center justify-between z-20 transition-all ${
-        isIncognito
-          ? 'bg-[#151125]/90 border-purple-900/40 backdrop-blur-md text-purple-100'
-          : isDarkMode
-          ? 'bg-[#111827]/90 border-slate-800/80 backdrop-blur-md text-slate-100'
-          : 'bg-white/90 border-slate-200/80 backdrop-blur-md text-slate-800 shadow-xs'
-      }`}>
-        {/* Left: Brand - Life OS Logo (Tapping opens Right Drawer) */}
-        <button
-          type="button"
-          onClick={() => setIsModeDrawerOpen(true)}
-          title="Open Life OS Navigation & Toolkit Drawer"
-          className="flex items-center gap-2 sm:gap-2.5 flex-shrink-0 group cursor-pointer text-left focus:outline-none"
-        >
-          <span className={`w-8 h-8 rounded-xl flex items-center justify-center p-1.5 shadow-sm transition-all group-hover:scale-105 active:scale-95 ${
-            isIncognito
-              ? 'bg-purple-950 border border-purple-700/60 shadow-purple-950/50'
-              : isDarkMode
-              ? 'bg-slate-900 border border-slate-800'
-              : 'bg-slate-950 border border-slate-800'
-          }`}>
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="20" height="20">
-              <circle cx="16" cy="16" r="12" fill="none" stroke="#475569" strokeWidth="2"/>
-              <polygon points="16,6.5 19,16 16,14.5" fill={isIncognito ? '#a855f7' : '#38bdf8'}/>
-              <polygon points="16,25.5 19,16 16,17.5" fill="#94a3b8"/>
-              <circle cx="16" cy="16" r="2.5" fill="#ffffff"/>
-            </svg>
-          </span>
-          <div className="flex items-baseline gap-1.5">
-            <span className="font-bold text-base tracking-tight">Life OS</span>
-            <span className={`text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded-full border ${
-              chatMode === 'home'
-                ? 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20'
-                : 'text-blue-500 bg-blue-500/10 border-blue-500/20'
-            }`}>
-              {chatMode === 'home' ? 'Home' : 'Work'}
-            </span>
-          </div>
-        </button>
-
-        {/* Center: 2 Chat Slots Selector (Visible when on Chat Tab) */}
-        {activeAppTab === 'chat' && (
-          <div className="flex items-center gap-1 p-0.5 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
-            <button
-              type="button"
-              onClick={() => setActiveSlot(1)}
-              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
-                activeSlot === 1
-                  ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-2xs'
-                  : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
-              }`}
-            >
-              Chat 1
-              {slot1Loading && <span className="ml-1 w-1.5 h-1.5 rounded-full bg-blue-500 inline-block animate-ping" />}
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveSlot(2)}
-              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
-                activeSlot === 2
-                  ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-2xs'
-                  : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
-              }`}
-            >
-              Chat 2
-              {slot2Loading && <span className="ml-1 w-1.5 h-1.5 rounded-full bg-blue-500 inline-block animate-ping" />}
-            </button>
-          </div>
-        )}
-
-        {/* Right: Mode Switcher & DP Dropdown */}
-        <div className="flex items-center gap-2 sm:gap-2.5">
-          {/* Mode Switcher Toggle Button (Home vs Work) */}
-          <button
-            type="button"
-            onClick={() => handleModeChange(chatMode === 'home' ? 'work' : 'home')}
-            title={`Switch Operating Mode (Currently in ${chatMode === 'home' ? 'Home Mode' : 'Work Mode'})`}
-            className={`h-9 px-2.5 sm:px-3 rounded-xl border text-xs font-bold transition-all flex items-center gap-1.5 hover:scale-105 active:scale-95 shadow-2xs ${
-              chatMode === 'home'
-                ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
-                : 'border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-300'
-            }`}
-          >
-            <span>{chatMode === 'home' ? '🏠' : '💼'}</span>
-            <span className="capitalize font-bold text-[11px] hidden xs:inline">{chatMode}</span>
-          </button>
-
-          {/* Settings Trigger with Click-Outside Ref */}
-          <div ref={settingsRef} className="relative">
-            <button
-              onClick={() => setIsSettingsOpen(!isSettingsOpen)}
-              className={`h-10 px-2 sm:px-2.5 rounded-xl border text-xs font-medium transition-all flex items-center gap-1.5 hover:scale-105 active:scale-95 ${
-                isIncognito
-                  ? 'border-purple-800/60 bg-purple-950/60 hover:bg-purple-900/60 text-purple-300'
-                  : isDarkMode
-                  ? 'border-zinc-800 bg-zinc-900 hover:bg-zinc-800 text-zinc-200'
-                  : 'border-zinc-200 hover:bg-zinc-100 text-zinc-700 bg-white shadow-2xs'
-              }`}
-            >
-              {user ? (
-                <img src={user.picture} alt={user.name} className="w-6 h-6 rounded-full" />
-              ) : (
-                <span className="px-1 font-medium">Settings ▾</span>
-              )}
-            </button>
-
-            {/* Simplistic, Minimalist Dropdown Menu */}
-            {isSettingsOpen && (
-              <div className={`absolute right-0 mt-2 w-56 border rounded-2xl shadow-xl py-1.5 z-50 text-xs backdrop-blur-md transition-all ${
-                isIncognito
-                  ? 'bg-[#151124]/95 border-purple-900/50 text-zinc-300'
-                  : isDarkMode
-                  ? 'bg-zinc-900/95 border-zinc-800 text-zinc-300'
-                  : 'bg-white/95 border-zinc-200 text-zinc-700 shadow-black/5'
-              }`}>
-                {user ? (
-                  <>
-                    <div className="px-3.5 py-2 border-b border-zinc-100 dark:border-zinc-800/80 mb-1">
-                      <p className="font-semibold text-zinc-900 dark:text-zinc-100 truncate">{user.name}</p>
-                      <p className="text-[10px] text-zinc-400 dark:text-zinc-500 truncate">{user.email}</p>
-                    </div>
-
-                    {/* Appearance (Theme) Toggle */}
-                    <button
-                      type="button"
-                      onClick={toggleDarkMode}
-                      className="w-full text-left px-3 py-2 hover:bg-zinc-100 dark:hover:bg-zinc-800/70 rounded-lg mx-auto flex items-center justify-between transition-colors"
-                    >
-                      <span className="flex items-center gap-2.5">
-                        {isDarkMode ? (
-                          <svg className="w-3.5 h-3.5 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-                          </svg>
-                        ) : (
-                          <svg className="w-3.5 h-3.5 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                          </svg>
-                        )}
-                        <span>{isDarkMode ? 'Light Mode' : 'Dark Mode'}</span>
-                      </span>
-                      <span className="text-[10px] text-zinc-400 font-mono">{isDarkMode ? 'DARK' : 'LIGHT'}</span>
-                    </button>
-
-                    {/* Incognito Mode */}
-                    <button
-                      type="button"
-                      onClick={() => { setIsSettingsOpen(false); handleToggleIncognito(); }}
-                      className="w-full text-left px-3 py-2 hover:bg-zinc-100 dark:hover:bg-zinc-800/70 rounded-lg mx-auto flex items-center justify-between transition-colors"
-                    >
-                      <span className="flex items-center gap-2.5">
-                        <svg className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                        </svg>
-                        <span>{isIncognito ? 'Exit Incognito' : 'Incognito Mode'}</span>
-                      </span>
-                      <span className="text-[10px] text-zinc-400 font-medium">{isIncognito ? 'Active' : 'Off'}</span>
-                    </button>
-
-                    {/* Admin Panel Link */}
-                    {(user.email === 'dhruvabalde@gmail.com' || user.email === 'ddhruva21balde@gmail.com') && (
-                      <Link
-                        href="/admin"
-                        className="w-full text-left px-3 py-2 hover:bg-zinc-100 dark:hover:bg-zinc-800/70 rounded-lg mx-auto flex items-center justify-between transition-colors border-t border-zinc-100 dark:border-zinc-800 mt-1"
-                        onClick={() => setIsSettingsOpen(false)}
-                      >
-                        <span className="flex items-center gap-2.5">
-                          <svg className="w-3.5 h-3.5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                          </svg>
-                          <span className="text-emerald-600 dark:text-emerald-400 font-medium">Admin Portal</span>
-                        </span>
-                        <span className="text-slate-400 text-[10px]">↗</span>
-                      </Link>
-                    )}
-
-                    {/* Delegation & Autonomy Settings */}
-                    <button
-                      type="button"
-                      onClick={() => { setIsSettingsOpen(false); setIsDelegationModalOpen(true); }}
-                      className="w-full text-left px-3 py-2 hover:bg-zinc-100 dark:hover:bg-zinc-800/70 rounded-lg mx-auto flex items-center justify-between transition-colors"
-                    >
-                      <span className="flex items-center gap-2.5">
-                        <span className="text-sm">⚡</span>
-                        <span>Delegation & Autonomy</span>
-                      </span>
-                      <span className="text-[10px] text-blue-500 font-semibold uppercase tracking-wider">
-                        {delegationSettings.globalMode.slice(0, 4)}
-                      </span>
-                    </button>
-
-                    {/* Chats Archive */}
-                    <button
-                      type="button"
-                      onClick={() => { setIsSettingsOpen(false); openArchive(); }}
-                      className="w-full text-left px-3 py-2 hover:bg-zinc-100 dark:hover:bg-zinc-800/70 rounded-lg mx-auto flex items-center justify-between transition-colors"
-                    >
-                      <span className="flex items-center gap-2.5">
-                        <svg className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
-                        </svg>
-                        <span>Chats Archive</span>
-                      </span>
-                      <span className="text-[10px] text-zinc-400 font-mono">⌘A</span>
-                    </button>
-
-                    {/* Memory (Locked) */}
-                    <button
-                      type="button"
-                      disabled
-                      title="Memory: Life OS securely stores context given by you across sessions. Management controls locked."
-                      className="w-full text-left px-3 py-2 flex items-center justify-between text-zinc-400 dark:text-zinc-500 cursor-not-allowed"
-                    >
-                      <span className="flex items-center gap-2.5">
-                        <svg className="w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
-                        </svg>
-                        <span>Memory</span>
-                      </span>
-                      <span className="text-[10px] text-zinc-400 dark:text-zinc-600 font-medium">Locked</span>
-                    </button>
-
-                    {/* Privacy & Security */}
-                    <Link
-                      href="/privacy"
-                      onClick={() => setIsSettingsOpen(false)}
-                      className="w-full text-left px-3 py-2 hover:bg-zinc-100 dark:hover:bg-zinc-800/70 rounded-lg mx-auto flex items-center justify-between transition-colors"
-                    >
-                      <span className="flex items-center gap-2.5">
-                        <svg className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                        </svg>
-                        <span>Privacy & Security</span>
-                      </span>
-                    </Link>
-
-                    {/* Report Bug / Issue */}
-                    <button
-                      type="button"
-                      onClick={() => { setIsSettingsOpen(false); handleOpenBugModal(); }}
-                      className="w-full text-left px-3 py-2 hover:bg-zinc-100 dark:hover:bg-zinc-800/70 rounded-lg mx-auto flex items-center justify-between transition-colors"
-                    >
-                      <span className="flex items-center gap-2.5">
-                        <svg className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                        </svg>
-                        <span>Report Bug</span>
-                      </span>
-                    </button>
-
-                    {/* Install App */}
-                    <button
-                      type="button"
-                      onClick={() => { setIsSettingsOpen(false); handleInstallApp(); }}
-                      className="w-full text-left px-3 py-2 hover:bg-zinc-100 dark:hover:bg-zinc-800/70 rounded-lg mx-auto flex items-center justify-between transition-colors"
-                    >
-                      <span className="flex items-center gap-2.5">
-                        <svg className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                        </svg>
-                        <span>Install App</span>
-                      </span>
-                      {isInstallable && <span className="text-[10px] text-zinc-400 font-mono">PWA</span>}
-                    </button>
-
-                    <div className="border-t border-zinc-100 dark:border-zinc-800/80 my-1"></div>
-
-                    {/* Delete Chat */}
-                    <button
-                      type="button"
-                      onClick={() => { setIsSettingsOpen(false); handleDeleteCurrentChat(); }}
-                      className="w-full text-left px-3 py-2 hover:bg-red-500/10 text-red-600 dark:text-red-400 rounded-lg mx-auto flex items-center gap-2.5 transition-colors"
-                    >
-                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                      <span>Delete Chat</span>
-                    </button>
-
-                    {/* Sign Out */}
-                    <button
-                      type="button"
-                      onClick={() => { setIsSettingsOpen(false); handleLogout(); }}
-                      className="w-full text-left px-3 py-2 hover:bg-zinc-100 dark:hover:bg-zinc-800/70 text-zinc-500 dark:text-zinc-400 rounded-lg mx-auto flex items-center gap-2.5 transition-colors"
-                    >
-                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                      </svg>
-                      <span>Sign Out</span>
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <button
-                      onClick={() => { handleInstallApp(); setIsSettingsOpen(false); }}
-                      className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center justify-between text-blue-600 font-medium"
-                    >
-                      <span className="flex items-center gap-1.5">
-                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                        </svg>
-                        <span>Install Life OS App</span>
-                      </span>
-                      {isInstallable && <span className="bg-blue-100 text-blue-700 text-[9px] px-1.5 py-0.5 rounded font-bold">READY</span>}
-                    </button>
-                    <button
-                      onClick={handleLogin}
-                      className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 font-semibold text-blue-600"
-                    >
-                      Connect Google Account
-                    </button>
-                  </>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-
-      </header>
+  isIncognito
+    ? 'bg-[#151125]/90 border-purple-900/40 backdrop-blur-md text-purple-100'
+    : isDarkMode
+    ? 'bg-[#111827]/90 border-slate-800/80 backdrop-blur-md text-slate-100'
+    : 'bg-white/90 border-slate-200/80 backdrop-blur-md text-slate-800 shadow-xs'
+}`}>
+  {/* Left: Brand - Life OS Logo (Tapping opens Left Drawer) */}
+  <button
+    type="button"
+    onClick={() => setIsModeDrawerOpen(true)}
+    title="Open Life OS Navigation Drawer"
+    className="flex items-center gap-2 sm:gap-2.5 flex-shrink-0 group cursor-pointer text-left focus:outline-none"
+  >
+    <span className={`w-8 h-8 rounded-xl flex items-center justify-center p-1.5 shadow-sm transition-all group-hover:scale-105 active:scale-95 ${
+      isIncognito
+        ? 'bg-purple-950 border border-purple-700/60 shadow-purple-950/50'
+        : isDarkMode
+        ? 'bg-slate-900 border border-slate-800'
+        : 'bg-slate-950 border border-slate-800'
+    }`}>
+      <svg viewBox="0 0 24 24" className="w-full h-full text-white dark:text-slate-100" fill="currentColor">
+        <path d="M12 2L2 22h20L12 2z" />
+      </svg>
+    </span>
+    <div>
+      <h1 className="font-bold text-sm sm:text-[15px] leading-tight tracking-tight">Life OS</h1>
+    </div>
+  </button>
+</header>
 
       {/* 1. DASHBOARDS TAB VIEW (Dynamic per user persona and Home vs Work mode) */}
       {activeAppTab === 'dashboards' && (
@@ -2392,44 +2103,13 @@ export default function Home() {
           <main ref={scrollContainerRef} onScroll={handleMessagesScroll} className="flex-1 overflow-y-auto px-4 py-6">
             <div className="max-w-3xl mx-auto space-y-6">
               {messages.length === 0 && (
-                <div className="flex flex-col items-center justify-center min-h-[50vh] text-center px-4">
-                  <span className="w-12 h-12 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-center p-2 shadow-md mb-4">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="28" height="28">
-                      <circle cx="16" cy="16" r="13" fill="none" stroke="#334155" strokeWidth="1.5"/>
-                      <polygon points="16,5 19.5,16 16,14" fill="#3b82f6"/>
-                      <polygon points="16,5 12.5,16 16,14" fill="#60a5fa"/>
-                      <polygon points="16,27 19.5,16 16,18" fill="#64748b"/>
-                      <polygon points="16,27 12.5,16 16,18" fill="#94a3b8"/>
-                      <circle cx="16" cy="16" r="2.5" fill="#ffffff" stroke="#0f172a" strokeWidth="1"/>
-                    </svg>
-                  </span>
-                  <h2 className="text-xl sm:text-2xl font-bold tracking-tight mb-3">
-                    Hey {user?.name ? user.name.split(' ')[0] : 'User'}, what can I do for you?
-                  </h2>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mb-6 max-w-md">
-                    Your autonomous Chief of Staff & Life OS. Minimum time & attention spent, maximum clarity & benefit received.
-                  </p>
-                  <div className="flex flex-wrap justify-center gap-2 max-w-lg">
-                    {welcomeCapabilities.map((cap, i) => (
-                      <button
-                        key={i}
-                        onClick={() => sendMessage(cap)}
-                        className={`px-3.5 py-2 rounded-2xl border text-xs shadow-xs transition-all text-left hover:scale-[1.02] active:scale-[0.98] ${
-                          isIncognito
-                            ? 'border-purple-800/60 bg-[#1a142e] hover:bg-purple-900/40 text-purple-200 hover:border-purple-600'
-                            : isDarkMode
-                            ? 'border-slate-800 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:border-slate-700'
-                            : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700 hover:border-slate-300 shadow-2xs'
-                        }`}
-                      >
-                        ✦ {cap}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
+  <div className="flex flex-col items-center justify-center min-h-[50vh] text-center px-4">
+    <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-200 mb-2">What can I help you with today?</h2>
+    <p className="text-sm text-slate-500 max-w-md">Type a message below to search your files, schedule an event, or chat with Life OS.</p>
+  </div>
+)}
 
-              {(() => {
+                {(() => {
                 const userIndices = messages
                   .map((m, idx) => (m.role === 'user' ? idx : -1))
                   .filter(idx => idx !== -1);
@@ -3746,287 +3426,89 @@ export default function Home() {
         </div>
       )}
 
-      {/* RIGHT TOP DRAWER: HOME & LIFE DUAL MODE COCKPIT */}
-      {isModeDrawerOpen && (
-        <div className="fixed inset-0 z-50 flex justify-end">
-          {/* Backdrop */}
-          <div
-            className="fixed inset-0 bg-black/40 backdrop-blur-xs transition-opacity animate-in fade-in"
-            onClick={() => setIsModeDrawerOpen(false)}
-          />
+      {/* LEFT NAVIGATION DRAWER */}
+{isModeDrawerOpen && (
+  <div className="fixed inset-0 z-50 flex justify-start">
+    {/* Backdrop */}
+    <div
+      className="fixed inset-0 bg-black/40 backdrop-blur-xs transition-opacity animate-in fade-in"
+      onClick={() => setIsModeDrawerOpen(false)}
+    />
 
-          {/* Drawer Panel */}
-          <div className={`relative w-full max-w-sm sm:max-w-md h-full shadow-2xl flex flex-col z-10 overflow-y-auto animate-in slide-in-from-right duration-200 border-l ${
-            isDarkMode || isIncognito
-              ? 'bg-slate-900 border-slate-800 text-slate-100'
-              : 'bg-white border-slate-200 text-slate-800'
-          }`}>
-            {/* Header */}
-            <div className="p-4 sm:p-5 border-b flex items-center justify-between flex-shrink-0">
-              <div className="flex items-center gap-2">
-                <span className="w-7 h-7 rounded-lg bg-blue-600/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-sm">
-                  🧭
-                </span>
-                <div>
-                  <h3 className="font-bold text-sm leading-tight">Operating Mode</h3>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400">Toggle persona & quick toolkits</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsModeDrawerOpen(false)}
-                className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                title="Close drawer"
-              >
-                ✕
-              </button>
+    {/* Drawer Panel */}
+    <div className={`relative w-full max-w-[280px] h-full shadow-2xl flex flex-col z-10 overflow-hidden animate-in slide-in-from-left duration-200 border-r ${
+      isDarkMode || isIncognito
+        ? 'bg-slate-900 border-slate-800 text-slate-100'
+        : 'bg-white border-slate-200 text-slate-800'
+    }`}>
+      {/* Top: Home/Work Toggle */}
+      <div className="p-4 border-b border-slate-200 dark:border-slate-800">
+        <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
+          <button
+            onClick={() => handleModeChange('home')}
+            className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${chatMode === 'home' ? 'bg-white dark:bg-slate-700 shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
+          >
+            Home
+          </button>
+          <button
+            onClick={() => handleModeChange('work')}
+            className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${chatMode === 'work' ? 'bg-white dark:bg-slate-700 shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
+          >
+            Work
+          </button>
+        </div>
+      </div>
+
+      {/* Navigation Links */}
+      <div className="flex-1 overflow-y-auto p-3 space-y-1">
+        <button onClick={() => { setActiveView('chat'); setIsModeDrawerOpen(false); }} className={`w-full text-left px-3 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-3 transition-colors ${activeView === 'chat' ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400' : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'}`}>
+          <span>💬</span> Chats
+        </button>
+        <button onClick={() => { setActiveView('myday'); setIsModeDrawerOpen(false); }} className={`w-full text-left px-3 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-3 transition-colors ${activeView === 'myday' ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400' : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'}`}>
+          <span>☀️</span> My Day & Goals
+        </button>
+        <button onClick={() => { setActiveView('dashboards'); setIsModeDrawerOpen(false); }} className={`w-full text-left px-3 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-3 transition-colors ${activeView === 'dashboards' ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400' : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'}`}>
+          <span>📊</span> Dashboards
+        </button>
+        <button onClick={() => { setActiveView('systems'); setIsModeDrawerOpen(false); }} className={`w-full text-left px-3 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-3 transition-colors ${activeView === 'systems' ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400' : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'}`}>
+          <span>⚙️</span> Systems & Routines
+        </button>
+      </div>
+
+      {/* Bottom: Profile & Settings */}
+      <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 space-y-3">
+        {userProfile && (
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold shadow-sm">
+              {userProfile.name.charAt(0)}
             </div>
-
-            {/* Segmented Mode Switcher */}
-            <div className="p-4 sm:p-5 flex flex-col gap-4 flex-1">
-              <div className="p-1 rounded-2xl bg-slate-100 dark:bg-slate-800 grid grid-cols-2 gap-1 border border-slate-200/80 dark:border-slate-700/80">
-                <button
-                  type="button"
-                  onClick={() => handleModeChange('home')}
-                  className={`py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all ${
-                    chatMode === 'home'
-                      ? 'bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-400 shadow-sm border border-emerald-500/20 scale-[1.02]'
-                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-                  }`}
-                >
-                  <span className="text-base">🏠</span>
-                  <span>Home Mode</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleModeChange('work')}
-                  className={`py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all ${
-                    chatMode === 'work'
-                      ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-sm border border-blue-500/20 scale-[1.02]'
-                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-                  }`}
-                >
-                  <span className="text-base">💼</span>
-                  <span>Work Mode</span>
-                </button>
-              </div>
-
-              {/* Mode Context Description */}
-              <div className={`p-3 rounded-xl border text-xs leading-relaxed ${
-                chatMode === 'home'
-                  ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-800 dark:text-emerald-300'
-                  : 'bg-blue-500/10 border-blue-500/20 text-blue-800 dark:text-blue-300'
-              }`}>
-                {chatMode === 'home' ? (
-                  <p>
-                    <strong>🏠 Home Mode:</strong> Curates personal vitality, health diagnostics, aging parent care, grocery/packing checklists, family schedules, and household finances.
-                  </p>
-                ) : (
-                  <p>
-                    <strong>💼 Work Mode:</strong> Powers salaried professionals, entrepreneurs &amp; founders. Features 1-tap WhatsApp communication, direct call briefings, vendor search, and B2B customer outreach.
-                  </p>
-                )}
-              </div>
-
-              {/* Mode-Specific Power Tools & Forms */}
-              {chatMode === 'work' ? (
-                <div className="flex flex-col gap-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                      ⚡ Quick Action Tools (Work Mode)
-                    </span>
-                  </div>
-
-                  {/* WhatsApp Quick Launcher Box */}
-                  <div className="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 flex flex-col gap-2.5">
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-xs flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
-                        <span>💬</span> 1-Tap WhatsApp Launcher
-                      </span>
-                      <span className="text-[9px] font-semibold bg-emerald-500/10 text-emerald-600 px-1.5 py-0.5 rounded-md">
-                        wa.me
-                      </span>
-                    </div>
-                    <label className="text-[11px] font-semibold text-slate-500">Phone with country code (e.g. 919876543210):</label>
-                    <input
-                      type="tel"
-                      value={quickWaPhone}
-                      onChange={(e) => setQuickWaPhone(e.target.value)}
-                      aria-label="Recipient Phone Number"
-                      className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                    />
-                    <div className="flex gap-1 flex-wrap">
-                      {[
-                        { label: 'Invoice', text: 'Hi, checking in on the status of our pending invoice. Please share an update!' },
-                        { label: 'RFQ Quote', text: 'Hi, sharing our scope requirements. Could you send your estimated quotation and turnaround time?' },
-                        { label: 'Catch up', text: 'Hi, had a quick question regarding our upcoming sync. Let me know when you are free for 5 mins!' }
-                      ].map(t => (
-                        <button
-                          key={t.label}
-                          type="button"
-                          onClick={() => setQuickWaMsg(t.text)}
-                          className="text-[10px] px-2 py-0.5 rounded-md bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-emerald-500 hover:text-white transition-colors"
-                        >
-                          {t.label}
-                        </button>
-                      ))}
-                    </div>
-                    <label className="text-[11px] font-semibold text-slate-500">Message:</label>
-                    <textarea
-                      rows={2}
-                      value={quickWaMsg}
-                      onChange={(e) => setQuickWaMsg(e.target.value)}
-                      aria-label="Message Text"
-                      className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500 resize-none"
-                    />
-                    <button
-                      type="button"
-                      disabled={!quickWaPhone.trim() || !quickWaMsg.trim()}
-                      onClick={() => {
-                        const cleanPhone = quickWaPhone.replace(/[^\d]/g, '');
-                        const url = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(quickWaMsg)}`;
-                        window.open(url, '_blank');
-                      }}
-                      className="w-full py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all disabled:opacity-40"
-                    >
-                      <span>Open WhatsApp Chat ↗</span>
-                    </button>
-                  </div>
-
-                  {/* Pre-Call Briefing Launcher */}
-                  <div className="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 flex flex-col gap-2.5">
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-xs flex items-center gap-1.5 text-blue-600 dark:text-blue-400">
-                        <span>📞</span> Direct Call & Pre-Call Briefing
-                      </span>
-                      <span className="text-[9px] font-semibold bg-blue-500/10 text-blue-600 px-1.5 py-0.5 rounded-md">
-                        tel:
-                      </span>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <label className="text-[10px] font-semibold text-slate-500 block mb-1">Contact Name:</label>
-                        <input
-                          type="text"
-                          value={quickCallContact}
-                          onChange={(e) => setQuickCallContact(e.target.value)}
-                          aria-label="Contact Name"
-                          className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[10px] font-semibold text-slate-500 block mb-1">Phone Number:</label>
-                        <input
-                          type="tel"
-                          value={quickCallPhone}
-                          onChange={(e) => setQuickCallPhone(e.target.value)}
-                          aria-label="Phone Number"
-                          className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
-                        />
-                      </div>
-                    </div>
-                    <label className="text-[10px] font-semibold text-slate-500 block">Call Objective:</label>
-                    <input
-                      type="text"
-                      value={quickCallObjective}
-                      onChange={(e) => setQuickCallObjective(e.target.value)}
-                      aria-label="Call Objective"
-                      className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    />
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        disabled={!quickCallPhone.trim()}
-                        onClick={() => {
-                          const tel = `tel:${quickCallPhone.replace(/[\s()-]/g, '')}`;
-                          window.location.href = tel;
-                        }}
-                        className="flex-1 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center justify-center gap-1 shadow-sm transition-all disabled:opacity-40"
-                      >
-                        <span>Call Now 📞</span>
-                      </button>
-                      <button
-                        type="button"
-                        disabled={!quickCallContact.trim()}
-                        onClick={() => {
-                          setIsModeDrawerOpen(false);
-                          sendMessage(`Prepare an executive pre-call briefing for my upcoming phone call with ${quickCallContact} (${quickCallPhone}). Objective: ${quickCallObjective || 'Strategic discussion'}. Include 3 punchy talking points, leverage points, and landmines to avoid.`);
-                        }}
-                        className="py-2 px-3 rounded-xl border border-blue-600 text-blue-600 dark:text-blue-400 font-bold text-xs hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-colors disabled:opacity-40"
-                      >
-                        Briefing in Chat
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* 1-Tap Trigger Chips */}
-                  <div className="flex flex-col gap-1.5">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 pt-1">
-                      💼 Instant Prompts
-                    </span>
-                    {[
-                      { icon: '🏢', title: 'Compare 3 Vendors in Sheets', prompt: 'Find and compare 3 leading vendors for my project in Google Sheets with side-by-side costs, turnaround times, and pros/cons.' },
-                      { icon: '🎯', title: 'Start B2B Customer Outreach', prompt: 'Create a B2B customer connect outreach pipeline with Gmail drafts, WhatsApp follow-ups, and a Google Sheets lead tracker.' },
-                      { icon: '📄', title: 'Build Appraisal Brag Sheet', prompt: 'Help me draft an executive performance brag sheet in Google Docs with measurable business outcomes and promotion talking points.' },
-                      { icon: '🏛️', title: 'Business Entity & GST Checklist', prompt: 'Provide a step-by-step business setup checklist (LLP vs Pvt Ltd, GST, founder agreement, banking) in Google Keep.' },
-                    ].map(item => (
-                      <button
-                        key={item.title}
-                        type="button"
-                        onClick={() => {
-                          setIsModeDrawerOpen(false);
-                          sendMessage(item.prompt);
-                        }}
-                        className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-blue-500/40 bg-white dark:bg-slate-800/60 hover:bg-blue-500/5 text-left flex items-center gap-2.5 transition-all text-xs"
-                      >
-                        <span className="text-sm">{item.icon}</span>
-                        <span className="font-semibold flex-1">{item.title}</span>
-                        <span className="text-slate-400">→</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <div className="flex flex-col gap-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                      🌿 Quick Action Tools (Home Mode)
-                    </span>
-                  </div>
-
-                  {/* 1-Tap Trigger Chips for Home Mode */}
-                  <div className="flex flex-col gap-1.5">
-                    {[
-                      { icon: '🩺', title: 'Annual Health Checkup Blueprint', prompt: 'Create my Annual Preventive Health Checkup blueprint and schedule comprehensive age-appropriate diagnostic blood panels.' },
-                      { icon: '📝', title: 'Keep Grocery & Meal Checklist', prompt: 'Create a healthy weekly grocery and meal planning checklist in Google Keep.' },
-                      { icon: '👴', title: 'Aging Parents Medication & Doctor Hub', prompt: 'Organize a medical schedule, doctor appointment log, and medication tracker for aging parents in Google Tasks and Keep.' },
-                      { icon: '💰', title: 'Personal Balance Sheet in Sheets', prompt: 'Build a monthly household expense budget and SIP investment tracker with automated formulas in Google Sheets.' },
-                      { icon: '🧳', title: 'Travel Packing Master List', prompt: 'Generate an organized travel packing checklist in Google Keep grouped by essentials, electronics, and documents.' },
-                      { icon: '🌅', title: 'Evening Wind-down Routine', prompt: 'Set up an evening digital-sunset and habit routine in Google Tasks to protect mental bandwidth.' },
-                    ].map(item => (
-                      <button
-                        key={item.title}
-                        type="button"
-                        onClick={() => {
-                          setIsModeDrawerOpen(false);
-                          sendMessage(item.prompt);
-                        }}
-                        className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-emerald-500/40 bg-white dark:bg-slate-800/60 hover:bg-emerald-500/5 text-left flex items-center gap-2.5 transition-all text-xs"
-                      >
-                        <span className="text-sm">{item.icon}</span>
-                        <span className="font-semibold flex-1">{item.title}</span>
-                        <span className="text-slate-400">→</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
+            <div className="flex-1 overflow-hidden">
+              <p className="text-sm font-bold truncate">{userProfile.name}</p>
+              <p className="text-[10px] text-slate-500 uppercase tracking-wider">{userProfile.userType}</p>
             </div>
           </div>
+        )}
+        
+        <div className="grid grid-cols-2 gap-2">
+          <button onClick={toggleDarkMode} className="flex items-center justify-center gap-2 py-2 bg-slate-200 dark:bg-slate-800 rounded-lg text-xs font-bold hover:bg-slate-300 dark:hover:bg-slate-700 transition-colors">
+            {isDarkMode ? '☀️ Light' : '🌙 Dark'}
+          </button>
+          <button onClick={() => { setIsIncognito(!isIncognito); setMessages([]); }} className={`flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold transition-colors ${isIncognito ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' : 'bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700'}`}>
+            🕵️ Incognito
+          </button>
         </div>
-      )}
+        
+        {isAdmin && (
+          <button onClick={() => window.location.href = '/admin'} className="w-full mt-2 py-2 bg-slate-800 dark:bg-slate-200 text-white dark:text-slate-800 rounded-lg text-xs font-bold hover:opacity-90 transition-opacity flex justify-center items-center gap-2">
+            Admin Portal ↗
+          </button>
+        )}
+      </div>
+    </div>
+  </div>
+)}
 
-      {/* FULLSCREEN ACTIONS DECK (1 card per viewport, no scroll, auto swipe-up) */}
+        {/* FULLSCREEN ACTIONS DECK (1 card per viewport, no scroll, auto swipe-up) */}
       <ActionCardsDeck
         isOpen={isActionsDeckOpen}
         onClose={() => setIsActionsDeckOpen(false)}
