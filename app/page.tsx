@@ -3001,12 +3001,12 @@ export default function Home() {
                   </button>
                 )}
 
-              {/* Compass Needle Skill Suggestion Button (Replaces Bulb) */}
+              {/* Compass Needle Strategy Suggestion Button */}
               <button
                 type="button"
                 onClick={handleCompassSuggestion}
                 disabled={isChatLocked || isOtherSlotWorking}
-                title="Executive Strategy & Skill Suggestion"
+                title="Executive Strategy & Action Suggestion"
                 className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-blue-500 hover:bg-blue-100 dark:hover:bg-blue-950/40 transition-colors disabled:opacity-40"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="w-4 h-4">

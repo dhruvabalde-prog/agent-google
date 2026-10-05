@@ -111,17 +111,14 @@ export default function OnboardingFlowModal({
 
   // --- Profile State ---
   const [name, setName] = useState(initialProfile?.name || '');
+  const [phoneDigits, setPhoneDigits] = useState(
+    initialProfile?.phoneNumber ? initialProfile.phoneNumber.replace(/\D/g, '').slice(-10) : ''
+  );
   const [phone, setPhone] = useState(initialProfile?.phoneNumber || '');
   const [gender, setGender] = useState<'female' | 'male' | 'non_binary' | 'prefer_not_to_say'>(initialProfile?.gender || 'prefer_not_to_say');
   const [userType, setUserType] = useState<UserType>(initialProfile?.userType || 'working_professional');
   const [workingCategory, setWorkingCategory] = useState<WorkingProfessionalCategory>(initialProfile?.workingCategory || 'salaried');
   const [subCategory, setSubCategory] = useState<string>('');
-  
-  // Admin Login Prompt
-  const [isAdminLoginOpen, setIsAdminLoginOpen] = useState(false);
-  const [adminEmail, setAdminEmail] = useState('');
-  const [adminPin, setAdminPin] = useState('');
-  const [adminError, setAdminError] = useState('');
   
   // Answers state
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -156,9 +153,10 @@ export default function OnboardingFlowModal({
   };
 
   const finalizeOnboarding = (overrideProfile?: Partial<UserProfile>) => {
+    const finalPhone = phoneDigits.trim() ? `+91 ${phoneDigits.trim()}` : phone.trim();
     const updated: UserProfile = {
       name: name.trim() || 'Life OS Member',
-      phoneNumber: phone.trim(),
+      phoneNumber: finalPhone,
       gender,
       userType,
       workingCategory: userType === 'working_professional' ? workingCategory : undefined,
@@ -169,6 +167,11 @@ export default function OnboardingFlowModal({
       updatedAt: new Date().toISOString(),
       ...overrideProfile,
     };
+    try {
+      localStorage.setItem('lifeos_onboarding_v2_completed', 'true');
+      localStorage.setItem('lifeos_user_profile', JSON.stringify(updated));
+      localStorage.setItem('agent_google_user_profile', JSON.stringify(updated));
+    } catch(e) {}
     onSaveProfile(updated);
     onClose();
   };
@@ -188,49 +191,66 @@ export default function OnboardingFlowModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-hidden">
+    <div className={`fixed inset-0 z-50 w-full h-full min-h-screen overflow-y-auto flex flex-col ${
+      isDarkMode ? 'bg-zinc-950 text-zinc-100' : 'bg-slate-50 text-zinc-900'
+    }`}>
       <style>{`
         @keyframes slideInRight {
-          from { transform: translateX(40px); opacity: 0; }
+          from { transform: translateX(24px); opacity: 0; }
           to { transform: translateX(0); opacity: 1; }
         }
         @keyframes slideInLeft {
-          from { transform: translateX(-40px); opacity: 0; }
+          from { transform: translateX(-24px); opacity: 0; }
           to { transform: translateX(0); opacity: 1; }
         }
       `}</style>
       
-      <div className={`w-full max-w-xl h-[600px] rounded-3xl border shadow-2xl flex flex-col relative overflow-hidden ${
-        isDarkMode ? 'bg-zinc-900 border-zinc-800 text-zinc-100' : 'bg-white border-zinc-200 text-zinc-900'
-      }`}>
-        
-        {/* Header - Hidden on building step */}
-        {currentStep < BUILDING_STEP && (
-          <div className={`px-6 py-4 border-b flex items-center justify-between z-10 ${
-            isDarkMode ? 'bg-zinc-950/80 border-zinc-800' : 'bg-slate-50 border-zinc-200'
-          }`}>
-            <div className="flex items-center gap-3">
-              {currentStep > 0 && (
-                <button onClick={goToPrev} className="p-1.5 rounded-full hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 18l-6-6 6-6"/></svg>
-                </button>
-              )}
-              <h2 className="text-lg font-bold">Personalize Life OS</h2>
-            </div>
-            
-            {/* Progress dots */}
-            <div className="flex gap-1">
-              {Array.from({ length: OAUTH_STEP + 1 }).map((_, i) => (
-                <div key={i} className={`h-1.5 rounded-full transition-all ${
-                  i === currentStep ? 'w-4 bg-blue-500' : i < currentStep ? 'w-1.5 bg-blue-300 dark:bg-blue-800' : 'w-1.5 bg-zinc-200 dark:bg-zinc-700'
-                }`} />
-              ))}
+      {/* Top Header - Mobile-first sticky navigation */}
+      {currentStep < BUILDING_STEP && (
+        <header className={`w-full px-4 sm:px-6 py-3.5 border-b sticky top-0 z-30 flex items-center justify-between backdrop-blur-md ${
+          isDarkMode ? 'bg-zinc-950/90 border-zinc-800/80' : 'bg-white/90 border-slate-200/80'
+        }`}>
+          <div className="flex items-center gap-3">
+            {currentStep > 0 ? (
+              <button
+                type="button"
+                onClick={goToPrev}
+                className="w-8 h-8 rounded-xl flex items-center justify-center border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                title="Previous Step"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M15 18l-6-6 6-6"/></svg>
+              </button>
+            ) : (
+              <div className="w-8 h-8 rounded-xl bg-blue-600 flex items-center justify-center text-white font-black text-sm shadow-sm">
+                L
+              </div>
+            )}
+            <div>
+              <h2 className="text-sm font-bold tracking-tight">Life OS Onboarding</h2>
+              <p className="text-[11px] text-zinc-500">Step {currentStep + 1} of {OAUTH_STEP + 1}</p>
             </div>
           </div>
-        )}
+          
+          {/* Progress Indicator */}
+          <div className="flex items-center gap-1.5">
+            {Array.from({ length: OAUTH_STEP + 1 }).map((_, i) => (
+              <div
+                key={i}
+                className={`h-1.5 rounded-full transition-all duration-300 ${
+                  i === currentStep
+                    ? 'w-5 bg-blue-600'
+                    : i < currentStep
+                    ? 'w-2 bg-blue-400 dark:bg-blue-700'
+                    : 'w-1.5 bg-zinc-200 dark:bg-zinc-800'
+                }`}
+              />
+            ))}
+          </div>
+        </header>
+      )}
 
-        {/* Dynamic Content Area */}
-        <div key={currentStep} className={`flex-1 overflow-y-auto p-6 flex flex-col ${slideClass}`}>
+      {/* Main Full-Page Responsive Container */}
+      <main className={`flex-1 w-full max-w-lg mx-auto p-4 sm:p-6 md:p-8 flex flex-col justify-between ${slideClass}`}>
           
           {/* STEP 0: IDENTITY */}
           {currentStep === 0 && (
@@ -254,19 +274,35 @@ export default function OnboardingFlowModal({
                 </div>
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-500">Phone Number (Optional)</label>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-500">Mobile Number (Optional)</label>
                     <span className="text-[11px] text-zinc-400">For WhatsApp & Direct Calls</span>
                   </div>
-                  <input
-                    type="tel"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="+91 98765 43210"
-                    className={`w-full px-4 py-3 rounded-xl text-sm border focus:outline-none focus:ring-2 focus:ring-blue-500 ${isDarkMode ? 'bg-zinc-800 border-zinc-700 text-white' : 'bg-zinc-50 border-zinc-200 text-zinc-900'}`}
-                  />
+                  {/* Locked +91 prefix badge */}
+                  <div className={`flex items-center rounded-xl border focus-within:ring-2 focus-within:ring-blue-500 overflow-hidden ${
+                    isDarkMode ? 'bg-zinc-800 border-zinc-700 text-white' : 'bg-zinc-50 border-zinc-200 text-zinc-900'
+                  }`}>
+                    <div className="flex items-center gap-1.5 px-3.5 py-3 bg-zinc-200/70 dark:bg-zinc-800 border-r border-zinc-200 dark:border-zinc-700 font-bold text-xs text-zinc-700 dark:text-zinc-200 select-none flex-shrink-0">
+                      <span>🇮🇳</span>
+                      <span>+91</span>
+                    </div>
+                    <input
+                      type="tel"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      maxLength={10}
+                      value={phoneDigits}
+                      onChange={(e) => {
+                        const digits = e.target.value.replace(/\D/g, '').slice(0, 10);
+                        setPhoneDigits(digits);
+                        setPhone(digits ? `+91 ${digits}` : '');
+                      }}
+                      placeholder="Enter 10-digit number"
+                      className="flex-1 px-3.5 py-3 bg-transparent text-sm focus:outline-none placeholder:text-zinc-400 font-mono tracking-wider"
+                    />
+                  </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-1.5">Gender (Tailors health, biometric & routine skills)</label>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-1.5">Gender (Tailors health, biometric & daily routines)</label>
                   <div className="grid grid-cols-3 gap-2">
                     {[
                       { id: 'female', label: 'Female ♀' },
@@ -291,6 +327,7 @@ export default function OnboardingFlowModal({
               </div>
               <div className="mt-auto pt-8">
                 <button
+                  type="button"
                   onClick={goToNext}
                   disabled={!name.trim()}
                   className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 disabled:bg-zinc-300 dark:disabled:bg-zinc-700 disabled:text-zinc-500 text-white font-bold rounded-xl transition-all shadow-lg"
@@ -306,7 +343,7 @@ export default function OnboardingFlowModal({
             <div className="flex flex-col h-full overflow-y-auto">
               <div className="mb-4">
                 <h3 className="text-xl font-bold mb-1">What best describes you?</h3>
-                <p className="text-xs text-zinc-500">Life OS configures distinct skill sets based on your role.</p>
+                <p className="text-xs text-zinc-500">Life OS configures distinct capabilities and intelligence profiles based on your role.</p>
               </div>
               <div className="grid grid-cols-1 gap-2.5">
                 {[
@@ -314,13 +351,13 @@ export default function OnboardingFlowModal({
                   { id: 'entrepreneur', icon: '🚀', title: 'Entrepreneur & Founder', desc: 'Startups, Agency Owners & Growth Leaders' },
                   { id: 'student', icon: '🎓', title: 'Student', desc: 'School, University & Competitive Exams' },
                   { id: 'seniors', icon: '☕', title: 'Home & Personal', desc: 'Retirees, Homemakers & Family Managers' },
-                  { id: 'admin', icon: '🛡️', title: 'Admin / System Commander', desc: 'Master credentials verification & sovereign unlock' },
+                  { id: 'admin', icon: '🛡️', title: 'Admin / System Commander', desc: 'Sovereign console access & governance' },
                 ].map(type => (
                   <button
                     key={type.id}
                     onClick={() => {
                       if (type.id === 'admin') {
-                        setIsAdminLoginOpen(true);
+                        window.location.href = '/admin';
                       } else if (type.id === 'entrepreneur') {
                         setUserType('working_professional');
                         setWorkingCategory('entrepreneur');
@@ -331,7 +368,7 @@ export default function OnboardingFlowModal({
                       }
                     }}
                     className={`flex items-center gap-3.5 p-3.5 rounded-2xl border transition-all text-left group ${
-                      (userType === type.id || (type.id === 'admin' && isAdminLoginOpen))
+                      userType === type.id
                         ? 'border-blue-500 bg-blue-500/10 ring-1 ring-blue-500/50'
                         : isDarkMode ? 'border-zinc-800 bg-zinc-800/40 hover:bg-zinc-800' : 'border-zinc-200 bg-white hover:bg-zinc-50'
                     }`}
@@ -347,53 +384,6 @@ export default function OnboardingFlowModal({
                   </button>
                 ))}
               </div>
-
-              {/* Inline Admin Verification Prompt */}
-              {isAdminLoginOpen && (
-                <div className="mt-4 p-4 rounded-2xl border border-blue-500/60 bg-blue-500/5 space-y-3 animate-in fade-in duration-200">
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-bold text-xs uppercase tracking-wider text-blue-500 flex items-center gap-1.5">
-                      <span>🛡️</span> Admin Credentials Verification
-                    </h4>
-                    <button type="button" onClick={() => setIsAdminLoginOpen(false)} className="text-xs text-zinc-400 hover:text-zinc-200">Cancel</button>
-                  </div>
-                  <input
-                    type="email"
-                    placeholder="Enter Admin Gmail (e.g. dhruvabalde@gmail.com)"
-                    value={adminEmail}
-                    onChange={(e) => setAdminEmail(e.target.value)}
-                    className={`w-full px-3.5 py-2.5 rounded-xl text-xs border focus:outline-none focus:ring-1 focus:ring-blue-500 ${isDarkMode ? 'bg-zinc-900 border-zinc-700 text-white' : 'bg-white border-zinc-200 text-zinc-900'}`}
-                  />
-                  <input
-                    type="password"
-                    placeholder="Enter 6-Digit PIN"
-                    maxLength={6}
-                    value={adminPin}
-                    onChange={(e) => setAdminPin(e.target.value)}
-                    className={`w-full px-3.5 py-2.5 rounded-xl text-xs border focus:outline-none focus:ring-1 focus:ring-blue-500 ${isDarkMode ? 'bg-zinc-900 border-zinc-700 text-white' : 'bg-white border-zinc-200 text-zinc-900'}`}
-                  />
-                  {adminError && <p className="text-xs text-red-500 font-medium">{adminError}</p>}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const normEmail = (adminEmail || '').trim().toLowerCase();
-                      const cleanPin = (adminPin || '').trim();
-                      if (cleanPin === '111111' && (normEmail.includes('dhruva') || normEmail.includes('admin') || normEmail === 'dhruvabalde@gmail.com' || normEmail === 'ddhruva21balde@gmail.com')) {
-                        finalizeOnboarding({
-                          name: normEmail.split('@')[0],
-                          email: normEmail,
-                          userType: 'admin' as any,
-                        });
-                      } else {
-                        setAdminError('Invalid Admin Gmail or PIN.');
-                      }
-                    }}
-                    className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl transition-all shadow-md"
-                  >
-                    Authorize & Launch Admin Life OS ↗
-                  </button>
-                </div>
-              )}
             </div>
           )}
 
@@ -539,7 +529,7 @@ export default function OnboardingFlowModal({
 
           {/* BUILDING SCREEN */}
           {currentStep === BUILDING_STEP && (
-            <div className="flex flex-col h-full justify-center items-center text-center max-w-sm mx-auto animate-pulse">
+            <div className="flex flex-col h-full justify-center items-center text-center max-w-sm mx-auto my-auto animate-pulse">
               <div className="relative w-24 h-24 mb-8">
                 <div className="absolute inset-0 border-4 border-blue-200 dark:border-blue-900 rounded-full"></div>
                 <div className="absolute inset-0 border-4 border-blue-600 rounded-full border-t-transparent animate-spin"></div>
@@ -550,13 +540,11 @@ export default function OnboardingFlowModal({
               <div className="space-y-3 w-full text-sm font-medium text-zinc-500 dark:text-zinc-400">
                 <p className={buildingStage >= 0 ? 'text-blue-600 dark:text-blue-400' : ''}>✓ Analyzing your role and goals</p>
                 <p className={`transition-opacity ${buildingStage >= 1 ? 'opacity-100 text-blue-600 dark:text-blue-400' : 'opacity-30'}`}>✓ Generating custom trackers in Google Sheets</p>
-                <p className={`transition-opacity ${buildingStage >= 2 ? 'opacity-100 text-blue-600 dark:text-blue-400' : 'opacity-30'}`}>✓ Provisioning AI autonomous skill packs</p>
+                <p className={`transition-opacity ${buildingStage >= 2 ? 'opacity-100 text-blue-600 dark:text-blue-400' : 'opacity-30'}`}>✓ Initializing autonomous execution engine</p>
               </div>
             </div>
           )}
-
-        </div>
-      </div>
+      </main>
     </div>
   );
 }
