@@ -207,6 +207,7 @@ export default function Home() {
   // 4 Air-Gapped Chat Slots (2 for Home Mode, 2 for Work Mode)
   const [activeSlot, setActiveSlot] = useState<1 | 2>(1);
   const [chatMode, setChatMode] = useState<AppMode>('work');
+  const [activeView, setActiveView] = useState<'chat'|'myday'|'dashboards'|'systems'>('chat');
 
   // Home Slots
   const [homeSlot1Messages, setHomeSlot1Messages] = useState<ChatMessage[]>([]);
@@ -3540,4 +3541,5 @@ export default function Home() {
     </div>
   );
 }
+
 
