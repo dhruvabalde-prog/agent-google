@@ -1933,6 +1933,7 @@ export default function Home() {
   }, [computedActions]);
 
   const pendingApprovalsCount = computedActions.filter(a => a.status === 'NEEDS_APPROVAL').length;
+  const isAdmin = user && (user.email === 'dhruvabalde@gmail.com' || user.email === 'ddhruva21balde@gmail.com');
 
   return (
 
@@ -3541,5 +3542,6 @@ export default function Home() {
     </div>
   );
 }
+
 
 
