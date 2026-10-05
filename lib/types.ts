@@ -61,6 +61,8 @@ export interface UserProfile {
   instituteCode?: string;
   familyMembers: FamilyMember[];
   teamMembers: TeamMember[];
+  gender?: 'female' | 'male' | 'non_binary' | 'prefer_not_to_say';
+  phoneNumber?: string;
   onboarded?: boolean;
   onboardedAt?: string;
   onboardingCompleted?: boolean;

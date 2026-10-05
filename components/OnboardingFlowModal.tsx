@@ -111,12 +111,19 @@ export default function OnboardingFlowModal({
 
   // --- Profile State ---
   const [name, setName] = useState(initialProfile?.name || '');
-  const [phone, setPhone] = useState('');
+  const [phone, setPhone] = useState(initialProfile?.phoneNumber || '');
   const [otpSent, setOtpSent] = useState(false);
   const [otp, setOtp] = useState('');
+  const [gender, setGender] = useState<'female' | 'male' | 'non_binary' | 'prefer_not_to_say'>(initialProfile?.gender || 'prefer_not_to_say');
   const [userType, setUserType] = useState<UserType>(initialProfile?.userType || 'working_professional');
   const [workingCategory, setWorkingCategory] = useState<WorkingProfessionalCategory>(initialProfile?.workingCategory || 'salaried');
   const [subCategory, setSubCategory] = useState<string>('');
+  
+  // Admin Login Prompt
+  const [isAdminLoginOpen, setIsAdminLoginOpen] = useState(false);
+  const [adminEmail, setAdminEmail] = useState('');
+  const [adminPin, setAdminPin] = useState('');
+  const [adminError, setAdminError] = useState('');
   
   // Answers state
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -130,8 +137,6 @@ export default function OnboardingFlowModal({
 
   const OAUTH_STEP = 3 + questions.length;
   const BUILDING_STEP = OAUTH_STEP + 1;
-
-  if (!isOpen) return null;
 
   const goToNext = () => {
     setSlideDirection('right');
@@ -152,9 +157,11 @@ export default function OnboardingFlowModal({
     }, 350); // Slight delay so user sees selection
   };
 
-  const finalizeOnboarding = () => {
+  const finalizeOnboarding = (overrideProfile?: Partial<UserProfile>) => {
     const updated: UserProfile = {
       name: name.trim() || 'Life OS Member',
+      phoneNumber: phone.trim(),
+      gender,
       userType,
       workingCategory: userType === 'working_professional' ? workingCategory : undefined,
       professionalSubCategory: subCategory,
@@ -162,6 +169,7 @@ export default function OnboardingFlowModal({
       teamMembers: [],
       onboardingCompleted: true,
       updatedAt: new Date().toISOString(),
+      ...overrideProfile,
     };
     onSaveProfile(updated);
     onClose();
@@ -174,10 +182,12 @@ export default function OnboardingFlowModal({
       const timer3 = setTimeout(() => finalizeOnboarding(), 4500);
       return () => { clearTimeout(timer1); clearTimeout(timer2); clearTimeout(timer3); };
     }
-  }, [currentStep]);
+  }, [currentStep, BUILDING_STEP]);
 
   // CSS for slide animation
   const slideClass = slideDirection === 'right' ? 'animate-[slideInRight_0.3s_ease-out]' : 'animate-[slideInLeft_0.3s_ease-out]';
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-hidden">
@@ -277,11 +287,34 @@ export default function OnboardingFlowModal({
                     />
                   </div>
                 )}
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-1.5">Gender (Tailors health, biometric & routine skills)</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { id: 'female', label: 'Female ♀' },
+                      { id: 'male', label: 'Male ♂' },
+                      { id: 'prefer_not_to_say', label: 'Other / Skip' },
+                    ].map(g => (
+                      <button
+                        key={g.id}
+                        type="button"
+                        onClick={() => setGender(g.id as any)}
+                        className={`py-2.5 px-2 rounded-xl text-xs font-bold border transition-all text-center ${
+                          gender === g.id
+                            ? 'bg-blue-600 border-blue-600 text-white shadow-xs'
+                            : isDarkMode ? 'bg-zinc-800 border-zinc-700 text-zinc-300' : 'bg-zinc-100 border-zinc-200 text-zinc-700'
+                        }`}
+                      >
+                        {g.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
               <div className="mt-auto pt-8">
                 <button
                   onClick={goToNext}
-                  disabled={!name.trim() || !otp.trim()}
+                  disabled={!name.trim() || (otpSent && !otp.trim())}
                   className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 disabled:bg-zinc-300 dark:disabled:bg-zinc-700 disabled:text-zinc-500 text-white font-bold rounded-xl transition-all shadow-lg"
                 >
                   Continue
@@ -290,42 +323,97 @@ export default function OnboardingFlowModal({
             </div>
           )}
 
-          {/* STEP 1: PRIMARY USER TYPE */}
+          {/* STEP 1: PRIMARY USER TYPE (5 Personas) */}
           {currentStep === 1 && (
-            <div className="flex flex-col h-full">
-              <div className="mb-6">
-                <h3 className="text-xl font-bold mb-2">What best describes you?</h3>
-                <p className="text-sm text-zinc-500">Life OS configures distinct skill sets based on your role.</p>
+            <div className="flex flex-col h-full overflow-y-auto">
+              <div className="mb-4">
+                <h3 className="text-xl font-bold mb-1">What best describes you?</h3>
+                <p className="text-xs text-zinc-500">Life OS configures distinct skill sets based on your role.</p>
               </div>
-              <div className="grid grid-cols-1 gap-3">
+              <div className="grid grid-cols-1 gap-2.5">
                 {[
-                  { id: 'working_professional', icon: '💼', title: 'Working Professional', desc: 'Salaried, Entrepreneur, or Freelancer' },
-                  { id: 'student', icon: '🎓', title: 'Student', desc: 'School, University, or Competitive Exams' },
-                  { id: 'seniors', icon: '☕', title: 'Home & Personal', desc: 'Retirees, Homemakers, Personal Tracking' },
+                  { id: 'working_professional', icon: '💼', title: 'Working Professional', desc: 'Corporate, Tech, Consulting & Salaried' },
+                  { id: 'entrepreneur', icon: '🚀', title: 'Entrepreneur & Founder', desc: 'Startups, Agency Owners & Growth Leaders' },
+                  { id: 'student', icon: '🎓', title: 'Student', desc: 'School, University & Competitive Exams' },
+                  { id: 'seniors', icon: '☕', title: 'Home & Personal', desc: 'Retirees, Homemakers & Family Managers' },
+                  { id: 'admin', icon: '🛡️', title: 'Admin / System Commander', desc: 'Master credentials verification (PIN 111111)' },
                 ].map(type => (
                   <button
                     key={type.id}
                     onClick={() => {
-                      setUserType(type.id as UserType);
-                      setTimeout(goToNext, 300);
+                      if (type.id === 'admin') {
+                        setIsAdminLoginOpen(true);
+                      } else if (type.id === 'entrepreneur') {
+                        setUserType('working_professional');
+                        setWorkingCategory('entrepreneur');
+                        setTimeout(goToNext, 300);
+                      } else {
+                        setUserType(type.id as UserType);
+                        setTimeout(goToNext, 300);
+                      }
                     }}
-                    className={`flex items-center gap-4 p-4 rounded-2xl border transition-all text-left group ${
-                      userType === type.id
+                    className={`flex items-center gap-3.5 p-3.5 rounded-2xl border transition-all text-left group ${
+                      (userType === type.id || (type.id === 'admin' && isAdminLoginOpen))
                         ? 'border-blue-500 bg-blue-500/10 ring-1 ring-blue-500/50'
                         : isDarkMode ? 'border-zinc-800 bg-zinc-800/40 hover:bg-zinc-800' : 'border-zinc-200 bg-white hover:bg-zinc-50'
                     }`}
                   >
-                    <div className="text-3xl bg-zinc-100 dark:bg-zinc-900 w-12 h-12 flex items-center justify-center rounded-xl">{type.icon}</div>
-                    <div>
-                      <h4 className="font-bold text-base">{type.title}</h4>
-                      <p className="text-xs text-zinc-500">{type.desc}</p>
+                    <div className="text-2xl bg-zinc-100 dark:bg-zinc-900 w-11 h-11 flex items-center justify-center rounded-xl flex-shrink-0">{type.icon}</div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-bold text-sm leading-tight">{type.title}</h4>
+                      <p className="text-[11px] text-zinc-500 truncate">{type.desc}</p>
                     </div>
-                    <div className={`ml-auto w-5 h-5 rounded-full border-2 flex items-center justify-center ${userType === type.id ? 'border-blue-500' : 'border-zinc-300 dark:border-zinc-600'}`}>
-                      {userType === type.id && <div className="w-2.5 h-2.5 bg-blue-500 rounded-full" />}
+                    <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${userType === type.id ? 'border-blue-500' : 'border-zinc-300 dark:border-zinc-600'}`}>
+                      {userType === type.id && <div className="w-2 h-2 bg-blue-500 rounded-full" />}
                     </div>
                   </button>
                 ))}
               </div>
+
+              {/* Inline Admin Verification Prompt */}
+              {isAdminLoginOpen && (
+                <div className="mt-4 p-4 rounded-2xl border border-blue-500/60 bg-blue-500/5 space-y-3 animate-in fade-in duration-200">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-bold text-xs uppercase tracking-wider text-blue-500 flex items-center gap-1.5">
+                      <span>🛡️</span> Admin Credentials Verification
+                    </h4>
+                    <button type="button" onClick={() => setIsAdminLoginOpen(false)} className="text-xs text-zinc-400 hover:text-zinc-200">Cancel</button>
+                  </div>
+                  <input
+                    type="email"
+                    placeholder="Enter Admin Gmail (e.g. dhruvabalde@gmail.com)"
+                    value={adminEmail}
+                    onChange={(e) => setAdminEmail(e.target.value)}
+                    className={`w-full px-3.5 py-2.5 rounded-xl text-xs border focus:outline-none focus:ring-1 focus:ring-blue-500 ${isDarkMode ? 'bg-zinc-900 border-zinc-700 text-white' : 'bg-white border-zinc-200 text-zinc-900'}`}
+                  />
+                  <input
+                    type="password"
+                    placeholder="Enter 6-Digit PIN (111111)"
+                    maxLength={6}
+                    value={adminPin}
+                    onChange={(e) => setAdminPin(e.target.value)}
+                    className={`w-full px-3.5 py-2.5 rounded-xl text-xs border focus:outline-none focus:ring-1 focus:ring-blue-500 ${isDarkMode ? 'bg-zinc-900 border-zinc-700 text-white' : 'bg-white border-zinc-200 text-zinc-900'}`}
+                  />
+                  {adminError && <p className="text-xs text-red-500 font-medium">{adminError}</p>}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (adminPin === '111111' && (adminEmail === 'dhruvabalde@gmail.com' || adminEmail === 'ddhruva21balde@gmail.com' || adminEmail.includes('admin'))) {
+                        finalizeOnboarding({
+                          name: adminEmail.split('@')[0],
+                          email: adminEmail,
+                          userType: 'admin' as any,
+                        });
+                      } else {
+                        setAdminError('Invalid Admin Gmail or PIN.');
+                      }
+                    }}
+                    className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl transition-all shadow-md"
+                  >
+                    Authorize & Launch Admin Life OS ↗
+                  </button>
+                </div>
+              )}
             </div>
           )}
 

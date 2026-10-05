@@ -1944,37 +1944,93 @@ export default function Home() {
         ? 'bg-[#0b0f19] text-slate-100 selection:bg-blue-500/30'
         : 'bg-[#f8fafc] text-slate-900 selection:bg-blue-500/20'
     }`}>
-      {/* HEADER - Sized comfortable & pretty for phones & desktops */}
-      <header className={`h-16 border-b px-3.5 sm:px-5 flex items-center justify-between z-20 transition-all ${
-  isIncognito
-    ? 'bg-[#151125]/90 border-purple-900/40 backdrop-blur-md text-purple-100'
-    : isDarkMode
-    ? 'bg-[#111827]/90 border-slate-800/80 backdrop-blur-md text-slate-100'
-    : 'bg-white/90 border-slate-200/80 backdrop-blur-md text-slate-800 shadow-xs'
-}`}>
-  {/* Left: Brand - Life OS Logo (Tapping opens Left Drawer) */}
-  <button
-    type="button"
-    onClick={() => setIsModeDrawerOpen(true)}
-    title="Open Life OS Navigation Drawer"
-    className="flex items-center gap-2 sm:gap-2.5 flex-shrink-0 group cursor-pointer text-left focus:outline-none"
-  >
-    <span className={`w-8 h-8 rounded-xl flex items-center justify-center p-1.5 shadow-sm transition-all group-hover:scale-105 active:scale-95 ${
-      isIncognito
-        ? 'bg-purple-950 border border-purple-700/60 shadow-purple-950/50'
-        : isDarkMode
-        ? 'bg-slate-900 border border-slate-800'
-        : 'bg-slate-950 border border-slate-800'
-    }`}>
-      <svg viewBox="0 0 24 24" className="w-full h-full text-white dark:text-slate-100" fill="currentColor">
-        <path d="M12 2L2 22h20L12 2z" />
-      </svg>
-    </span>
-    <div>
-      <h1 className="font-bold text-sm sm:text-[15px] leading-tight tracking-tight">Life OS</h1>
-    </div>
-  </button>
-</header>
+      {/* HEADER - Sized comfortable & pretty for phones & desktops (LOCKED TOP) */}
+      <header className={`h-16 flex-shrink-0 sticky top-0 border-b px-3.5 sm:px-5 flex items-center justify-between z-30 transition-all ${
+        isIncognito
+          ? 'bg-[#151125]/95 border-purple-900/40 backdrop-blur-md text-purple-100'
+          : isDarkMode
+          ? 'bg-[#111827]/95 border-slate-800/80 backdrop-blur-md text-slate-100'
+          : 'bg-white/95 border-slate-200/80 backdrop-blur-md text-slate-800 shadow-xs'
+      }`}>
+        {/* Left: Brand - Life OS Logo (Tapping opens Left Drawer) */}
+        <button
+          type="button"
+          onClick={() => setIsModeDrawerOpen(true)}
+          title="Open Life OS Navigation Drawer"
+          className="flex items-center gap-2 sm:gap-2.5 flex-shrink-0 group cursor-pointer text-left focus:outline-none"
+        >
+          <span className={`w-8 h-8 rounded-xl flex items-center justify-center p-1.5 shadow-sm transition-all group-hover:scale-105 active:scale-95 ${
+            isIncognito
+              ? 'bg-purple-950 border border-purple-700/60 shadow-purple-950/50'
+              : isDarkMode
+              ? 'bg-slate-900 border border-slate-800'
+              : 'bg-slate-950 border border-slate-800'
+          }`}>
+            <svg viewBox="0 0 24 24" className="w-full h-full text-white dark:text-slate-100" fill="currentColor">
+              <path d="M12 2L2 22h20L12 2z" />
+            </svg>
+          </span>
+          <div>
+            <h1 className="font-bold text-sm sm:text-[15px] leading-tight tracking-tight">Life OS</h1>
+          </div>
+        </button>
+
+        {/* Right: Home/Work Simple Icon Toggle + Incognito Icon Button */}
+        <div className="flex items-center gap-2">
+          {/* Home/Work Toggle (Minimal Icon Switcher) */}
+          <div className={`flex items-center p-0.5 rounded-xl border ${
+            isDarkMode || isIncognito ? 'bg-slate-900/90 border-slate-800' : 'bg-slate-100 border-slate-200'
+          }`}>
+            <button
+              type="button"
+              onClick={() => handleModeChange('home')}
+              title="Switch to Home Mode"
+              className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold transition-all ${
+                chatMode === 'home'
+                  ? 'bg-emerald-600 text-white shadow-xs scale-105'
+                  : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
+              }`}
+            >
+              <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="currentColor">
+                <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleModeChange('work')}
+              title="Switch to Work Mode"
+              className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold transition-all ${
+                chatMode === 'work'
+                  ? 'bg-blue-600 text-white shadow-xs scale-105'
+                  : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
+              }`}
+            >
+              <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="currentColor">
+                <path d="M20 6h-4V4c0-1.11-.89-2-2-2h-4c-1.11 0-2 .89-2 2v2H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-6 0h-4V4h4v2z" />
+              </svg>
+            </button>
+          </div>
+
+          {/* Incognito Icon Button */}
+          <button
+            type="button"
+            onClick={handleToggleIncognito}
+            title={isIncognito ? 'Exit Incognito Mode' : 'Enter Private Incognito'}
+            className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all border ${
+              isIncognito
+                ? 'bg-purple-600 border-purple-500 text-white shadow-xs'
+                : isDarkMode
+                ? 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
+                : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+          </button>
+        </div>
+      </header>
 
       {/* 1. DASHBOARDS TAB VIEW (Dynamic per user persona and Home vs Work mode) */}
       {activeAppTab === 'dashboards' && (
@@ -3461,19 +3517,36 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Navigation Links */}
+      {/* Navigation Links with Rich Pointers */}
       <div className="flex-1 overflow-y-auto p-3 space-y-1">
-        <button onClick={() => { setActiveView('chat'); setIsModeDrawerOpen(false); }} className={`w-full text-left px-3 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-3 transition-colors ${activeView === 'chat' ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400' : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'}`}>
-          <span>💬</span> Chats
+        <button onClick={() => { setActiveView('chat'); setActiveAppTab('chat'); setIsModeDrawerOpen(false); }} className={`w-full text-left px-3 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-3 transition-colors ${activeAppTab === 'chat' ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400' : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'}`}>
+          <span>💬</span> Unified Chats
         </button>
-        <button onClick={() => { setActiveView('myday'); setIsModeDrawerOpen(false); }} className={`w-full text-left px-3 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-3 transition-colors ${activeView === 'myday' ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400' : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'}`}>
-          <span>☀️</span> My Day & Goals
+        <button onClick={() => { setActiveView('myday'); setActiveAppTab('today'); setIsModeDrawerOpen(false); }} className={`w-full text-left px-3 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-3 transition-colors ${activeAppTab === 'today' ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400' : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'}`}>
+          <span>☀️</span> My Day & Schedule
         </button>
-        <button onClick={() => { setActiveView('dashboards'); setIsModeDrawerOpen(false); }} className={`w-full text-left px-3 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-3 transition-colors ${activeView === 'dashboards' ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400' : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'}`}>
-          <span>📊</span> Dashboards
+        <button onClick={() => { setActiveView('dashboards'); setActiveAppTab('dashboards'); setIsModeDrawerOpen(false); }} className={`w-full text-left px-3 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-3 transition-colors ${activeAppTab === 'dashboards' ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400' : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'}`}>
+          <span>📊</span> Live Dashboards
         </button>
-        <button onClick={() => { setActiveView('systems'); setIsModeDrawerOpen(false); }} className={`w-full text-left px-3 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-3 transition-colors ${activeView === 'systems' ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400' : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'}`}>
-          <span>⚙️</span> Systems & Routines
+        <button onClick={() => { setIsActionsDeckOpen(true); setIsModeDrawerOpen(false); }} className="w-full text-left px-3 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-3 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50">
+          <span>⚡</span> Action Cards Deck
+        </button>
+        <button onClick={() => { setIsDelegationModalOpen(true); setIsModeDrawerOpen(false); }} className="w-full text-left px-3 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-3 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50">
+          <span>⚙️</span> Systems & SOPs
+        </button>
+        <button onClick={() => { setIsBugModalOpen(true); setIsModeDrawerOpen(false); }} className="w-full text-left px-3 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-3 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50 text-rose-500">
+          <span>🐞</span> Report a Bug
+        </button>
+        <button onClick={() => { 
+          try {
+            localStorage.removeItem('agent_google_user_profile');
+            localStorage.removeItem('agent_user_session');
+          } catch(e) {}
+          setUserProfile(null);
+          setShowOnboardingModal(true);
+          setIsModeDrawerOpen(false);
+        }} className="w-full text-left px-3 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-3 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50 text-amber-500">
+          <span>🔄</span> Reset & Re-run Onboarding
         </button>
       </div>
 

@@ -121,32 +121,41 @@ When the user seeks career counseling, job hunting, resume tailoring, portfolio 
 - Compensation Arbitrage Playbook: Demand guaranteed fixed base over variable bonus traps; leverage notice buyout as upfront signing cash; synchronize final rounds for 7-day multi-offer laddering; protect equity with 5-10 year post-termination exercise windows (PTEW).`;
 
 const CANDIDATE_MODELS = [
-  'gemini-3.8-flash',
-  'gemini-3.5-flash',
-  'gemini-flash-latest',
-  'gemini-3.1-flash-lite',
+  'gemini-2.0-flash',
+  'gemini-2.0-flash-lite',
+  'gemini-1.5-flash',
+  'gemini-1.5-pro',
 ];
 
 
-async function callGemini(ai: GoogleGenAI, contents: any[], systemInstruction: string) {
+const BACKUP_KEYS = (process.env.GEMINI_API_KEYS || process.env.GEMINI_API_KEY || '')
+  .split(',')
+  .map(k => k.trim())
+  .filter(Boolean);
+
+async function callGemini(primaryAi: GoogleGenAI, contents: any[], systemInstruction: string) {
+  const clients = [primaryAi, ...BACKUP_KEYS.map(k => new GoogleGenAI({ apiKey: k }))];
   let lastError: any = null;
-  for (const model of CANDIDATE_MODELS) {
-    try {
-      const response = await ai.models.generateContent({
-        model,
-        contents,
-        config: {
-          tools: [{ functionDeclarations }],
-          systemInstruction,
-        },
-      });
-      return response;
-    } catch (err: any) {
-      console.warn(`Model ${model} failed (${err?.status || err?.message}), trying next...`);
-      lastError = err;
+
+  for (const client of clients) {
+    for (const model of CANDIDATE_MODELS) {
+      try {
+        const response = await client.models.generateContent({
+          model,
+          contents,
+          config: {
+            tools: [{ functionDeclarations }],
+            systemInstruction,
+          },
+        });
+        return response;
+      } catch (err: any) {
+        console.warn(`Model ${model} failed (${err?.status || err?.message}), trying next...`);
+        lastError = err;
+      }
     }
   }
-  throw lastError || new Error('All Gemini model candidates failed to respond.');
+  throw lastError || new Error('All Gemini model candidates and API keys failed to respond.');
 }
 
 function formatResponseData(data: any): Record<string, any> {
